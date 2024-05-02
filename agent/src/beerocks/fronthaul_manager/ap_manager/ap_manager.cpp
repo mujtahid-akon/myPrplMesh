@@ -124,6 +124,8 @@ static void copy_vaps_info(std::shared_ptr<bwl::ap_wlan_hal> &ap_wlan_hal,
             curr_vap.profile1_backhaul_sta_association_disallowed;
         vaps[i].profile2_backhaul_sta_association_disallowed =
             curr_vap.profile2_backhaul_sta_association_disallowed;
+        vaps[i].ap_mld_mac = tlvf::mac_from_string(curr_vap.ap_mld_mac);
+        vaps[i].link_id    = curr_vap.link_id;
     }
 }
 
@@ -1883,6 +1885,7 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
             bss_info_conf.authentication_type = config_data.authentication_type_attr().data;
             bss_info_conf.encryption_type     = config_data.encryption_type_attr().data;
             bss_info_conf.network_key         = config_data.network_key_str();
+            bss_info_conf.mld_id              = config_data.mld_id();
 
             bss_info_conf_list.push_back(bss_info_conf);
         }

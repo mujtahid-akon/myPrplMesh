@@ -60,7 +60,7 @@
 #include <tlvf/wfa_map/tlvAssociatedStaTrafficStats.h>
 #include <tlvf/wfa_map/tlvAssociatedWiFi6StaStatusReport.h>
 #include <tlvf/wfa_map/tlvBackhaulBssConfiguration.h>
-#include <tlvf/wfa_map/tlvBackhaulSTAMLDConfiguration.h>
+#include <tlvf/wfa_map/tlvBackhaulStaMldConfiguration.h>
 #include <tlvf/wfa_map/tlvBackhaulStaRadioCapabilities.h>
 #include <tlvf/wfa_map/tlvBackhaulSteeringRequest.h>
 #include <tlvf/wfa_map/tlvBackhaulSteeringResponse.h>
@@ -585,7 +585,7 @@ std::shared_ptr<BaseClass> CmduMessageRx::parseNextTlv(wfa_map::eTlvTypeMap tlv_
         return msg.addClass<wfa_map::tlvAgentApMldConfiguration>();
     }
     case (wfa_map::eTlvTypeMap::TLV_BACKHAUL_STA_MLD_CONFIGURATION): {
-        return msg.addClass<wfa_map::tlvBackhaulSTAMLDConfiguration>();
+        return msg.addClass<wfa_map::tlvBackhaulStaMldConfiguration>();
     }
     case (wfa_map::eTlvTypeMap::TLV_ASSOCIATED_STA_MLD_CONFIGURATION_REPORT): {
         return msg.addClass<wfa_map::tlvAssociatedStaMldConfigurationReport>();
@@ -601,6 +601,7 @@ std::shared_ptr<BaseClass> CmduMessageRx::parseNextTlv(wfa_map::eTlvTypeMap tlv_
     }
     case (wfa_map::eTlvTypeMap::TLV_EHT_OPERATIONS): {
         return msg.addClass<wfa_map::tlvEHTOperations>();
+    }
     }
     LOG(FATAL) << "Unknown TLV type: " << unsigned(tlv_type);
     return msg.addClass<tlvUnknown>();

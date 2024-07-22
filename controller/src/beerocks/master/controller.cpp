@@ -3164,7 +3164,7 @@ bool Controller::handle_cmdu_control_message(
                   << "vaps_list:" << std::endl
                   << vaps_list;
 
-        for (auto vap : vaps_info) {
+        for (const auto &vap : vaps_info) {
             if (!database.update_bss(src_mac, radio_mac, tlvf::mac_from_string(vap.second.mac),
                                      vap.second.ssid)) {
                 LOG(ERROR) << "Failed to update VAP for radio " << radio_mac << " BSS "

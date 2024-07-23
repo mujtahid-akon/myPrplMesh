@@ -84,10 +84,10 @@ private:
     wfa_map::tlvProfile2CacRequest::sCacRequestRadio m_cac_request_radio;
 
     // original values
-    uint8_t m_original_channel                  = 0;
-    eWiFiBandwidth m_original_bandwidth         = eWiFiBandwidth::BANDWIDTH_UNKNOWN;
-    uint16_t m_original_center_frequency        = 0;
-    uint8_t m_original_secondary_channel_offset = 0;
+    uint8_t m_original_channel                 = 0;
+    eWiFiBandwidth m_original_bandwidth        = eWiFiBandwidth::BANDWIDTH_UNKNOWN;
+    uint16_t m_original_center_frequency       = 0;
+    int8_t m_original_secondary_channel_offset = 0;
 
     // max time to wait for switch channel
     static constexpr std::chrono::seconds DEFAULT_WAIT_FOR_SWITCH_CHANNEL_REPORT{5};

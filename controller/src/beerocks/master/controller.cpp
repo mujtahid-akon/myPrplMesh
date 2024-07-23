@@ -4819,8 +4819,8 @@ bool Controller::send_unassociated_sta_link_metrics_query_message(
             son_actions::send_cmdu_to_agent(agent->al_mac, cmdu_tx, database);
             LOG(DEBUG) << "removed  non_associated stations from  agent with mac_address "
                        << tlvf::mac_to_string(agent->al_mac);
-            return true;
         }
+        return true;
     }
 
     //now loop over all agents  and send a specific telemtry for each operating_class

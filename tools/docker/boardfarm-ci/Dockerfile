@@ -37,6 +37,8 @@ RUN git clone https://github.com/mattsm/boardfarm.git \
 # Installation of the python packages needed by the tests
 COPY requirements.txt /app/requirements.txt
 WORKDIR app
+# Pin pysnmp package, as an update breaks boardfarm imports
+RUN sed -i 's/pysnmp/pysnmp==4.4.12/g' requirements.txt
 RUN pip3 install -r requirements.txt
 
 # Installation of Debian dependencies needed by the tests

@@ -347,7 +347,9 @@ bool client_steering_task::steer_sta()
         }
     }
 
-    // Send STEERING request
+    //Send STEERING request after 3 seconds, as ACL takes time to set
+    UTILS_SLEEP_MSEC(3000);
+
     if (!m_cmdu_tx.create(0, ieee1905_1::eMessageType::CLIENT_STEERING_REQUEST_MESSAGE)) {
         LOG(ERROR) << "cmdu creation of type CLIENT_STEERING_REQUEST_MESSAGE, has failed";
         return false;

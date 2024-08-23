@@ -832,7 +832,7 @@ bool Controller::handle_cmdu_1905_autoconfiguration_search(const sMacAddr &src_m
         }
     }
 
-    return son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
+    return son_actions::send_cmdu_to_agent(al_mac, cmdu_tx, database);
 }
 
 /**

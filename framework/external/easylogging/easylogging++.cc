@@ -710,6 +710,7 @@ void Logger::flush(Level level, el::base::FileStreamPtr fs) {
 }
 
 void Logger::initUnflushedCount(void) {
+  base::threading::ScopedLock scopedLock(lock());
   m_unflushedCount.clear();
   base::type::EnumType lIndex = LevelHelper::kMinValid;
   LevelHelper::forEachLevel(&lIndex, [&](void) -> bool {

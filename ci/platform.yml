@@ -259,21 +259,6 @@ run-certification-tests-R4-platform-essensium:
     - job: build-for-turris-omnia
     - job: build-for-haze
 
-run-certification-tests-R1-platform-isr:
-  extends: .run-certification-tests-R1
-  before_script:
-    - !reference [.run-certification-tests-R1, before_script]
-    - echo "$TESTS_TO_RUN_ISR" > .tests-to-run
-    - echo "$DEVICE_UNDER_TEST_ISR" > .device-under-test
-  tags:
-    - certs-tests-isr
-  needs:
-    - job: build-for-turris-omnia
-  rules:
-    - if: '$TESTS_TO_RUN_ISR !~ /^\$/ && $DEVICE_UNDER_TEST_ISR != "prplmesh"'
-    - when: manual
-      allow_failure: true
-
 changelog:
   stage: build
   image: $CI_REGISTRY_IMAGE/prplmesh-scripts:$PARENT_PIPELINE_ID

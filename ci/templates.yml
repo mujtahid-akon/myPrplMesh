@@ -60,7 +60,7 @@
     - mkdir -p "$RDK_CACHE_DIR"
     # Clean up the cache directory from anything that hasn't been accessed for a week.
     - find "$RDK_CACHE_DIR" -type f -atime +7 -delete
-    - tools/docker/builder/rdk-b/build.sh --verbose --target-device "$TARGET_DEVICE" --tag "$CI_PIPELINE_ID" --cache "$RDK_CACHE_DIR"
+    - tools/docker/builder/rdk-b/build.sh --verbose --target-device "$TARGET_DEVICE" --tag "$CI_PIPELINE_ID" --no-whm --cache "$RDK_CACHE_DIR"
   artifacts:
     paths:
       - "build/${TARGET_DEVICE}-rdk/"

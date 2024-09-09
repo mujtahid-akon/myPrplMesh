@@ -308,6 +308,7 @@ bool mon_wlan_hal_whm::sta_beacon_11k_request(const std::string &vap_iface_name,
     args.add_child("channel", uint8_t(req.channel));
     args.add_child("ssid", std::string((const char *)req.ssid));
     args.add_child("mode", int(req.measurement_mode));
+    args.add_child("neighbor", false);
 
     if (req.use_optional_ap_ch_report) {
         std::stringstream optionalElements;

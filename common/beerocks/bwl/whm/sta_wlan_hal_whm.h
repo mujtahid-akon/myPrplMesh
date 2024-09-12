@@ -110,6 +110,8 @@ private:
         std::string bssid;
         std::string ssid;
         std::string connection_status;
+        uint8_t multi_ap_profile;
+        uint16_t multi_ap_primary_vlanid;
         int channel;
         int active_profile_id;
     };

@@ -55,6 +55,9 @@ struct VAPElement {
     bool backhaul;
     bool profile1_backhaul_sta_association_disallowed = false;
     bool profile2_backhaul_sta_association_disallowed = false;
+    int8_t link_id                                    = -1;
+    int8_t mld_id                                     = -1;
+    std::string ap_mld_mac;
 
     bool operator==(const VAPElement &other) const
     {

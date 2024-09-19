@@ -1477,22 +1477,20 @@ bool db::set_ap_wifi6_capabilities(wfa_map::tlvApWifi6Capabilities &wifi6_caps_t
         }
 
         //TODO: Need to set the value for MCS_NSS and OFDMA (PPM-2288)
-        ret_val &= m_ambiorix_datamodel->set(path_to_obj, "AgentRole", flags1.agent_role);
         ret_val &= m_ambiorix_datamodel->set(path_to_obj, "HE160",
                                              static_cast<bool>(flags1.he_support_160mhz));
         ret_val &= m_ambiorix_datamodel->set(path_to_obj, "HE8080",
                                              static_cast<bool>(flags1.he_support_80_80mhz));
-        ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MCSNSSLength", flags1.mcs_nss_length);
         ret_val &= m_ambiorix_datamodel->set(path_to_obj, "SUBeamformer",
                                              static_cast<bool>(flags2.su_beamformer));
         ret_val &= m_ambiorix_datamodel->set(path_to_obj, "SUBeamformee",
                                              static_cast<bool>(flags2.su_beamformee));
         ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MUBeamformer",
                                              static_cast<bool>(flags2.mu_Beamformer_status));
-        ret_val &= m_ambiorix_datamodel->set(path_to_obj, "BeamformeeStsLess80",
+        ret_val &= m_ambiorix_datamodel->set(path_to_obj, "Beamformee80orLess",
                                              static_cast<bool>(flags2.beamformee_sts_less_80mhz));
         ret_val &=
-            m_ambiorix_datamodel->set(path_to_obj, "BeamformeeStsGreater80",
+            m_ambiorix_datamodel->set(path_to_obj, "BeamformeeAbove80",
                                       static_cast<bool>(flags2.beamformee_sts_greater_80mhz));
         ret_val &= m_ambiorix_datamodel->set(path_to_obj, "ULMUMIMO",
                                              static_cast<bool>(flags2.ul_mu_mimo));
@@ -1500,10 +1498,10 @@ bool db::set_ap_wifi6_capabilities(wfa_map::tlvApWifi6Capabilities &wifi6_caps_t
             m_ambiorix_datamodel->set(path_to_obj, "ULOFDMA", static_cast<bool>(flags2.ul_ofdma));
         ret_val &=
             m_ambiorix_datamodel->set(path_to_obj, "DLOFDMA", static_cast<bool>(flags2.dl_ofdma));
-        ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MaxNumberOfUsersSupportedTX",
-                                             flags3.max_dl_mu_mimo_tx);
-        ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MaxNumberOfUsersSupportedRX",
-                                             flags3.max_ul_mu_mimo_rx);
+        ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MaxDLMUMIMO", flags3.max_dl_mu_mimo_tx);
+        ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MaxULMUMIMO", flags3.max_ul_mu_mimo_rx);
+        ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MaxDLOFDMA", role.max_dl_ofdma_tx());
+        ret_val &= m_ambiorix_datamodel->set(path_to_obj, "MaxULOFDMA", role.max_ul_ofdma_rx());
         ret_val &= m_ambiorix_datamodel->set(path_to_obj, "RTS", static_cast<bool>(flags4.rts));
         ret_val &=
             m_ambiorix_datamodel->set(path_to_obj, "MURTS", static_cast<bool>(flags4.mu_rts));
@@ -1511,9 +1509,9 @@ bool db::set_ap_wifi6_capabilities(wfa_map::tlvApWifi6Capabilities &wifi6_caps_t
                                              static_cast<bool>(flags4.multi_bssid));
         ret_val &=
             m_ambiorix_datamodel->set(path_to_obj, "MUEDCA", static_cast<bool>(flags4.mu_edca));
-        ret_val &= m_ambiorix_datamodel->set(path_to_obj, "TwtRequester",
+        ret_val &= m_ambiorix_datamodel->set(path_to_obj, "TWTRequestor",
                                              static_cast<bool>(flags4.twt_requester));
-        ret_val &= m_ambiorix_datamodel->set(path_to_obj, "TwtResponder",
+        ret_val &= m_ambiorix_datamodel->set(path_to_obj, "TWTResponder",
                                              static_cast<bool>(flags4.twt_responder));
         ret_val &= m_ambiorix_datamodel->set(path_to_obj, "SpatialReuse",
                                              static_cast<bool>(flags4.spatial_reuse));

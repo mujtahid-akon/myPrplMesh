@@ -7796,15 +7796,10 @@ bool db::dm_add_radio_scan_capabilities(const Agent::sRadio &radio)
     }
 
     auto scan_capability_path = radio.dm_path + ".ScanCapability";
+    auto &scan_capabilities   = radio.scan_capabilities;
+    bool ret_val              = true;
 
-    // Clearing ScanCapability data model object and its sub-objects.
-    if (!m_ambiorix_datamodel->remove_all_instances(scan_capability_path)) {
-        return false;
-    }
-
-    auto &scan_capabilities = radio.scan_capabilities;
-    bool ret_val            = true;
-
+    // Update the ScanCapability data model parameters.
     ret_val &= m_ambiorix_datamodel->set(scan_capability_path, "OnBootOnly",
                                          scan_capabilities.on_boot_only);
     ret_val &=
@@ -7817,6 +7812,12 @@ bool db::dm_add_radio_scan_capabilities(const Agent::sRadio &radio)
         return false;
     }
 
+    // Remove any existing instances of the OpClassChannels sub-object.
+    if (!m_ambiorix_datamodel->remove_all_instances(scan_capability_path + ".OpClassChannels")) {
+        return false;
+    }
+
+    // Add new instances of the OpClassChannels sub-object.
     for (auto &oc_ch : scan_capabilities.operating_classes) {
         auto oc_channels_path =
             m_ambiorix_datamodel->add_instance(scan_capability_path + ".OpClassChannels");

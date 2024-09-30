@@ -29,6 +29,7 @@ pyflakes
 pymongo
 pyserial
 pysmi
+pyasn1==0.6.0
 pysnmp
 pytest==5.3.5
 pytest-html

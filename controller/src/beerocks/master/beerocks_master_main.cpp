@@ -152,6 +152,9 @@ static void fill_master_config(son::db::sDbMasterConfig &master_conf,
     master_conf.load_backhaul_measurements = (main_master_conf.load_backhaul_measurements == "1");
     master_conf.load_front_measurements    = (main_master_conf.load_front_measurements == "1");
     master_conf.load_monitor_on_vaps       = (main_master_conf.load_monitor_on_vaps == "1");
+    master_conf.use_dataelements_vap_configs =
+        (main_master_conf.use_dataelements_vap_configs == "1");
+
     master_conf.ire_rssi_report_rate_sec =
         beerocks::string_utils::stoi(main_master_conf.ire_rssi_report_rate_sec);
 
@@ -772,11 +775,17 @@ int main(int argc, char *argv[])
     }
 
 #ifdef USE_PRPLMESH_WHM
-    auto wifi_manager =
-        std::make_shared<prplmesh::controller::whm::WifiManager>(event_loop, &master_db);
-    LOG_IF(!wifi_manager, FATAL) << "Unable to create controller WifiManager!";
+    if (master_conf.use_dataelements_vap_configs) {
+        LOG(INFO) << "use dataelements input as vap config";
+    } else {
+        LOG(INFO) << "legacy behavior: use Device.Wifi.";
 
-    wifi_manager->subscribe_to_bss_info_config_change();
+        auto wifi_manager =
+            std::make_shared<prplmesh::controller::whm::WifiManager>(event_loop, &master_db);
+        LOG_IF(!wifi_manager, FATAL) << "Unable to create controller WifiManager!";
+
+        wifi_manager->subscribe_to_bss_info_config_change();
+    }
 #endif
 
     // diagnostics_thread diagnostics(master_db);

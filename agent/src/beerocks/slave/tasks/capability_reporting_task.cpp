@@ -31,6 +31,8 @@
 #include "capability_reporting_task.h"
 #include "../son_slave_thread.h"
 #include "../tlvf_utils.h"
+#include "multi_vendor.h"
+
 #include <tlvf/wfa_map/tlvApCapability.h>
 #include <tlvf/wfa_map/tlvApHeCapabilities.h>
 #include <tlvf/wfa_map/tlvApHtCapabilities.h>
@@ -45,6 +47,8 @@
 #include <tlvf/wfa_map/tlvProfile2ApCapability.h>
 #include <tlvf/wfa_map/tlvProfile2CacCapabilities.h>
 #include <tlvf/wfa_map/tlvProfile2MetricCollectionInterval.h>
+
+using namespace multi_vendor;
 
 namespace beerocks {
 
@@ -173,6 +177,13 @@ void CapabilityReportingTask::handle_ap_capability_query(ieee1905_1::CmduMessage
     if (!m_cmdu_tx.create(mid, ieee1905_1::eMessageType::AP_CAPABILITY_REPORT_MESSAGE)) {
         LOG(ERROR) << "cmdu creation of type AP_CAPABILITY_REPORT_MESSAGE, has failed";
         return;
+    }
+
+    // The add_vs_tlv method invokes the handler to add Vendor specific TLVs to the
+    // AP_CAPABILITY_REPORT_MESSAGE.
+    if (!multi_vendor::tlvf_handler::add_vs_tlv(
+            m_cmdu_tx, ieee1905_1::eMessageType::AP_CAPABILITY_REPORT_MESSAGE)) {
+        LOG(ERROR) << "Failed adding few TLVs in AP_CAPABILITY_REPORT_MESSAGE";
     }
 
     auto ap_capability_tlv = m_cmdu_tx.addClass<wfa_map::tlvApCapability>();

@@ -12,6 +12,7 @@
 #include "../son_slave_thread.h"
 #include "../tlvf_utils.h"
 #include "../traffic_separation.h"
+#include "multi_vendor.h"
 
 #include <bcl/beerocks_utils.h>
 #include <bcl/beerocks_version.h>
@@ -51,6 +52,7 @@
 
 using namespace beerocks;
 using namespace net;
+using namespace multi_vendor;
 
 static constexpr uint8_t AUTOCONFIG_DISCOVERY_TIMEOUT_SECONDS = 3;
 
@@ -561,6 +563,13 @@ bool ApAutoConfigurationTask::send_ap_autoconfiguration_search_message(
         }
         auto beerocks_header                      = message_com::get_beerocks_header(m_cmdu_tx);
         beerocks_header->actionhdr()->direction() = beerocks::BEEROCKS_DIRECTION_CONTROLLER;
+
+        // The add_vs_tlv method invokes the handler to add Vendor specific TLVs to the
+        // WSC search message.
+        if (!multi_vendor::tlvf_handler::add_vs_tlv(
+                m_cmdu_tx, ieee1905_1::eMessageType::AP_AUTOCONFIGURATION_SEARCH_MESSAGE)) {
+            LOG(ERROR) << "Failed adding few TLVs in AP Search Message";
+        }
         return true;
     };
 

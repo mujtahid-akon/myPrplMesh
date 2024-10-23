@@ -10,6 +10,7 @@
 #define _CmduMessageRX_H_
 
 #include <tlvf/CmduMessage.h>
+#include <tlvf/vendor_example/eVendorExampleTlvTypeMap.h>
 #include <tlvf/wfa_map/eTlvTypeMap.h>
 
 namespace ieee1905_1 {
@@ -43,6 +44,7 @@ private:
     std::shared_ptr<BaseClass> parseNextTlv();
     std::shared_ptr<BaseClass> parseNextTlv(ieee1905_1::eTlvType tlv_type);
     std::shared_ptr<BaseClass> parseNextTlv(wfa_map::eTlvTypeMap tlv_type);
+    std::shared_ptr<BaseClass> parseNextTlv(vendor_example::eVendorExampleTlvTypeMap tlv_type);
 };
 
 }; // namespace ieee1905_1

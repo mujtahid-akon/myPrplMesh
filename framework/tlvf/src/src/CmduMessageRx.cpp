@@ -30,6 +30,8 @@
 #include <tlvf/ieee_1905_1/tlvVendorSpecific.h>
 #include <tlvf/ieee_1905_1/tlvWsc.h>
 #include <tlvf/swap.h>
+#include <tlvf/vendor_example/eVendorExampleTlvTypeMap.h>
+#include <tlvf/vendor_example/tlvVendorExample.h>
 #include <tlvf/wfa_map/eTlvTypeMap.h>
 #include <tlvf/wfa_map/eVirtualBssSubtype.h>
 #include <tlvf/wfa_map/tlv1905EncapDpp.h>
@@ -615,6 +617,20 @@ std::shared_ptr<BaseClass> CmduMessageRx::parseNextTlv(wfa_map::eTlvTypeMap tlv_
     return msg.addClass<tlvUnknown>();
 }
 
+// Instruction for New Vendors:**
+// - Follow the structure of this function to implement your own TLV parsing.
+std::shared_ptr<BaseClass>
+CmduMessageRx::parseNextTlv(vendor_example::eVendorExampleTlvTypeMap tlv_type)
+{
+    switch (tlv_type) {
+    case (vendor_example::eVendorExampleTlvTypeMap::TLV_VENDOR_SPECIFIC): {
+        return msg.addClass<vendor_example::tlvVendorExample>();
+    }
+    }
+    LOG(FATAL) << "Unknown TLV type: " << unsigned(tlv_type);
+    return msg.addClass<tlvUnknown>();
+}
+
 std::shared_ptr<BaseClass> CmduMessageRx::parseNextTlv()
 {
     auto tlv_type = getNextTlvType();
@@ -623,6 +639,8 @@ std::shared_ptr<BaseClass> CmduMessageRx::parseNextTlv()
         return parseNextTlv(ieee1905_1::eTlvType(tlv_type));
     } else if (wfa_map::eTlvTypeMapValidate::check(tlv_type)) {
         return parseNextTlv(wfa_map::eTlvTypeMap(tlv_type));
+    } else if (vendor_example::eVendorExampleTlvTypeMapValidate::check(tlv_type)) {
+        return parseNextTlv(vendor_example::eVendorExampleTlvTypeMap(tlv_type));
     } else {
         LOG(INFO) << "Unknown TLV type: " << tlv_type;
         return msg.addClass<tlvUnknown>();

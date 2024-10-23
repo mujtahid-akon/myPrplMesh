@@ -133,6 +133,7 @@ public:
         bool load_channel_select_task;
         bool load_dynamic_channel_select_task;
         bool daisy_chaining_disabled;
+        bool use_dataelements_vap_configs;
 
         bool certification_mode;
         bool persistent_db;

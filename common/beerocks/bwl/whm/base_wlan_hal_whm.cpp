@@ -605,7 +605,8 @@ bool base_wlan_hal_whm::get_radio_vaps(AmbiorixVariantMap &aps)
         }
         auto ssid_obj = m_ambiorix_cl.get_object(wbapi_utils::get_path_ssid_reference(ap));
         if (!ssid_obj) {
-            LOG(DEBUG) << "problem with ssid reference for " << it.first;
+            LOG(ERROR) << "problem with ssid reference for " << it.first;
+            continue;
         }
         std::string mac_addr = wbapi_utils::get_ssid_mac(*ssid_obj);
 
@@ -738,7 +739,9 @@ bool base_wlan_hal_whm::refresh_vaps_info(int id)
         }
     } else {
         for (const auto &vap : saved_vaps) {
-            handle_vap(vap.first, vap.second);
+            if (!vap.second.bss.empty()) {
+                handle_vap(vap.first, vap.second);
+            }
         }
         for (int e = int(beerocks::IFACE_VAP_ID_MAX) - 1; e > (max_slot); e--) {
             empty_slots.push_back(e);

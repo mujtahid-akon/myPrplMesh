@@ -388,7 +388,7 @@ bool controller_ucc_listener::handle_dev_set_config(
         return false;
     }
 
-    static const std::string key("bss_info");
+    std::string key("bss_info");
     if (params.find(key) == params.end()) {
         err_string = "command has no bss_info configuration";
         return false;
@@ -403,6 +403,11 @@ bool controller_ucc_listener::handle_dev_set_config(
     if (al_mac.empty()) {
         err_string += (" on " + key);
         return false;
+    }
+
+    key = "mld_groupID";
+    if (params.find(key) != params.end()) {
+        bss_info_conf.mld_id = params.at(key)[0] - 'A' + 1;
     }
 
     auto mac = tlvf::mac_from_string(al_mac);
@@ -523,6 +528,8 @@ controller_ucc_listener::parse_bss_info(const std::string &bss_info_str,
         bss_info_conf.operating_class = {115, 116};
     } else if (operating_class_str == "12x") {
         bss_info_conf.operating_class = {124, 125, 126};
+    } else if (operating_class_str == "13x") {
+        bss_info_conf.operating_class = {131, 132, 133, 134, 135, 136, 137};
     } else {
         err_string = "invalid operating class " + operating_class_str;
         return std::string();

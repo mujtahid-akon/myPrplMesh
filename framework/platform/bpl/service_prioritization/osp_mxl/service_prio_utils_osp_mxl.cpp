@@ -118,7 +118,7 @@ void remove_ebtables_rules(const std::string &custom_chain_name, bool flush_rule
     }
 }
 
-bool write_dscp_map_to_proc(sDscpMap *map, const std::string &filename)
+bool write_dscp_map_to_proc(ServicePrioritizationUtils::sDscpMap *map, const std::string &filename)
 {
     std::ofstream dscp_proc_entry(filename);
 

@@ -71,7 +71,7 @@ if (TARGET_PLATFORM STREQUAL "openwrt")
             ${MODULE_PATH}/db/uci/*.c*
             ${MODULE_PATH}/dhcp/uci/*.c*
             ${MODULE_PATH}/cfg/vendor/*.c*
-            ${MODULE_PATH}/service_prioritization/tc/service_prio_utils_tc.cpp
+            ${MODULE_PATH}/service_prioritization/osp_mxl/service_prio_utils_osp_mxl.cpp
         )
 
         # UGW specific libraries

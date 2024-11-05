@@ -450,26 +450,10 @@ cBssEntry::sFlags& cBssEntry::flags() {
     return (sFlags&)(*m_flags);
 }
 
-uint8_t* cBssEntry::basic_eht_mcs_and_nss_set(size_t idx) {
-    if ( (m_basic_eht_mcs_and_nss_set_idx__ == 0) || (m_basic_eht_mcs_and_nss_set_idx__ <= idx) ) {
-        TLVF_LOG(ERROR) << "Requested index is greater than the number of available entries";
-        return nullptr;
-    }
-    return &(m_basic_eht_mcs_and_nss_set[idx]);
+uint32_t& cBssEntry::basic_eht_mcs_and_nss_set() {
+    return (uint32_t&)(*m_basic_eht_mcs_and_nss_set);
 }
 
-bool cBssEntry::set_basic_eht_mcs_and_nss_set(const void* buffer, size_t size) {
-    if (buffer == nullptr) {
-        TLVF_LOG(WARNING) << "set_basic_eht_mcs_and_nss_set received a null pointer.";
-        return false;
-    }
-    if (size > 32) {
-        TLVF_LOG(ERROR) << "Received buffer size is smaller than buffer length";
-        return false;
-    }
-    std::copy_n(reinterpret_cast<const uint8_t *>(buffer), size, m_basic_eht_mcs_and_nss_set);
-    return true;
-}
 uint8_t& cBssEntry::control() {
     return (uint8_t&)(*m_control);
 }
@@ -510,6 +494,7 @@ void cBssEntry::class_swap()
 {
     m_bssid->struct_swap();
     m_flags->struct_swap();
+    tlvf_swap(32, reinterpret_cast<uint8_t*>(m_basic_eht_mcs_and_nss_set));
     tlvf_swap(16, reinterpret_cast<uint8_t*>(m_disabled_subchannel_bitmap));
 }
 
@@ -545,7 +530,7 @@ size_t cBssEntry::get_initial_size()
     size_t class_size = 0;
     class_size += sizeof(sMacAddr); // bssid
     class_size += sizeof(sFlags); // flags
-    class_size += 32 * sizeof(uint8_t); // basic_eht_mcs_and_nss_set
+    class_size += sizeof(uint32_t); // basic_eht_mcs_and_nss_set
     class_size += sizeof(uint8_t); // control
     class_size += sizeof(uint8_t); // ccfs0
     class_size += sizeof(uint8_t); // ccfs1
@@ -572,12 +557,11 @@ bool cBssEntry::init()
         return false;
     }
     if (!m_parse__) { m_flags->struct_init(); }
-    m_basic_eht_mcs_and_nss_set = reinterpret_cast<uint8_t*>(m_buff_ptr__);
-    if (!buffPtrIncrementSafe(sizeof(uint8_t) * (32))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) * (32) << ") Failed!";
+    m_basic_eht_mcs_and_nss_set = reinterpret_cast<uint32_t*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(uint32_t))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint32_t) << ") Failed!";
         return false;
     }
-    m_basic_eht_mcs_and_nss_set_idx__  = 32;
     m_control = reinterpret_cast<uint8_t*>(m_buff_ptr__);
     if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";

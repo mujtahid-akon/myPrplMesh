@@ -47,6 +47,7 @@
 #include <tlvf/wfa_map/tlvProfile2ApCapability.h>
 #include <tlvf/wfa_map/tlvProfile2CacCapabilities.h>
 #include <tlvf/wfa_map/tlvProfile2MetricCollectionInterval.h>
+#include <tlvf/wfa_map/tlvWifi7AgentCapabilities.h>
 
 using namespace multi_vendor;
 
@@ -161,6 +162,265 @@ void CapabilityReportingTask::handle_client_capability_query(ieee1905_1::CmduMes
     m_btl_ctx.send_cmdu_to_controller({}, m_cmdu_tx);
 }
 
+bool CapabilityReportingTask::add_wifi7_agent_capabilities_tlv(ieee1905_1::CmduMessageTx &cmdu_tx)
+{
+    auto db = AgentDB::get();
+
+    int eht_capable_radio_nb = 0;
+    for (auto radio : db->get_radios_list()) {
+        if (radio->eht_supported) {
+            ++eht_capable_radio_nb;
+        }
+    }
+    if (eht_capable_radio_nb == 0) {
+        LOG(DEBUG) << "No radio with EHT support";
+        return true;
+    }
+
+    auto wifi7_agent_capabilities_tlv = cmdu_tx.addClass<wfa_map::tlvWifi7AgentCapabilities>();
+    if (!wifi7_agent_capabilities_tlv) {
+        LOG(ERROR) << "Error creating TLV_WIFI7_AGENT_CAPABILITIES";
+        return false;
+    }
+
+    // Corresponds to the maximum number of MLDs we can have
+    wifi7_agent_capabilities_tlv->max_num_mlds() = db->device_conf.max_num_mlds;
+
+    // Corresponds to the number of APs on other radios that can be linked to an AP on this radio
+    wifi7_agent_capabilities_tlv->flags1().ap_maximum_links   = eht_capable_radio_nb - 1;
+    wifi7_agent_capabilities_tlv->flags1().bsta_maximum_links = eht_capable_radio_nb - 1;
+    wifi7_agent_capabilities_tlv->flags2().tid_to_link_mapping_capability = 0;
+
+    for (auto radio : db->get_radios_list()) {
+        if (!radio) {
+            LOG(ERROR) << "radio does not exist in the db";
+            continue;
+        }
+
+        if (!radio->eht_supported) {
+            continue;
+        }
+
+        auto radio_wifi7_capabilities(
+            wifi7_agent_capabilities_tlv->create_radio_wifi7_capabilities());
+
+        radio_wifi7_capabilities->ruid() = radio->front.iface_mac;
+
+        auto &ap_radio_mode_support         = radio_wifi7_capabilities->ap_modes_support();
+        ap_radio_mode_support.str_support   = radio->ap_modes_support.str_support;
+        ap_radio_mode_support.nstr_support  = radio->ap_modes_support.nstr_support;
+        ap_radio_mode_support.emlsr_support = radio->ap_modes_support.emlsr_support;
+        ap_radio_mode_support.emlmr_support = radio->ap_modes_support.emlmr_support;
+
+        auto &bsta_radio_mode_support         = radio_wifi7_capabilities->bsta_modes_support();
+        bsta_radio_mode_support.str_support   = radio->bsta_modes_support.str_support;
+        bsta_radio_mode_support.nstr_support  = radio->bsta_modes_support.nstr_support;
+        bsta_radio_mode_support.emlsr_support = radio->bsta_modes_support.emlsr_support;
+        bsta_radio_mode_support.emlmr_support = radio->bsta_modes_support.emlmr_support;
+
+        auto radio_ap_capabilities = radio_wifi7_capabilities->create_ap_wifi7_capabilities();
+
+        // Fill AP WiFi7 capabilities attribute
+        if (ap_radio_mode_support.str_support) {
+            for (auto radio2 : db->get_radios_list()) {
+                if (!radio2 || radio->front.iface_mac == radio2->front.iface_mac) {
+                    continue;
+                }
+
+                if (radio2->ap_modes_support.str_support) {
+                    auto ap_str_config(radio_ap_capabilities->create_str_config());
+
+                    ap_str_config->frequency_separation().freq_separation = 0;
+                    if (ap_str_config->frequency_separation().freq_separation) {
+                        ap_str_config->ruid() = radio2->front.iface_mac;
+                    }
+
+                    if (!radio_ap_capabilities->add_str_config(ap_str_config)) {
+                        LOG(ERROR) << "add_str_config() failed in tlvWifi7AgentCapabilities";
+                        return false;
+                    }
+                }
+            }
+        }
+
+        if (ap_radio_mode_support.nstr_support) {
+            for (auto radio2 : db->get_radios_list()) {
+                if (!radio2 || radio->front.iface_mac == radio2->front.iface_mac) {
+                    continue;
+                }
+
+                if (radio2->ap_modes_support.nstr_support) {
+                    auto ap_nstr_config(radio_ap_capabilities->create_nstr_config());
+
+                    ap_nstr_config->frequency_separation().freq_separation = 0;
+                    if (ap_nstr_config->frequency_separation().freq_separation) {
+                        ap_nstr_config->ruid() = radio2->front.iface_mac;
+                    }
+
+                    if (!radio_ap_capabilities->add_nstr_config(ap_nstr_config)) {
+                        LOG(ERROR) << "add_nstr_config() failed in tlvWifi7AgentCapabilities";
+                        return false;
+                    }
+                }
+            }
+        }
+
+        if (ap_radio_mode_support.emlsr_support) {
+            for (auto radio2 : db->get_radios_list()) {
+                if (!radio2 || radio->front.iface_mac == radio2->front.iface_mac) {
+                    continue;
+                }
+
+                if (radio2->ap_modes_support.emlsr_support) {
+                    auto ap_emlsr_config(radio_ap_capabilities->create_emlsr_config());
+
+                    ap_emlsr_config->frequency_separation().freq_separation = 0;
+                    if (ap_emlsr_config->frequency_separation().freq_separation) {
+                        ap_emlsr_config->ruid() = radio2->front.iface_mac;
+                    }
+
+                    if (!radio_ap_capabilities->add_emlsr_config(ap_emlsr_config)) {
+                        LOG(ERROR) << "add_emlsr_config() failed in tlvWifi7AgentCapabilities";
+                        return false;
+                    }
+                }
+            }
+        }
+
+        if (ap_radio_mode_support.emlmr_support) {
+            for (auto radio2 : db->get_radios_list()) {
+                if (!radio2 || radio->front.iface_mac == radio2->front.iface_mac) {
+                    continue;
+                }
+
+                if (radio2->ap_modes_support.emlmr_support) {
+                    auto ap_emlmr_config(radio_ap_capabilities->create_emlmr_config());
+
+                    ap_emlmr_config->frequency_separation().freq_separation = 0;
+                    if (ap_emlmr_config->frequency_separation().freq_separation) {
+                        ap_emlmr_config->ruid() = radio2->front.iface_mac;
+                    }
+
+                    if (!radio_ap_capabilities->add_emlmr_config(ap_emlmr_config)) {
+                        LOG(ERROR) << "add_emlmr_config() failed in tlvWifi7AgentCapabilities";
+                        return false;
+                    }
+                }
+            }
+        }
+
+        if (!radio_wifi7_capabilities->add_ap_wifi7_capabilities(radio_ap_capabilities)) {
+            LOG(ERROR) << "add_ap_wifi7_capabilities() failed in tlvWifi7AgentCapabilities";
+            return false;
+        }
+
+        // Fill bsta WiFi7 capabilities attribute
+        auto radio_bsta_capabilities = radio_wifi7_capabilities->create_bsta_wifi7_capabilities();
+
+        if (bsta_radio_mode_support.str_support) {
+            for (auto radio2 : db->get_radios_list()) {
+                if (!radio2 || radio->front.iface_mac == radio2->front.iface_mac) {
+                    continue;
+                }
+
+                if (radio2->bsta_modes_support.str_support) {
+                    auto bsta_str_config(radio_bsta_capabilities->create_str_config());
+
+                    bsta_str_config->frequency_separation().freq_separation = 0;
+                    if (bsta_str_config->frequency_separation().freq_separation) {
+                        bsta_str_config->ruid() = radio2->front.iface_mac;
+                    }
+
+                    if (!radio_bsta_capabilities->add_str_config(bsta_str_config)) {
+                        LOG(ERROR) << "add_str_config() failed in tlvWifi7AgentCapabilities";
+                        return false;
+                    }
+                }
+            }
+        }
+
+        if (bsta_radio_mode_support.nstr_support) {
+            for (auto radio2 : db->get_radios_list()) {
+                if (!radio2 || radio->front.iface_mac == radio2->front.iface_mac) {
+                    continue;
+                }
+
+                if (radio2->bsta_modes_support.nstr_support) {
+                    auto bsta_nstr_config(radio_bsta_capabilities->create_nstr_config());
+
+                    bsta_nstr_config->frequency_separation().freq_separation = 0;
+                    if (bsta_nstr_config->frequency_separation().freq_separation) {
+                        bsta_nstr_config->ruid() = radio2->front.iface_mac;
+                    }
+
+                    if (!radio_bsta_capabilities->add_nstr_config(bsta_nstr_config)) {
+                        LOG(ERROR) << "add_nstr_config() failed in tlvWifi7AgentCapabilities";
+                        return false;
+                    }
+                }
+            }
+        }
+
+        if (bsta_radio_mode_support.emlsr_support) {
+            for (auto radio2 : db->get_radios_list()) {
+                if (!radio2 || radio->front.iface_mac == radio2->front.iface_mac) {
+                    continue;
+                }
+
+                if (radio2->bsta_modes_support.emlsr_support) {
+                    auto bsta_emlsr_config(radio_bsta_capabilities->create_emlsr_config());
+
+                    bsta_emlsr_config->frequency_separation().freq_separation = 0;
+                    if (bsta_emlsr_config->frequency_separation().freq_separation) {
+                        bsta_emlsr_config->ruid() = radio2->front.iface_mac;
+                    }
+
+                    if (!radio_bsta_capabilities->add_emlsr_config(bsta_emlsr_config)) {
+                        LOG(ERROR) << "add_emlsr_config() failed in tlvWifi7AgentCapabilities";
+                        return false;
+                    }
+                }
+            }
+        }
+
+        if (bsta_radio_mode_support.emlmr_support) {
+            for (auto radio2 : db->get_radios_list()) {
+                if (!radio2 || radio->front.iface_mac == radio2->front.iface_mac) {
+                    continue;
+                }
+
+                if (radio2->bsta_modes_support.emlmr_support) {
+                    auto bsta_emlmr_config(radio_bsta_capabilities->create_emlmr_config());
+
+                    bsta_emlmr_config->frequency_separation().freq_separation = 0;
+                    if (bsta_emlmr_config->frequency_separation().freq_separation) {
+                        bsta_emlmr_config->ruid() = radio2->front.iface_mac;
+                    }
+
+                    if (!radio_bsta_capabilities->add_emlmr_config(bsta_emlmr_config)) {
+                        LOG(ERROR) << "add_emlmr_config() failed in tlvWifi7AgentCapabilities";
+                        return false;
+                    }
+                }
+            }
+        }
+
+        if (!radio_wifi7_capabilities->add_bsta_wifi7_capabilities(radio_bsta_capabilities)) {
+            LOG(ERROR) << "add_bsta_wifi7_capabilities() failed in tlvWifi7AgentCapabilities";
+            return false;
+        }
+
+        if (!wifi7_agent_capabilities_tlv->add_radio_wifi7_capabilities(radio_wifi7_capabilities)) {
+            LOG(ERROR) << "add_radio_wifi7_capabilities() failed in tlvWifi7AgentCapabilities";
+            return false;
+        }
+    }
+
+    LOG(INFO) << "Add WiFi 7 capabilities TLV";
+
+    return true;
+}
+
 void CapabilityReportingTask::handle_ap_capability_query(ieee1905_1::CmduMessageRx &cmdu_rx,
                                                          const sMacAddr &src_mac)
 {
@@ -233,6 +493,11 @@ void CapabilityReportingTask::handle_ap_capability_query(ieee1905_1::CmduMessage
     // 2. The tlvs created here are defined in the
     // specification as "One" (multi-ap specification v2, 17.1.7).
     // the one tlv may contain information about few radios
+
+    if (!add_wifi7_agent_capabilities_tlv(m_cmdu_tx)) {
+        LOG(ERROR) << "Error filling TLV_WIFI7_AGENT_CAPABILITIES";
+        return;
+    }
 
     // 2.1 radio dependent tlvs
     // Add channel scan capabilities

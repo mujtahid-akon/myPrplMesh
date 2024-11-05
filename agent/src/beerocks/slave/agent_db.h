@@ -171,6 +171,7 @@ public:
         wfa_map::tlvProfile2MultiApProfile::eMultiApProfile certification_profile =
             wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::PRPLMESH_PROFILE_UNKNOWN;
         int on_boot_scan;
+        uint8_t max_num_mlds = 3; // Arbitrary
     } device_conf;
 
     struct sControllerInfo {
@@ -378,6 +379,15 @@ public:
 
         // 32-byte attribute containing the MCS set as defined in 802.11ax
         std::array<uint8_t, beerocks::message::HE_MCS_SET_SIZE> he_mcs_set;
+
+        bool eht_supported = false;
+        typedef struct {
+            bool str_support   = false;
+            bool nstr_support  = false;
+            bool emlsr_support = false;
+            bool emlmr_support = false;
+        } sMloModesSupport;
+        sMloModesSupport ap_modes_support, bsta_modes_support;
 
         bool report_indepent_scans_policy = false;
 

@@ -3096,10 +3096,15 @@ void BackhaulManager::handle_dev_reset_default(
         // If certification program is mapr2, set the certification_profile to Profile 2.
         db->device_conf.certification_profile =
             wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_2;
-    } else if (program == supported_programs[2] || program == supported_programs[3]) {
+    } else if (program == supported_programs[2]) {
         // If certification program is mapr3, set the certification_profile to Profile 3.
         db->device_conf.certification_profile =
             wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_3;
+    } else if (program == supported_programs[3] || program == supported_programs[4] ||
+               program == supported_programs[5]) {
+        // If certification program is mapr4/5/6, set the certification_profile to Profile 4.
+        db->device_conf.certification_profile =
+            wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_1_AS_OF_R4;
     }
 
     //check if wired interface is enabled or try to enable it.

@@ -459,8 +459,7 @@ bool ap_wlan_hal_whm::update_vap_credentials(
                 continue;
             }
 
-            search_path = wbapi_utils::search_path_ap_by_ssidRef(wifi_ssid_path);
-            if (!m_ambiorix_cl.resolve_path(search_path, wifi_vap_path)) {
+            if (!get_accesspoint_by_ssid(wifi_ssid_path, wifi_vap_path)) {
                 LOG(ERROR) << "new AccessPoint not found";
                 continue;
             }

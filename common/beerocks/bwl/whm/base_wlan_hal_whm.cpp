@@ -203,8 +203,8 @@ void base_wlan_hal_whm::subscribe_to_ap_events()
                     process_radio_event(get_iface_name(), "AccessPointNumberOfEntries",
                                         AmbiorixVariant::copy(1).get());
                 }
-                process_ap_event(vap_it->first, key, value.get());
                 vap_it->second.status = status;
+                process_ap_event(vap_it->first, key, value.get());
             } else {
                 process_ap_event(vap_it->first, key, value.get());
             }

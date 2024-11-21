@@ -35,9 +35,7 @@ cBssEntry:
   _type: class
   bssid: sMacAddr
   flags: sFlags
-  basic_eht_mcs_and_nss_set:
-    _type: uint8_t
-    _length: [32]
+  basic_eht_mcs_and_nss_set: uint32_t
   control: uint8_t
   ccfs0: uint8_t
   ccfs1: uint8_t

@@ -128,8 +128,7 @@ class cBssEntry : public BaseClass
         
         sMacAddr& bssid();
         sFlags& flags();
-        uint8_t* basic_eht_mcs_and_nss_set(size_t idx = 0);
-        bool set_basic_eht_mcs_and_nss_set(const void* buffer, size_t size);
+        uint32_t& basic_eht_mcs_and_nss_set();
         uint8_t& control();
         uint8_t& ccfs0();
         uint8_t& ccfs1();
@@ -144,15 +143,14 @@ class cBssEntry : public BaseClass
         bool init();
         sMacAddr* m_bssid = nullptr;
         sFlags* m_flags = nullptr;
-        uint8_t* m_basic_eht_mcs_and_nss_set = nullptr;
-        size_t m_basic_eht_mcs_and_nss_set_idx__ = 0;
-        int m_lock_order_counter__ = 0;
+        uint32_t* m_basic_eht_mcs_and_nss_set = nullptr;
         uint8_t* m_control = nullptr;
         uint8_t* m_ccfs0 = nullptr;
         uint8_t* m_ccfs1 = nullptr;
         uint16_t* m_disabled_subchannel_bitmap = nullptr;
         uint8_t* m_reserved = nullptr;
         size_t m_reserved_idx__ = 0;
+        int m_lock_order_counter__ = 0;
 };
 
 }; // close namespace: wfa_map

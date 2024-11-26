@@ -144,6 +144,15 @@ bool tlvf_utils::add_ap_radio_basic_capabilities(ieee1905_1::CmduMessageTx &cmdu
         radio->wifi_channel.get_freq_type());
 
     for (auto op_class : operating_classes) {
+        auto non_oper_channels =
+            get_operating_class_non_oper_channels(radio->channels_list, op_class);
+
+        // OPClass won't be added if its non-operable channels size is equal to its channels size
+        if (non_oper_channels.size() ==
+            son::wireless_utils::operating_classes_list.find(op_class)->second.channels.size()) {
+            continue;
+        }
+
         auto operationClassesInfo = radio_basic_caps->create_operating_classes_info_list();
         if (!operationClassesInfo) {
             LOG(ERROR) << "Failed creating operating classes info list";
@@ -154,8 +163,6 @@ bool tlvf_utils::add_ap_radio_basic_capabilities(ieee1905_1::CmduMessageTx &cmdu
         operationClassesInfo->maximum_transmit_power_dbm() =
             get_operating_class_max_tx_power(radio->channels_list, op_class);
 
-        auto non_oper_channels =
-            get_operating_class_non_oper_channels(radio->channels_list, op_class);
         if (!non_oper_channels.empty()) {
             // Create list of statically non-oper channels
 

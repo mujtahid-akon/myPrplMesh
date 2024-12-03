@@ -223,6 +223,23 @@ bool Ieee1905Transport::attach_interface_socket_filter(NetworkInterface &interfa
         }
     }
 
+    // BPF does not apply to buffered frames, there is a chance that "after create the socket and before applying the BPF",
+    // frames already buffered in kernel but not handled by user application
+    // if the traffic is heavy enough, it could cause the receive function, which is expecting filtered frames, to complain
+    // here we can apply an empty filter, then drain buffers, and then switch to the filter that we want
+    // elaborated discussion can be found in `libpcap/pcap-linux.c`, in the comments of `set_kernel_filter`
+    struct sock_filter zero_bytecode = BPF_STMT(BPF_RET | BPF_K, 0);
+    struct sock_fprog zero           = {1, &zero_bytecode};
+    if (setsockopt(fd, SOL_SOCKET, SO_ATTACH_FILTER, &zero, sizeof(zero)) == -1) {
+        MAPF_ERR("Failed attaching zero filter for '" << interface.ifname
+                                                      << "': " << strerror(errno));
+        return false;
+    }
+    char drain[1];
+    // here we choose to ignore the error code such as EINTR
+    while (recv(fd, &drain, sizeof(drain), MSG_DONTWAIT) >= 0)
+        ;
+
     // This BPF is designed to accepts the following packets:
     // - IEEE1905 multicast packets (with IEEE1905 Multicast Address [01:80:c2:00:00:13] set as destination address)
     // - LLDP multicast packets (with LLDP Multicast Address as destination address)

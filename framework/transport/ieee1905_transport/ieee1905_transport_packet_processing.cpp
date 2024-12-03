@@ -147,7 +147,7 @@ bool Ieee1905Transport::verify_packet(const Packet &packet)
         // this should never happen (due to packet filter)
         // This print is changed to debug in order to prevent log-flood on the platforms
         // TODO: change back to error-log-print once PPM-80 is merged
-        MAPF_DBG("packet verification failed - unsupported etherType: 0x"
+        MAPF_ERR("packet verification failed - unsupported etherType: 0x"
                  << std::hex << packet.ether_type << std::dec);
 
         return false;

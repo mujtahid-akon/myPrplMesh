@@ -596,7 +596,7 @@ bool monitor_stats::add_ap_assoc_wifi_6_sta_status_report(ieee1905_1::CmduMessag
 }
 
 bool monitor_stats::add_radio_metrics(ieee1905_1::CmduMessageTx &cmdu_tx, const sMacAddr &radio_mac,
-                                      const monitor_radio_node &radio_node) const
+                                      monitor_radio_node &radio_node) const
 {
     // add profile-2 radio metrics tlv
     auto radio_metrics_tlv = cmdu_tx.addClass<wfa_map::tlvProfile2RadioMetrics>();
@@ -606,13 +606,13 @@ bool monitor_stats::add_radio_metrics(ieee1905_1::CmduMessageTx &cmdu_tx, const 
     }
     LOG(DEBUG) << "adding tlvProfile2RadioMetrics for iface:" << radio_node.get_iface();
     radio_metrics_tlv->radio_uid() = radio_mac;
-    radio_metrics_tlv->noise()     = radio_node.ap_metrics_reporting_info().ap_metrics_radio_noise;
-    radio_metrics_tlv->transmit() =
-        radio_node.ap_metrics_reporting_info().ap_metrics_radio_transmit;
-    radio_metrics_tlv->receive_self() =
-        radio_node.ap_metrics_reporting_info().ap_metrics_radio_receive_self;
-    radio_metrics_tlv->receive_other() =
-        radio_node.ap_metrics_reporting_info().ap_metrics_radio_receive_other;
+
+    auto radio_metrics = radio_node.get_stats().hal_stats;
+
+    radio_metrics_tlv->noise()         = radio_metrics.anpi_noise;
+    radio_metrics_tlv->transmit()      = radio_metrics.transmit;
+    radio_metrics_tlv->receive_self()  = radio_metrics.receive_self;
+    radio_metrics_tlv->receive_other() = radio_metrics.receive_other;
 
     return true;
 }

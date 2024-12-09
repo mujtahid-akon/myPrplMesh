@@ -34,6 +34,10 @@ struct SRadioStats {
     uint32_t errors_sent;
     uint32_t errors_received;
     int8_t noise;
+    uint8_t anpi_noise;
+    uint8_t transmit;
+    uint8_t receive_self;
+    uint8_t receive_other;
     // uint8_t  channel_load_tot_prev;
     // uint8_t  channel_load_tot_curr;
     // uint8_t  channel_load_others;

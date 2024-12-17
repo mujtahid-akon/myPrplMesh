@@ -198,6 +198,22 @@ mon_wlan_hal_whm::mon_wlan_hal_whm(const std::string &iface_name, hal_event_cb_t
 
 mon_wlan_hal_whm::~mon_wlan_hal_whm() {}
 
+static uint8_t scaled_metric(const uint16_t val, const uint16_t tot)
+{
+    uint32_t aux = val * 2550 / tot; // 2550 isof 255 so we see decimal in second step
+
+    if (aux % 10 > 4) { // round decimal;
+        aux += 10;
+    }
+    aux = aux / 10;
+
+    if (aux > 255) { // clip to 255 max value
+        aux = 255;
+    }
+
+    return aux;
+}
+
 bool mon_wlan_hal_whm::update_radio_stats(SRadioStats &radio_stats)
 {
     std::string stats_path = m_radio_path + "Stats.";
@@ -215,6 +231,62 @@ bool mon_wlan_hal_whm::update_radio_stats(SRadioStats &radio_stats)
     stats_obj->read_child(radio_stats.errors_sent, "ErrorsSent");
     stats_obj->read_child(radio_stats.errors_received, "ErrorsReceived");
     stats_obj->read_child(radio_stats.noise, "Noise");
+
+    AmbiorixVariant result;
+    AmbiorixVariant args(AMXC_VAR_ID_HTABLE); // ex : WiFi.Radio.2.getRadioAirStats()
+    if (!m_ambiorix_cl.call(m_radio_path, "getRadioAirStats", args, result)) {
+        LOG(ERROR) << "remote function call getRadioAirStats Failed!";
+        return true;
+    }
+
+    auto air_stats_as_list = result.read_children<AmbiorixVariantListSmartPtr>();
+    // read as AmbxList removes [] around the result
+
+    auto data_map_2 = air_stats_as_list->front().read_children<AmbiorixVariantMapSmartPtr>();
+    // list has one element, with all lines grouped between curly brackets :
+    // {Key1 = Value1, KeyN = ValueN}
+    // second transformation exposes the lines of the result as a map
+    // storage size, name, exclamation marks required values
+    /*  uint16_t, "Load"
+        int32_t,  "Noise"  !
+        uint16_t, "TxTime" !
+        uint16_t, "RxTime" !
+        uint16_t, "IntTime"
+        uint16_t, "ObssTime" !
+        uint16_t, "NoiseTime"
+        uint16_t, "FreeTime"
+        uint16_t, "TotalTime" !
+        uint32_t, "Timestamp"
+    */
+
+    std::vector<std::string> required_elements = {"Noise", "TxTime", "RxTime", "ObssTime",
+                                                  "TotalTime"};
+    for (auto &r_e : required_elements) {
+        if (data_map_2->find(r_e) == data_map_2->end()) {
+            LOG(ERROR) << "RadioAirStats missing " << r_e;
+            return true;
+        }
+    }
+
+    uint16_t total, txt, rxt, obt;
+    int32_t noise;
+
+    (*data_map_2)["TotalTime"].get(total);
+    if (total == 0) {
+        LOG(WARNING) << "TotalTime 0: avoid using as denominator";
+        return true;
+    }
+
+    (*data_map_2)["TxTime"].get(txt);
+    (*data_map_2)["RxTime"].get(rxt);
+    (*data_map_2)["ObssTime"].get(obt);
+
+    (*data_map_2)["Noise"].get(noise);
+
+    radio_stats.anpi_noise    = (noise < 0) ? ((noise + 110) * 2) : 220;
+    radio_stats.transmit      = scaled_metric(txt, total);
+    radio_stats.receive_self  = scaled_metric(rxt, total);
+    radio_stats.receive_other = scaled_metric(obt, total);
 
     return true;
 }

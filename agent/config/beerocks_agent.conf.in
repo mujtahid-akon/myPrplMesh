@@ -51,21 +51,25 @@ backhaul_preferred_bssid=
 hostap_iface_type=WIFI_INTEL
 hostap_ant_gain=0
 enable_repeater_mode=@BEEROCKS_REPEATER_MODE@
+em_handle_third_party=0
 
 [agent1]
 hostap_iface_type=WIFI_INTEL
 hostap_ant_gain=0
 enable_repeater_mode=0
+em_handle_third_party=0
 
 [agent2]
 hostap_iface_type=WIFI_INTEL
 hostap_ant_gain=0
 enable_repeater_mode=0
+em_handle_third_party=0
 
 [agent3]
 hostap_iface_type=WIFI_INTEL
 hostap_ant_gain=0
 enable_repeater_mode=0
+em_handle_third_party=0
 
 [log]
 log_global_levels=error,info,warning,fatal,trace,debug

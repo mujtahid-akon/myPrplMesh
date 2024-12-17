@@ -101,6 +101,7 @@ public:
         std::string sta_iface[MAX_RADIOS_PER_AGENT];
         std::string sta_iface_filter_low[MAX_RADIOS_PER_AGENT];
         std::string hostap_ant_gain[MAX_RADIOS_PER_AGENT];
+        std::string em_handle_third_party;
         //[log]
         SConfigLog sLog;
     } sConfigSlave;

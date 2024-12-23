@@ -232,6 +232,54 @@ typedef struct sWIFI6Capabilities {
     void struct_init() {}
 } __attribute__((packed)) sWIFI6Capabilities;
 
+typedef struct sEHTOperations {
+#if defined(__LITTLE_ENDIAN_BITFIELD)
+    typedef struct sEHTOperationInformations {
+        uint16_t disabled_subchannel_bitmap;
+        uint8_t ccfs1;
+        uint8_t ccfs0;
+        uint8_t control;
+    } __attribute__((packed)) sEHTOperationInformations;
+    sEHTOperationInformations operation_informations;
+
+    uint32_t basic_eht_mcs_and_nss_set;
+
+    typedef struct sEHTOperationParameters {
+        uint8_t reserved : 2;
+        uint8_t group_addressed_bu_indication_exponent : 2;
+        uint8_t group_addressed_bu_indication_limit : 1;
+        uint8_t eht_default_pe_duration : 1;
+        uint8_t disabled_subchannel_valid : 1;
+        uint8_t eht_operation_information_valid : 1;
+    } __attribute__((packed)) sEHTOperationParameters;
+    sEHTOperationParameters operation_parameters;
+#elif defined(__BIG_ENDIAN_BITFIELD)
+    typedef struct sEHTOperationParameters {
+        uint8_t eht_operation_information_valid : 1;
+        uint8_t disabled_subchannel_valid : 1;
+        uint8_t eht_default_pe_duration : 1;
+        uint8_t group_addressed_bu_indication_limit : 1;
+        uint8_t group_addressed_bu_indication_exponent : 2;
+        uint8_t reserved : 2;
+    } __attribute__((packed)) sEHTOperationParameters;
+    sEHTOperationParameters operation_parameters;
+
+    uint32_t basic_eht_mcs_and_nss_set;
+
+    typedef struct sEHTOperationInformations {
+        uint8_t control;
+        uint8_t ccfs0;
+        uint8_t ccfs1;
+        uint16_t disabled_subchannel_bitmap;
+    } __attribute__((packed)) sEHTOperationInformations;
+    sEHTOperationInformations operation_informations;
+#else
+#error "Bitfield macros are not defined"
+#endif
+    void struct_swap() {}
+    void struct_init() {}
+} __attribute__((packed)) sEHTOperations;
+
 } // namespace net
 } // namespace beerocks
 

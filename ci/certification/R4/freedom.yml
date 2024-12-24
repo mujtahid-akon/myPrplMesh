@@ -31,12 +31,32 @@ R4:freedom:MAP-4.2.3_BHWIFI:
     - when: manual
       allow_failure: true
 
+R4:freedom:MAP-4.2.3_ETH:
+  extends: .certification:R4:freedom
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.2.3_ETH:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
 R4:freedom:MAP-4.2.4_BHWIFI:
   extends: .certification:R4:freedom
   rules:
     # If the last commit description contains the test name and we're not on master, run it.
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.2.4_BHWIFI:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
+R4:freedom:MAP-4.2.4_ETH:
+  extends: .certification:R4:freedom
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.2.4_ETH:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
     - when: manual
       allow_failure: true
@@ -51,12 +71,22 @@ R4:freedom:MAP-4.3.2_BHWIFI:
     - when: manual
       allow_failure: true
 
-R4:freedom:MAP-4.3.3_BHWIFI:
+R4:freedom:MAP-4.3.2_ETH:
   extends: .certification:R4:freedom
   rules:
     # If the last commit description contains the test name and we're not on master, run it.
     # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.3.3_BHWIFI:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.3.2_ETH:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
+R4:freedom:MAP-4.3.3_ETH:
+  extends: .certification:R4:freedom
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.3.3_ETH:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
     - when: manual
       allow_failure: true
@@ -71,12 +101,32 @@ R4:freedom:MAP-4.3.4_BHWIFI:
     - when: manual
       allow_failure: true
 
+R4:freedom:MAP-4.3.4_ETH:
+  extends: .certification:R4:freedom
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.3.4_ETH:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
 R4:freedom:MAP-4.4.2_BHWIFI:
   extends: .certification:R4:freedom
   rules:
     # If the last commit description contains the test name and we're not on master, run it.
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.4.2_BHWIFI:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
+R4:freedom:MAP-4.4.2_ETH:
+  extends: .certification:R4:freedom
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.4.2_ETH:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
     - when: manual
       allow_failure: true
@@ -91,12 +141,32 @@ R4:freedom:MAP-4.4.3_BHWIFI:
     - when: manual
       allow_failure: true
 
+R4:freedom:MAP-4.4.3_ETH:
+  extends: .certification:R4:freedom
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.4.3_ETH:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
 R4:freedom:MAP-4.5.1_BHWIFI:
   extends: .certification:R4:freedom
   rules:
     # If the last commit description contains the test name and we're not on master, run it.
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.5.1_BHWIFI:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
+R4:freedom:MAP-4.5.1_ETH:
+  extends: .certification:R4:freedom
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.5.1_ETH:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
     - when: manual
       allow_failure: true
@@ -111,12 +181,52 @@ R4:freedom:MAP-4.5.3_BHWIFI_FH5GH:
     - when: manual
       allow_failure: true
 
+R4:freedom:MAP-4.5.3_BHWIFI_FH5GL:
+  extends: .certification:R4:freedom
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.5.3_BHWIFI_FH5GL:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
+R4:freedom:MAP-4.5.3_ETH_FH5GH:
+  extends: .certification:R4:freedom
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.5.3_ETH_FH5GH:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
+R4:freedom:MAP-4.5.3_ETH_FH5GL:
+  extends: .certification:R4:freedom
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.5.3_ETH_FH5GL:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
 R4:freedom:MAP-4.6.1_BHWIFI:
   extends: .certification:R4:freedom
   rules:
     # If the last commit description contains the test name and we're not on master, run it.
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.6.1_BHWIFI:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
+R4:freedom:MAP-4.6.1_ETH:
+  extends: .certification:R4:freedom
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.6.1_ETH:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
     - when: manual
       allow_failure: true
@@ -151,12 +261,32 @@ R4:freedom:MAP-4.7.4_BHWIFI:
     - when: manual
       allow_failure: true
 
+R4:freedom:MAP-4.7.4_ETH:
+  extends: .certification:R4:freedom
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.7.4_ETH:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
 R4:freedom:MAP-4.7.5_BHWIFI:
   extends: .certification:R4:freedom
   rules:
     # If the last commit description contains the test name and we're not on master, run it.
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.7.5_BHWIFI:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
+R4:freedom:MAP-4.7.5_ETH:
+  extends: .certification:R4:freedom
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.7.5_ETH:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
     - when: manual
       allow_failure: true
@@ -171,12 +301,32 @@ R4:freedom:MAP-4.7.6_BHWIFI:
     - when: manual
       allow_failure: true
 
+R4:freedom:MAP-4.7.6_ETH:
+  extends: .certification:R4:freedom
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.7.6_ETH:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
 R4:freedom:MAP-4.7.7_BHWIFI:
   extends: .certification:R4:freedom
   rules:
     # If the last commit description contains the test name and we're not on master, run it.
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.7.7_BHWIFI:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
+R4:freedom:MAP-4.7.7_ETH:
+  extends: .certification:R4:freedom
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.7.7_ETH:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
     - when: manual
       allow_failure: true
@@ -191,12 +341,32 @@ R4:freedom:MAP-4.7.8_BHWIFI:
     - when: manual
       allow_failure: true
 
+R4:freedom:MAP-4.7.8_ETH:
+  extends: .certification:R4:freedom
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.7.8_ETH:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
 R4:freedom:MAP-4.7.9_BHWIFI:
   extends: .certification:R4:freedom
   rules:
     # If the last commit description contains the test name and we're not on master, run it.
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.7.9_BHWIFI:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
+R4:freedom:MAP-4.7.9_ETH:
+  extends: .certification:R4:freedom
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.7.9_ETH:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
     - when: manual
       allow_failure: true
@@ -211,12 +381,32 @@ R4:freedom:MAP-4.7.10_BHWIFI:
     - when: manual
       allow_failure: true
 
+R4:freedom:MAP-4.7.10_ETH:
+  extends: .certification:R4:freedom
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.7.10_ETH:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
 R4:freedom:MAP-4.8.1_BHWIFI:
   extends: .certification:R4:freedom
   rules:
     # If the last commit description contains the test name and we're not on master, run it.
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.8.1_BHWIFI:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
+R4:freedom:MAP-4.8.1_ETH:
+  extends: .certification:R4:freedom
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.8.1_ETH:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
     - when: manual
       allow_failure: true
@@ -231,6 +421,16 @@ R4:freedom:MAP-4.8.2_BHWIFI:
     - when: manual
       allow_failure: true
 
+R4:freedom:MAP-4.8.2_ETH:
+  extends: .certification:R4:freedom
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.8.2_ETH:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
 R4:freedom:MAP-4.8.3_BHWIFI:
   extends: .certification:R4:freedom
   rules:
@@ -241,12 +441,12 @@ R4:freedom:MAP-4.8.3_BHWIFI:
     - when: manual
       allow_failure: true
 
-R4:freedom:MAP-4.8.4_BHWIFI:
+R4:freedom:MAP-4.8.3_ETH:
   extends: .certification:R4:freedom
   rules:
     # If the last commit description contains the test name and we're not on master, run it.
     # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.8.4_BHWIFI:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.8.3_ETH:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
     - when: manual
       allow_failure: true
@@ -261,12 +461,32 @@ R4:freedom:MAP-4.8.5_BHWIFI:
     - when: manual
       allow_failure: true
 
+R4:freedom:MAP-4.8.5_ETH:
+  extends: .certification:R4:freedom
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.8.5_ETH:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
 R4:freedom:MAP-4.8.6_BHWIFI:
   extends: .certification:R4:freedom
   rules:
     # If the last commit description contains the test name and we're not on master, run it.
     # Otherwise, make it a manual job
     - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.8.6_BHWIFI:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
+R4:freedom:MAP-4.8.6_ETH:
+  extends: .certification:R4:freedom
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.8.6_ETH:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
     - when: manual
       allow_failure: true
@@ -311,6 +531,16 @@ R4:freedom:MAP-4.10.3_BHWIFI:
     - when: manual
       allow_failure: true
 
+R4:freedom:MAP-4.10.3_ETH:
+  extends: .certification:R4:freedom
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.10.3_ETH:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
 R4:freedom:MAP-4.10.4_ETH:
   extends: .certification:R4:freedom
   rules:
@@ -341,22 +571,62 @@ R4:freedom:MAP-4.10.6_BHWIFI:
     - when: manual
       allow_failure: true
 
-R4:freedom:MAP-4.13.1_BH5GH:
+R4:freedom:MAP-4.13.1_BH5GL:
   extends: .certification:R4:freedom
   rules:
     # If the last commit description contains the test name and we're not on master, run it.
     # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.1_BH5GH:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.1_BH5GL:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
     - when: manual
       allow_failure: true
 
-R4:freedom:MAP-4.13.2_BH5GL_FH5GH:
+R4:freedom:MAP-4.13.1_BH24G:
   extends: .certification:R4:freedom
   rules:
     # If the last commit description contains the test name and we're not on master, run it.
     # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.2_BH5GL_FH5GH:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.1_BH24G:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
+R4:freedom:MAP-4.13.1_ETH:
+  extends: .certification:R4:freedom
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.1_ETH:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
+R4:freedom:MAP-4.13.2_BH5GL_FH24G:
+  extends: .certification:R4:freedom
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.2_BH5GL_FH24G:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
+R4:freedom:MAP-4.13.2_BH24G_FH24G:
+  extends: .certification:R4:freedom
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.2_BH24G_FH24G:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
+R4:freedom:MAP-4.13.2_ETH_FH5GL:
+  extends: .certification:R4:freedom
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.2_ETH_FH5GL:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
     - when: manual
       allow_failure: true
@@ -371,12 +641,32 @@ R4:freedom:MAP-4.13.3_BHWIFI:
     - when: manual
       allow_failure: true
 
-R4:freedom:MAP-4.13.4_BH5GL_FH5GH:
+R4:freedom:MAP-4.13.3_ETH:
   extends: .certification:R4:freedom
   rules:
     # If the last commit description contains the test name and we're not on master, run it.
     # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.4_BH5GL_FH5GH:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.3_ETH:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
+R4:freedom:MAP-4.13.4_BH5GL_FH24G:
+  extends: .certification:R4:freedom
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.4_BH5GL_FH24G:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
+R4:freedom:MAP-4.13.4_BH24G_FH24G:
+  extends: .certification:R4:freedom
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.4_BH24G_FH24G:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
     - when: manual
       allow_failure: true
@@ -391,122 +681,202 @@ R4:freedom:MAP-4.13.6:
     - when: manual
       allow_failure: true
 
-R4:freedom:MAP-4.13.11_BH5GL_FH5GH:
-  extends: .certification:R4:freedom
+R4:freedom:MAP-4.13.11_BH5GL_FH5GL:
+  extends: .certification:R4:freedom_downstream_R1_agent
   rules:
     # If the last commit description contains the test name and we're not on master, run it.
     # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.11_BH5GL_FH5GH:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.11_BH5GL_FH5GL:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
     - when: manual
       allow_failure: true
 
-R4:freedom:MAP-4.14.1_BH5GL_FH5GH:
-  extends: .certification:R4:freedom
+R4:freedom:MAP-4.13.11_BH5GL_FH24G:
+  extends: .certification:R4:freedom_downstream_R1_agent
   rules:
     # If the last commit description contains the test name and we're not on master, run it.
     # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.14.1_BH5GL_FH5GH:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.11_BH5GL_FH24G:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
     - when: manual
       allow_failure: true
 
-R4:freedom:MAP-4.14.2_BH5GL_FH5GH:
-  extends: .certification:R4:freedom
+R4:freedom:MAP-4.13.11_BH24G_FH24G:
+  extends: .certification:R4:freedom_downstream_R1_agent
   rules:
     # If the last commit description contains the test name and we're not on master, run it.
     # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.14.2_BH5GL_FH5GH:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.11_BH24G_FH24G:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
     - when: manual
       allow_failure: true
 
-R4:freedom:MAP-4.16.1_BH5GL_FH5GH:
-  extends: .certification:R4:freedom
+R4:freedom:MAP-4.13.11_ETH_FH5GH:
+  extends: .certification:R4:freedom_downstream_R1_agent
   rules:
     # If the last commit description contains the test name and we're not on master, run it.
     # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.16.1_BH5GL_FH5GH:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.11_ETH_FH5GH:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
     - when: manual
       allow_failure: true
 
-R4:freedom:MAP-4.17.1:
-  extends: .certification:R4:freedom
+R4:freedom:MAP-4.13.11_ETH_FH5GL:
+  extends: .certification:R4:freedom_downstream_R1_agent
   rules:
     # If the last commit description contains the test name and we're not on master, run it.
     # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.17.1:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.11_ETH_FH5GL:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
     - when: manual
       allow_failure: true
 
-R4:freedom:MAP-4.17.2:
-  extends: .certification:R4:freedom
+R4:freedom:MAP-4.13.11_ETH_FH24G:
+  extends: .certification:R4:freedom_downstream_R1_agent
   rules:
     # If the last commit description contains the test name and we're not on master, run it.
     # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.17.2:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.13.11_ETH_FH24G:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
     - when: manual
       allow_failure: true
 
-R4:freedom:MAP-4.17.3_ETH:
+R4:freedom:MAP-4.14.1_BH5GL_FH5GL:
   extends: .certification:R4:freedom
   rules:
     # If the last commit description contains the test name and we're not on master, run it.
     # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.17.3_ETH:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.14.1_BH5GL_FH5GL:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
     - when: manual
       allow_failure: true
 
-R4:freedom:MAP-4.17.4:
+R4:freedom:MAP-4.14.1_BH5GL_FH24G:
   extends: .certification:R4:freedom
   rules:
     # If the last commit description contains the test name and we're not on master, run it.
     # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.17.4:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.14.1_BH5GL_FH24G:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
     - when: manual
       allow_failure: true
 
-R4:freedom:MAP-4.18.1_ETH_FH24G:
+R4:freedom:MAP-4.14.1_BH24G_FH24G:
   extends: .certification:R4:freedom
   rules:
     # If the last commit description contains the test name and we're not on master, run it.
     # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.18.1_ETH_FH24G:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.14.1_BH24G_FH24G:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
     - when: manual
       allow_failure: true
 
-R4:freedom:MAP-4.18.1_ETH_FH5GL:
+R4:freedom:MAP-4.14.1_ETH_FH5GH:
   extends: .certification:R4:freedom
   rules:
     # If the last commit description contains the test name and we're not on master, run it.
     # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.18.1_ETH_FH5GL:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.14.1_ETH_FH5GH:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
     - when: manual
       allow_failure: true
 
-R4:freedom:MAP-4.18.1_ETH_FH5GH:
+R4:freedom:MAP-4.14.1_ETH_FH5GL:
   extends: .certification:R4:freedom
   rules:
     # If the last commit description contains the test name and we're not on master, run it.
     # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.18.1_ETH_FH5GH:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.14.1_ETH_FH5GL:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
     - when: manual
       allow_failure: true
 
-R4:freedom:MAP-4.18.1_BHWIFI_FH24G:
+R4:freedom:MAP-4.14.1_ETH_FH24G:
   extends: .certification:R4:freedom
   rules:
     # If the last commit description contains the test name and we're not on master, run it.
     # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.18.1_BHWIFI_FH24G:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.14.1_ETH_FH24G:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
+R4:freedom:MAP-4.14.2_BH5GL_FH5GL:
+  extends: .certification:R4:freedom_on_boot_5
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.14.2_BH5GL_FH5GL:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
+R4:freedom:MAP-4.14.2_BH5GL_FH24G:
+  extends: .certification:R4:freedom_on_boot_24
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.14.2_BH5GL_FH24G:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
+R4:freedom:MAP-4.14.2_BH24G_FH24G:
+  extends: .certification:R4:freedom_on_boot_24
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.14.2_BH24G_FH24G:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
+R4:freedom:MAP-4.14.2_ETH_FH5GH:
+  extends: .certification:R4:freedom_on_boot_5
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.14.2_ETH_FH5GH:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
+R4:freedom:MAP-4.14.2_ETH_FH5GL:
+  extends: .certification:R4:freedom_on_boot_5
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.14.2_ETH_FH5GL:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
+R4:freedom:MAP-4.14.2_ETH_FH24G:
+  extends: .certification:R4:freedom_on_boot_24
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.14.2_ETH_FH24G:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
+R4:freedom:MAP-4.16.1_ETH_FH5GH:
+  extends: .certification:R4:freedom
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.16.1_ETH_FH5GH:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
+R4:freedom:MAP-4.16.1_ETH_FH5GL:
+  extends: .certification:R4:freedom
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.16.1_ETH_FH5GL:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
     - when: manual
       allow_failure: true
@@ -521,12 +891,52 @@ R4:freedom:MAP-4.18.1_BHWIFI_FH5GL:
     - when: manual
       allow_failure: true
 
-R4:freedom:MAP-4.18.1_BHWIFI_FH5GH:
+R4:freedom:MAP-4.18.1_BHWIFI_FH24G:
   extends: .certification:R4:freedom
   rules:
     # If the last commit description contains the test name and we're not on master, run it.
     # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.18.1_BHWIFI_FH5GH:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.18.1_BHWIFI_FH24G:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
+R4:freedom:MAP-4.18.1_ETH_FH5GH:
+  extends: .certification:R4:freedom
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.18.1_ETH_FH5GH:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
+R4:freedom:MAP-4.18.1_ETH_FH5GL:
+  extends: .certification:R4:freedom
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.18.1_ETH_FH5GL:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
+R4:freedom:MAP-4.18.1_ETH_FH24G:
+  extends: .certification:R4:freedom
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.18.1_ETH_FH24G:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
+R4:freedom:MAP-4.19.1_BHWIFI:
+  extends: .certification:R4:freedom
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.19.1_BHWIFI:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
     - when: manual
       allow_failure: true
@@ -541,12 +951,142 @@ R4:freedom:MAP-4.19.1_ETH:
     - when: manual
       allow_failure: true
 
-R4:freedom:MAP-4.19.1_BHWIFI:
+R4:freedom:MAP-5.4.1_ETH:
   extends: .certification:R4:freedom
   rules:
     # If the last commit description contains the test name and we're not on master, run it.
     # Otherwise, make it a manual job
-    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-4.19.1_BHWIFI:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-5.4.1_ETH:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
+R4:freedom:MAP-5.4.2_ETH:
+  extends: .certification:R4:freedom
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-5.4.2_ETH:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
+R4:freedom:MAP-5.4.3_ETH:
+  extends: .certification:R4:freedom
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-5.4.3_ETH:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
+R4:freedom:MAP-5.5.1:
+  extends: .certification:R4:freedom
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-5.5.1:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
+R4:freedom:MAP-5.6.1:
+  extends: .certification:R4:freedom
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-5.6.1:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
+R4:freedom:MAP-5.7.1:
+  extends: .certification:R4:freedom
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-5.7.1:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
+R4:freedom:MAP-5.8.1_ETH_FH24G:
+  extends: .certification:R4:freedom
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-5.8.1_ETH_FH24G:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
+R4:freedom:MAP-5.8.2_ETH:
+  extends: .certification:R4:freedom
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-5.8.2_ETH:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
+R4:freedom:MAP-5.8.3_ETH_FH5GL:
+  extends: .certification:R4:freedom
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-5.8.3_ETH_FH5GL:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
+R4:freedom:MAP-5.13.1_ETH_FH24G:
+  extends: .certification:R4:freedom
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-5.13.1_ETH_FH24G:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
+R4:freedom:MAP-5.13.2_ETH_FH24G:
+  extends: .certification:R4:freedom
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-5.13.2_ETH_FH24G:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
+R4:freedom:MAP-5.14.1_ETH_FH24G:
+  extends: .certification:R4:freedom
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-5.14.1_ETH_FH24G:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
+R4:freedom:MAP-5.14.2_ETH_FH24G:
+  extends: .certification:R4:freedom
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-5.14.2_ETH_FH24G:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
+      when: on_success
+    - when: manual
+      allow_failure: true
+
+R4:freedom:MAP-5.16.1_ETH_FH5GL:
+  extends: .certification:R4:freedom
+  rules:
+    # If the last commit description contains the test name and we're not on master, run it.
+    # Otherwise, make it a manual job
+    - if: '$CI_COMMIT_DESCRIPTION =~ /.*MAP-5.16.1_ETH_FH5GL:freedom.*/ && $CI_COMMIT_REF_NAME != "master"'
       when: on_success
     - when: manual
       allow_failure: true

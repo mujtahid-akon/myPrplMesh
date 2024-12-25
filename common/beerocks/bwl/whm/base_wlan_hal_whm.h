@@ -96,6 +96,7 @@ protected:
     bool whm_get_radio_path(const std::string &iface, std::string &path);
     bool refresh_vap_info(int id, const beerocks::wbapi::AmbiorixVariant &ap_obj);
     bool get_radio_vaps(beerocks::wbapi::AmbiorixVariantMap &aps);
+    bool get_accesspoint_by_ssid(std::string &ssid_path, std::string &ap_path);
     bool has_enabled_vap() const;
     bool check_enabled_vap(const std::string &bss) const;
 

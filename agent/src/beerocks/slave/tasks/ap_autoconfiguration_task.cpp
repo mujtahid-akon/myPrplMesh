@@ -277,6 +277,21 @@ void ApAutoConfigurationTask::handle_event(uint8_t event_enum_value, const void 
         work();
         break;
     }
+    case APPLY_CONFIG_FOR_NEW_IFACE: {
+        auto db = AgentDB::get();
+        for (const auto radio : db->get_radios_list()) {
+            if (!radio) {
+                continue;
+            }
+            for (auto &bss : radio->front.bssids) {
+                if (bss.backhaul_bss) {
+                    m_traffic_separation_configurator->apply_policy_for_new_interface(
+                        bss.iface_name);
+                }
+            }
+        }
+        break;
+    }
     default: {
         LOG(DEBUG) << "Message handler doesn't exists for event type " << event_enum_value;
         break;

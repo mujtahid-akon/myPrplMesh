@@ -598,7 +598,7 @@ bool BackhaulManager::finalize_slaves_connect_state(bool fConnected)
                     // External events
                     int ext_event_fd_max           = -1;
                     radio_info->sta_hal_ext_events = radio_info->sta_wlan_hal->get_ext_events_fds();
-                    LOG(INFO) << "iacob sta_hal_ext_events " << &(radio_info->sta_hal_ext_events);
+                    LOG(INFO) << "sta_hal_ext_events " << &(radio_info->sta_hal_ext_events);
                     if (radio_info->sta_hal_ext_events.empty()) {
                         LOG(WARNING) << "This instance [" << radio_info->sta_iface
                                      << "] of sta_wlan_hal should expose FDs";

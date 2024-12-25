@@ -40,6 +40,7 @@ base_wlan_hal_whm::base_wlan_hal_whm(HALType type, const std::string &iface_name
     m_fds_ext_events.clear();
     m_ambiorix_cl.resolve_path(wbapi_utils::search_path_radio_by_iface(iface_name), m_radio_path);
 
+    LOG(DEBUG) << "init base_wlan_hal_whm for " << m_radio_path;
     get_radio_mac();
     refresh_radio_info();
 
@@ -701,6 +702,8 @@ bool base_wlan_hal_whm::get_radio_vaps(AmbiorixVariantMap &aps)
         LOG(ERROR) << "could not get ap multi object for " << wbapi_utils::search_path_ap();
         return false;
     }
+
+    auto rad_index = wbapi_utils::get_object_id(m_radio_path);
     std::string radio_path;
     for (auto &it : *result) {
         auto &ap = it.second;
@@ -710,7 +713,10 @@ bool base_wlan_hal_whm::get_radio_vaps(AmbiorixVariantMap &aps)
             LOG(ERROR) << "radio path " << radio_path << " m_radio_path " << m_radio_path;
             continue;
         }
-        if (radio_path != m_radio_path) {
+
+        auto vap_rad_index = wbapi_utils::get_object_id(radio_path);
+
+        if (rad_index != vap_rad_index) {
             continue;
         }
         auto ssid_obj = m_ambiorix_cl.get_object(wbapi_utils::get_path_ssid_reference(ap));
@@ -723,10 +729,39 @@ bool base_wlan_hal_whm::get_radio_vaps(AmbiorixVariantMap &aps)
         if (mac_addr == "00:00:00:00:00:00" || mac_addr.empty()) {
             continue;
         }
-        LOG(INFO) << "add " << it.first << " to list of APs, with MAC " << mac_addr;
+        LOG(DEBUG) << "add " << it.first << " to list of APs, with MAC " << mac_addr;
         aps.emplace(std::move(mac_addr), std::move(ap));
     }
     return true;
+}
+
+bool base_wlan_hal_whm::get_accesspoint_by_ssid(std::string &ssid_path, std::string &ap_path)
+{
+    auto ssid_index = wbapi_utils::get_object_id(ssid_path);
+
+    auto result = m_ambiorix_cl.get_object_multi<AmbiorixVariantMapSmartPtr>(
+        wbapi_utils::search_path_ap_inst());
+
+    if (!result) {
+        LOG(ERROR) << "could not get ap multi object for " << wbapi_utils::search_path_ap();
+        return false;
+    }
+
+    std::string ssid_ref;
+    for (auto &it : *result) {
+        auto &ap = it.second;
+        if (ap.empty() ||
+            !m_ambiorix_cl.resolve_path(wbapi_utils::get_path_ssid_reference(ap), ssid_ref)) {
+            LOG(ERROR) << "VAP " << it.first << " inconsistent SSIDReference";
+            continue;
+        }
+        auto vap_ssid_index = wbapi_utils::get_object_id(ssid_ref);
+        if (vap_ssid_index == ssid_index) {
+            ap_path = it.first;
+            return true;
+        }
+    }
+    return false;
 }
 
 bool base_wlan_hal_whm::has_enabled_vap() const

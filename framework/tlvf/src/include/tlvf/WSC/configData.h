@@ -24,7 +24,8 @@ public:
         std::string network_key = "";
         sMacAddr bssid          = {};
         uint8_t bss_type;
-        int8_t mld_id = -1;
+        int8_t mld_id    = -1;
+        bool hidden_ssid = false;
     };
 
     configData(uint8_t *buff, size_t buff_len, bool parse) : WscAttrList(buff, buff_len, parse) {}

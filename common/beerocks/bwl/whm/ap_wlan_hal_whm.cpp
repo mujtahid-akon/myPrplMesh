@@ -521,6 +521,23 @@ bool ap_wlan_hal_whm::update_vap_credentials(
             }
             LOG(DEBUG) << "set multiaptype " << multi_ap;
             new_obj.add_child("MultiAPType", multi_ap);
+            std::string ishidessid   = "";
+            std::string isssidadvset = "";
+            m_ambiorix_cl.get_param(ishidessid, wifi_ssid_path, "SSID");
+            if ((ishidessid == bss_info_conf.ssid)) {
+                if (bss_info_conf.hidden_ssid) {
+                    new_obj.add_child("SSIDAdvertisementEnabled", 0);
+                    isssidadvset = "disabled";
+                } else {
+                    new_obj.add_child("SSIDAdvertisementEnabled", 1);
+                    isssidadvset = "enabled";
+                }
+            } else {
+                isssidadvset = "unset";
+            }
+
+            LOG(INFO) << "Hidden SSID-Bss_info: " << bss_info_conf.ssid
+                      << ", SSIDAdvertisementEnabled is " << isssidadvset;
             ret = m_ambiorix_cl.update_object(wifi_vap_path, new_obj);
             if (!ret) {
                 LOG(ERROR) << "Failed to enable vap " << wifi_vap_path
@@ -546,7 +563,8 @@ bool ap_wlan_hal_whm::update_vap_credentials(
                    << " auth_type: " << auth_type << " encr_type: " << enc_type
                    << " network_key: " << bss_info_conf.network_key
                    << " fronthaul: " << bss_info_conf.fronthaul
-                   << " backhaul: " << bss_info_conf.backhaul;
+                   << " backhaul: " << bss_info_conf.backhaul
+                   << " hidden_SSID: " << bss_info_conf.hidden_ssid;
 
         new_obj.set_type(AMXC_VAR_ID_HTABLE);
         new_obj.add_child("SSID", bss_info_conf.ssid);

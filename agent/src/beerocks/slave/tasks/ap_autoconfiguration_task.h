@@ -276,7 +276,15 @@ private:
     bool ap_autoconfiguration_wsc_parse_encrypted_settings(WSC::m2 &m2, uint8_t authkey[32],
                                                            uint8_t keywrapkey[16],
                                                            WSC::configData::config &config);
-
+    /**
+     * @brief Parse the vendor extension from m2, and load the into the BSS configuration
+     * @a config.
+     *
+     * @param [in] m2 WSC M2 attribute list from the Controller.
+     * @param [out] config BSS configuration.
+     * @return true on success, otherwise false.
+     */
+    bool ap_autoconfiguration_wsc_parse_hidden_ssid(WSC::m2 &m2, WSC::configData::config &config);
     bool add_wsc_m1_tlv(const std::string &radio_iface);
 };
 

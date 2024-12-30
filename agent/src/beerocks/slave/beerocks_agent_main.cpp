@@ -197,6 +197,7 @@ static void fill_son_slave_config(const beerocks::config_file::sConfigSlave &bee
 
     db->device_conf.operating_system = beerocks::os_utils::get_os_name();
     db->device_conf.software_version = beerocks::version::get_module_version();
+    db->em_handle_third_party        = beerocks_slave_conf.em_handle_third_party;
     beerocks::bpl::get_serial_number(db->device_conf.device_serial_number);
 }
 

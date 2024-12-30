@@ -545,11 +545,6 @@ bool ApAutoConfigurationTask::send_ap_autoconfiguration_search_message(
             LOG(ERROR) << "alloc_supported_service_list failed";
             return false;
         }
-        /*auto supportedServiceTuple = tlvSupportedService->supported_service_list(0);
-        if (!std::get<0>(supportedServiceTuple)) {
-            LOG(ERROR) << "Failed accessing supported_service_list";
-            return false;
-        }*/
         for (int serviceID = 0; serviceID < tlvSupportedService->supported_service_list_length();
              serviceID++) {
             auto supportedServiceTuple = tlvSupportedService->supported_service_list(serviceID);
@@ -947,22 +942,6 @@ bool ApAutoConfigurationTask::add_wsc_m1_tlv(const std::string &radio_iface)
 void ApAutoConfigurationTask::handle_ap_autoconfiguration_response(
     ieee1905_1::CmduMessageRx &cmdu_rx, const sMacAddr &src_mac)
 {
-    //This is to fetch the config variable
-    std::string slave_config_file_path =
-        CONF_FILES_WRITABLE_PATH + std::string(BEEROCKS_AGENT) +
-        ".conf"; //search first in platform-specific default directory
-    beerocks::config_file::sConfigSlave beerocks_slave_conf;
-    if (!beerocks::config_file::read_slave_config_file(slave_config_file_path,
-                                                       beerocks_slave_conf)) {
-        slave_config_file_path = mapf::utils::get_install_path() + "config/" +
-                                 std::string(BEEROCKS_AGENT) +
-                                 ".conf"; // if not found, search in beerocks path
-        if (!beerocks::config_file::read_slave_config_file(slave_config_file_path,
-                                                           beerocks_slave_conf)) {
-            std::cout << "config file '" << slave_config_file_path << "' args error." << std::endl;
-            return;
-        }
-    }
     auto db = AgentDB::get();
     if (db->controller_info.bridge_mac != network_utils::ZERO_MAC &&
         src_mac != db->controller_info.bridge_mac) {
@@ -1052,51 +1031,33 @@ void ApAutoConfigurationTask::handle_ap_autoconfiguration_response(
         LOG(ERROR) << "getClass tlvSupportedService failed";
         return;
     }
-    bool controller_found = false;
-    /*  for (int i = 0; i < tlvSupportedService->supported_service_list_length(); i++) {
+    bool controller_found          = false;
+    bool multi_ap_controller_found = false;
+    bool em_ap_controller_found    = false;
+    for (int i = 0; i < tlvSupportedService->supported_service_list_length(); i++) {
         auto supportedServiceTuple = tlvSupportedService->supported_service_list(i);
         if (!std::get<0>(supportedServiceTuple)) {
             LOG(ERROR) << "Invalid tlvSupportedService";
             return;
-        }*/
-    if (beerocks_slave_conf.em_handle_third_party == HANDLE_THIRD_PARTY_ENABLE) {
-        bool multi_ap_controller_found = false;
-        bool em_ap_controller_found    = false;
-        for (int i = 0; i < tlvSupportedService->supported_service_list_length(); i++) {
-            auto supportedServiceTuple = tlvSupportedService->supported_service_list(i);
-            if (!std::get<0>(supportedServiceTuple)) {
-                LOG(ERROR) << "Invalid tlvSupportedService";
-                return;
-            }
-            if (std::get<1>(supportedServiceTuple) ==
-                wfa_map::tlvSupportedService::eSupportedService::MULTI_AP_CONTROLLER) {
-                multi_ap_controller_found = true;
-            }
-            if (std::get<1>(supportedServiceTuple) ==
-                wfa_map::tlvSupportedService::eSupportedService::EM_AP_CONTROLLER) {
-                em_ap_controller_found = true;
-            }
         }
+        if (std::get<1>(supportedServiceTuple) ==
+            wfa_map::tlvSupportedService::eSupportedService::MULTI_AP_CONTROLLER) {
+            multi_ap_controller_found = true;
+        }
+        if (std::get<1>(supportedServiceTuple) ==
+            wfa_map::tlvSupportedService::eSupportedService::EM_AP_CONTROLLER) {
+            em_ap_controller_found = true;
+        }
+    }
+    if (db->em_handle_third_party == HANDLE_THIRD_PARTY_ENABLE) {
 
-        //if (std::get<1>(supportedServiceTuple) ==
-        //  wfa_map::tlvSupportedService::eSupportedService::MULTI_AP_CONTROLLER) {
         if (multi_ap_controller_found && em_ap_controller_found) {
             controller_found = true;
         } else {
             LOG(DEBUG) << "Detected third party vendor controller. Ignore the message.";
         }
     } else {
-        for (int i = 0; i < tlvSupportedService->supported_service_list_length(); i++) {
-            auto supportedServiceTuple = tlvSupportedService->supported_service_list(i);
-            if (!std::get<0>(supportedServiceTuple)) {
-                LOG(ERROR) << "Invalid tlvSupportedService";
-                return;
-            }
-            if (std::get<1>(supportedServiceTuple) ==
-                wfa_map::tlvSupportedService::eSupportedService::MULTI_AP_CONTROLLER) {
-                controller_found = true;
-            }
-        }
+        controller_found = multi_ap_controller_found;
     }
 
     if (!controller_found) {

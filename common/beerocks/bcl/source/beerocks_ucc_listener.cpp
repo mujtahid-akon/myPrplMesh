@@ -690,10 +690,16 @@ void beerocks_ucc_listener::handle_wfa_ca_command(int fd, const std::string &com
         // configuration.
         std::vector<std::vector<std::string>> bss_infos;
         static const std::string bss_info_prefix("bss_info");
+        static const std::string mld_groupID_prefix("mld_groupID");
         for (const auto &token : cmd_tokens_vec) {
-            // Check if token starts with "bss_info", initialize the first element in the
-            // outer vector with the common tokens.
+            // Check if token starts with "bss_info", in case of "bss_info_mld_groupID" add in latest bss infos, otherwise
+            // initialize the first element in the outer vector with the common tokens.
             if (token.compare(0, bss_info_prefix.size(), bss_info_prefix) == 0) {
+                if (token.find(mld_groupID_prefix) != std::string::npos) {
+                    bss_infos.back().push_back(mld_groupID_prefix);
+                    continue;
+                }
+
                 // Push common tokens
                 bss_infos.push_back(common_tokens);
                 bss_infos.back().push_back(bss_info_prefix);
@@ -743,6 +749,7 @@ void beerocks_ucc_listener::handle_wfa_ca_command(int fd, const std::string &com
                 params["first_bss"] = std::string();
                 first               = false;
             }
+
             if (!handle_dev_set_config(params, err_string)) {
                 break;
             }

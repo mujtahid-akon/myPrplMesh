@@ -143,8 +143,7 @@ private:
 
     bool channel_preference_report_ready();
 
-    bool send_channel_preference_report(ieee1905_1::CmduMessageRx &cmdu_rx,
-                                        std::shared_ptr<beerocks_header> beerocks_header);
+    bool send_channel_preference_report();
 
     bool create_channel_preference_tlv(const sMacAddr &radio_mac);
 

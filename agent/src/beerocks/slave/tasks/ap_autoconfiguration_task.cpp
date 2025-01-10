@@ -33,6 +33,7 @@
 #include <tlvf/wfa_map/tlvAgentApMldConfiguration.h>
 #include <tlvf/wfa_map/tlvApRadioIdentifier.h>
 #include <tlvf/wfa_map/tlvChannelScanReportingPolicy.h>
+#include <tlvf/wfa_map/tlvControllerCapability.h>
 #include <tlvf/wfa_map/tlvMetricReportingPolicy.h>
 #include <tlvf/wfa_map/tlvProfile2ApRadioAdvancedCapabilities.h>
 #include <tlvf/wfa_map/tlvProfile2Default802dotQSettings.h>
@@ -998,6 +999,13 @@ void ApAutoConfigurationTask::handle_ap_autoconfiguration_response(
         }
     }
 
+    auto controller_capability_tlv = cmdu_rx.getClass<wfa_map::tlvControllerCapability>();
+    if (controller_capability_tlv) {
+        if (controller_capability_tlv->flags().early_ap_capability) {
+            db->controller_info.early_ap_capability = true;
+        }
+    }
+
     auto tlvSupportedService = cmdu_rx.getClass<wfa_map::tlvSupportedService>();
     if (!tlvSupportedService) {
         LOG(ERROR) << "getClass tlvSupportedService failed";
@@ -1021,7 +1029,7 @@ void ApAutoConfigurationTask::handle_ap_autoconfiguration_response(
             << "Invalid tlvSupportedService - supported service is not MULTI_AP_CONTROLLER";
         return;
     } else {
-        m_btl_ctx.notify_controller_discovery();
+        m_btl_ctx.send_event(slave_thread::eEvent::CONTROLLER_DISCOVERED);
     }
 
     // Mark discovery status completed on band mentioned on the response and fill AgentDB fields.
@@ -1031,6 +1039,13 @@ void ApAutoConfigurationTask::handle_ap_autoconfiguration_response(
     LOG(DEBUG) << "controller_discovered on " << band_name
                << " band, controller bridge_mac=" << src_mac
                << ", prplmesh_controller=" << prplmesh_controller;
+
+    // Send Early AP Capability
+    if (db->controller_info.early_ap_capability &&
+        !db->controller_info.early_ap_capability_report_sent) {
+        db->controller_info.early_ap_capability_report_sent = true;
+        m_btl_ctx.send_event(slave_thread::eEvent::CONTROLLER_EARLY_AP_CAPABILITY);
+    }
 
     // Update the AP Manager with the Multi-AP Controller Profile
     m_btl_ctx.m_radio_managers.do_on_each_radio_manager(

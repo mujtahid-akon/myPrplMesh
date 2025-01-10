@@ -122,10 +122,11 @@ public:
      */
     bool update_vaps_info(const std::string &iface, const beerocks_message::sVapInfo vaps[]);
 
-    /**
-     * @brief Dispatch CONTROLLER_DISCOVERED event
-     */
-    void notify_controller_discovery();
+    enum eEvent : uint8_t {
+        CONTROLLER_DISCOVERED,
+        CONTROLLER_EARLY_AP_CAPABILITY,
+    };
+    bool send_event(eEvent event);
 
 private:
     /**

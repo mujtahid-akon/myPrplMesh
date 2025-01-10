@@ -181,6 +181,8 @@ public:
             wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::PRPLMESH_PROFILE_UNKNOWN;
         bool direct_link_to_controller = false;
         std::chrono::steady_clock::time_point last_controller_contact_time;
+        bool early_ap_capability             = false;
+        bool early_ap_capability_report_sent = false;
     } controller_info;
 
     struct sStatus {

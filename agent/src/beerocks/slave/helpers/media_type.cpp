@@ -11,7 +11,9 @@
 namespace beerocks {
 ieee1905_1::eMediaType MediaType::get_802_11_media_type(const beerocks::AgentDB::sRadio &radio)
 {
-    if (radio.he_supported) {
+    if (radio.eht_supported) {
+        return ieee1905_1::eMediaType::IEEE_802_11BE;
+    } else if (radio.he_supported) {
         return ieee1905_1::eMediaType::IEEE_802_11AX;
     } else if (radio.vht_supported) {
         return ieee1905_1::eMediaType::IEEE_802_11AC_5_GHZ;

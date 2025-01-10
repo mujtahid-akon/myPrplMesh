@@ -2457,6 +2457,8 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
         std::copy_n(notification->params().he_mcs_set, beerocks::message::HE_MCS_SET_SIZE,
                     radio->he_mcs_set.begin());
 
+        radio->eht_supported = notification->params().eht_supported;
+
         save_channel_params_to_db(fronthaul_iface, notification->cs_params());
         if (notification->params().frequency_band != radio->wifi_channel.get_freq_type()) {
             LOG(ERROR) << "Radio wifi channel's frequncy types does not match the frequency type "

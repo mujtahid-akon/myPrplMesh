@@ -356,6 +356,7 @@ typedef struct sNodeHostap {
     uint16_t he_capability;
     uint64_t wifi6_capability;
     uint8_t he_mcs_set[beerocks::message::HE_MCS_SET_SIZE];
+    uint8_t eht_supported;
     //Boolean. When set to 'true', the radio can be used only for zwdfs purpose.
     uint8_t zwdfs;
     //Boolean

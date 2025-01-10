@@ -1544,7 +1544,7 @@ bool ApAutoConfigurationTask::handle_wsc_m2_tlv(
             LOG(ERROR) << "Invalid config data, skip it";
             continue;
         }
-        if (!ap_autoconfiguration_wsc_parse_hidden_ssid(m2, config)) {
+        if (!airties_vs_ap_autoconfiguration_wsc_parse_hidden_ssid(m2, config)) {
             LOG(INFO) << "Hidden SSID parameter not found in Vendor Extension";
         }
 
@@ -1920,14 +1920,14 @@ bool ApAutoConfigurationTask::ap_autoconfiguration_wsc_calculate_keys(
     return true;
 }
 
-bool ApAutoConfigurationTask::ap_autoconfiguration_wsc_parse_hidden_ssid(
+bool ApAutoConfigurationTask::airties_vs_ap_autoconfiguration_wsc_parse_hidden_ssid(
     WSC::m2 &m2, WSC::configData::config &config)
 {
     bool retval = false;
     for (auto &vendor_ext_attr : m2.getAttrList<WSC::cWscAttrVendorExtension>()) {
-        if ((WSC::eWscVendorId::WSC_VENDOR_ID_WFA_4 != vendor_ext_attr->vendor_id_0()) ||
-            (WSC::eWscVendorId::WSC_VENDOR_ID_WFA_5 != vendor_ext_attr->vendor_id_1()) ||
-            (WSC::eWscVendorId::WSC_VENDOR_ID_WFA_6 != vendor_ext_attr->vendor_id_2())) {
+        if ((WSC::eWscVendorId::WSC_VENDOR_ID_AIRTIES_1 != vendor_ext_attr->vendor_id_0()) ||
+            (WSC::eWscVendorId::WSC_VENDOR_ID_AIRTIES_2 != vendor_ext_attr->vendor_id_1()) ||
+            (WSC::eWscVendorId::WSC_VENDOR_ID_AIRTIES_3 != vendor_ext_attr->vendor_id_2())) {
             continue;
         }
 
@@ -1941,9 +1941,6 @@ bool ApAutoConfigurationTask::ap_autoconfiguration_wsc_parse_hidden_ssid(
             config.hidden_ssid = (vendor_data[1] == VENDOR_HIDE_SSID) ? true : false;
             retval             = true;
             break;
-        } else {
-            LOG(INFO) << "VENDOR BSS CFG is not set by the Controller. Value read is: "
-                      << vendor_data[0];
         }
     }
 

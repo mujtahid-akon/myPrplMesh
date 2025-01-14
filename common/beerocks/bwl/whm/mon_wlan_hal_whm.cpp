@@ -507,6 +507,16 @@ bool mon_wlan_hal_whm::channel_scan_dump_cached_results()
                     supported_standards);
         }
 
+        if (map.find("ChannelUtilization") != map.end()) {
+            results.channel_utilization = std::stoul(map["ChannelUtilization"]);
+            results.load_bss_ie_present = 1;
+        }
+
+        if (map.find("StationCount") != map.end()) {
+            results.station_count       = std::stoul(map["StationCount"]);
+            results.load_bss_ie_present = 1;
+        }
+
         LOG(DEBUG) << "Processing results for BSSID:" << results.bssid
                    << " on Channel: " << results.channel;
         event_queue_push(Event::Channel_Scan_Dump_Result, results_notif);
@@ -1035,6 +1045,18 @@ bool mon_wlan_hal_whm::get_scan_results_from_pwhm()
             std::string operating_standards;
             map["OperatingStandards"].get(operating_standards);
             map_cach_bssid["OperatingStandards"] = operating_standards;
+        }
+
+        if (map.find("ChannelUtilization") != map.end()) {
+            std::string ChannelUtilization;
+            map["ChannelUtilization"].get(ChannelUtilization);
+            map_cach_bssid["ChannelUtilization"] = ChannelUtilization;
+        }
+
+        if (map.find("StationCount") != map.end()) {
+            std::string StationCount;
+            map["StationCount"].get(StationCount);
+            map_cach_bssid["StationCount"] = StationCount;
         }
 
         m_scan_results.push_back(map_cach_bssid);

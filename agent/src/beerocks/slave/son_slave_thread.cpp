@@ -3067,6 +3067,13 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
             break;
         }
 
+        for (auto &bss : radio->front.bssids) {
+            if (bss.mac == bssid && bss.backhaul_bss) {
+                m_task_pool.send_event(eTaskType::AP_AUTOCONFIGURATION,
+                                       ApAutoConfigurationTask::eEvent::APPLY_CONFIG_FOR_NEW_IFACE);
+            }
+        }
+
         radio->associated_clients.emplace(
             client_mac, AgentDB::sRadio::sClient{bssid, notification_in->association_frame_length(),
                                                  notification_in->association_frame()});

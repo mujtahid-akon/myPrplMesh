@@ -114,6 +114,8 @@ bool config_file::read_master_config_file(const std::string &config_file_path, s
                         mandatory_master),
         std::make_tuple("credentials_change_timeout_sec=", &conf.credentials_change_timeout_sec,
                         mandatory_master),
+
+        std::make_tuple("use_dataelements_vap_configs=", &conf.use_dataelements_vap_configs, 0),
     };
 
     bool ret_val = (read_config_file(config_file_path, master_conf_args, config_type) &&

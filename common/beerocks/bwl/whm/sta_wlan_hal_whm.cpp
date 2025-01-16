@@ -57,6 +57,7 @@ sta_wlan_hal_whm::sta_wlan_hal_whm(const std::string &iface_name, hal_event_cb_t
         LOG_IF((!ret), ERROR) << "Failed to enable endpoint, path:" << m_ep_path;
     }
 
+    LOG(DEBUG) << "init sta_wlan_hal_whm for " << m_ep_path << " with radio " << m_radio_path;
     subscribe_to_ep_events();
     subscribe_to_ep_wps_events();
     subscribe_to_scan_complete_events();
@@ -730,38 +731,33 @@ bool sta_wlan_hal_whm::enable_profile(int profile_id)
 bool sta_wlan_hal_whm::read_status(Endpoint &endpoint)
 {
     // Path example: WiFi.EndPoint.[IntfName == 'wlan0'].
-    auto endpoint_obj = m_ambiorix_cl.get_object(m_ep_path);
-    if (!endpoint_obj) {
+    auto ep_obj = m_ambiorix_cl.get_object(m_ep_path);
+    if (!ep_obj) {
         LOG(ERROR) << "failed to get endpoint object";
         return false;
     }
 
-    endpoint_obj->read_child(endpoint.connection_status, "ConnectionStatus");
-    endpoint_obj->read_child(endpoint.multi_ap_profile, "MultiAPProfile");
-    endpoint_obj->read_child(endpoint.multi_ap_primary_vlanid, "MultiAPVlanId");
+    ep_obj->read_child(endpoint.connection_status, "ConnectionStatus");
+    ep_obj->read_child(endpoint.multi_ap_profile, "MultiAPProfile");
+    ep_obj->read_child(endpoint.multi_ap_primary_vlanid, "MultiAPVlanId");
 
-    std::string ssid_ref, ssid_path;
-    if (endpoint_obj->read_child(ssid_ref, "SSIDReference") &&
-        m_ambiorix_cl.resolve_path(ssid_ref + ".", ssid_path)) {
-        auto ssid_obj = m_ambiorix_cl.get_object(ssid_path);
-        if (!ssid_obj) {
-            LOG(ERROR) << "failed to get ssid object";
-            return false;
-        }
-        ssid_obj->read_child(endpoint.bssid, "BSSID");
-        ssid_obj->read_child(endpoint.ssid, "SSID");
-        std::string radio_path;
-        if (ssid_obj->read_child(radio_path, "LowerLayers")) {
-            m_radio_path = radio_path;
-        }
-        if (!m_ambiorix_cl.get_param(endpoint.channel, m_radio_path, "Channel")) {
-            LOG(ERROR) << "failed to get radio channel from: " << m_radio_path;
-            return false;
-        }
+    auto ssid_obj = m_ambiorix_cl.get_object(wbapi_utils::get_path_ssid_reference(*ep_obj));
+    if (!ssid_obj) {
+        LOG(ERROR) << "failed to get ssid object from endpoint " << m_ep_path;
+        return false;
+    }
+
+    ssid_obj->read_child(endpoint.bssid, "BSSID");
+    ssid_obj->read_child(endpoint.ssid, "SSID");
+
+    if (m_radio_path.empty() ||
+        !m_ambiorix_cl.get_param(endpoint.channel, m_radio_path, "Channel")) {
+        LOG(WARNING) << "failed to update radio channel from: " << m_radio_path;
+        return false;
     }
 
     std::string profile_ref, profile_path;
-    if (endpoint_obj->read_child(profile_ref, "ProfileReference") &&
+    if (ep_obj->read_child(profile_ref, "ProfileReference") &&
         m_ambiorix_cl.resolve_path(profile_ref + ".", profile_path)) {
         endpoint.active_profile_id = wbapi_utils::get_object_id(profile_path);
     }

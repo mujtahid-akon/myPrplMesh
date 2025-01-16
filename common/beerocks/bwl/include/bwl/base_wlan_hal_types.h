@@ -148,7 +148,7 @@ inline std::ostream &operator<<(std::ostream &out, eRadioState radio_state)
 }
 
 struct sChannelInfo {
-    int8_t tx_power_dbm;
+    int8_t tx_power_dbm = 0;
     beerocks::eDfsState dfs_state;
     // Key: eWiFiBandwidth, Value: Rank
     std::map<beerocks::eWiFiBandwidth, int32_t> bw_info_list;

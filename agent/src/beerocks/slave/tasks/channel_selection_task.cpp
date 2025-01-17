@@ -871,7 +871,7 @@ void ChannelSelectionTask::handle_vs_channels_list_response(
         if (channel_preference_report_ready()) {
 
             // Need to send the preference report back to the controller
-            if (!send_channel_preference_report(cmdu_rx, beerocks_header)) {
+            if (!send_channel_preference_report()) {
                 LOG(ERROR) << "Failed to send the CHANNEL_PREFERENCE_REPORT_MESSAGE!";
             }
 
@@ -1107,8 +1107,7 @@ bool ChannelSelectionTask::channel_preference_report_ready()
     return true;
 }
 
-bool ChannelSelectionTask::send_channel_preference_report(
-    ieee1905_1::CmduMessageRx &cmdu_rx, std::shared_ptr<beerocks_header> beerocks_header)
+bool ChannelSelectionTask::send_channel_preference_report()
 {
 
     LOG(INFO) << "Building CHANNEL_PREFERENCE_REPORT_MESSAGE";

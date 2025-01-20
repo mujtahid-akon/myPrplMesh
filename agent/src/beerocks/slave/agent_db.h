@@ -620,6 +620,7 @@ public:
         std::vector<sAffiliatedAP> affiliated_aps;
     } sMLDConfiguration;
     std::vector<sMLDConfiguration> mld_configurations;
+    std::string em_handle_third_party;
 
 private:
     std::list<sRadio> m_radios;

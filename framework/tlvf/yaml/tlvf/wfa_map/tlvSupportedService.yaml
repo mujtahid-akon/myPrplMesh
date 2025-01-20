@@ -21,3 +21,5 @@ eSupportedService:
   _enum_storage: uint8_t
   MULTI_AP_CONTROLLER: 0x00
   MULTI_AP_AGENT: 0x01
+  EM_AP_CONTROLLER: 0xA0
+  EM_AP_AGENT: 0xA1

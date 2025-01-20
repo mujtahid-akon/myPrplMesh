@@ -707,22 +707,45 @@ bool TopologyTask::add_supported_service_tlv()
     auto db = AgentDB::get();
 
     // only agent or controller+agent
-    const size_t number_of_supported_services = db->device_conf.local_controller ? 2 : 1;
+    size_t number_of_supported_services = 2;
+    if (db->device_conf.local_controller) {
+        number_of_supported_services += 2;
+    }
 
     if (!tlvSupportedService->alloc_supported_service_list(number_of_supported_services)) {
         LOG(ERROR) << "alloc_supported_service_list failed";
         return false;
     }
 
-    for (size_t i = 0; i < number_of_supported_services; ++i) {
+    for (int i = 0; i < tlvSupportedService->supported_service_list_length(); i++) {
         auto supportedServiceTuple = tlvSupportedService->supported_service_list(i);
         if (!std::get<0>(supportedServiceTuple)) {
-            LOG(ERROR) << "Failed accessing supported_service_list(" << i << ")";
+            LOG(ERROR) << "Invalid tlvSupportedService";
             return false;
         }
-        std::get<1>(supportedServiceTuple) =
-            (i == 0) ? wfa_map::tlvSupportedService::eSupportedService::MULTI_AP_AGENT
-                     : wfa_map::tlvSupportedService::eSupportedService::MULTI_AP_CONTROLLER;
+        if (db->device_conf.local_controller) {
+            if (i == 0) {
+                std::get<1>(supportedServiceTuple) =
+                    wfa_map::tlvSupportedService::eSupportedService::MULTI_AP_CONTROLLER;
+            } else if (i == 1) {
+                std::get<1>(supportedServiceTuple) =
+                    wfa_map::tlvSupportedService::eSupportedService::MULTI_AP_AGENT;
+            } else if (i == 2) {
+                std::get<1>(supportedServiceTuple) =
+                    wfa_map::tlvSupportedService::eSupportedService::EM_AP_CONTROLLER;
+            } else if (i == 3) {
+                std::get<1>(supportedServiceTuple) =
+                    wfa_map::tlvSupportedService::eSupportedService::EM_AP_AGENT;
+            }
+        } else {
+            if (i == 0) {
+                std::get<1>(supportedServiceTuple) =
+                    wfa_map::tlvSupportedService::eSupportedService::MULTI_AP_AGENT;
+            } else if (i == 1) {
+                std::get<1>(supportedServiceTuple) =
+                    wfa_map::tlvSupportedService::eSupportedService::EM_AP_AGENT;
+            }
+        }
     }
 
     return true;

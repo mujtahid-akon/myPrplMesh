@@ -37,6 +37,8 @@ class tlvSupportedService : public BaseClass
         enum eSupportedService: uint8_t {
             MULTI_AP_CONTROLLER = 0x0,
             MULTI_AP_AGENT = 0x1,
+            EM_AP_CONTROLLER = 0xa0,
+            EM_AP_AGENT = 0xa1,
         };
         // Enum AutoPrint generated code snippet begining- DON'T EDIT!
         // clang-format off
@@ -44,6 +46,8 @@ class tlvSupportedService : public BaseClass
             switch (enum_value) {
             case MULTI_AP_CONTROLLER: return "MULTI_AP_CONTROLLER";
             case MULTI_AP_AGENT:      return "MULTI_AP_AGENT";
+            case EM_AP_CONTROLLER:    return "EM_AP_CONTROLLER";
+            case EM_AP_AGENT:         return "EM_AP_AGENT";
             }
             static std::string out_str = std::to_string(int(enum_value));
             return out_str.c_str();

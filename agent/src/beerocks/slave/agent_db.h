@@ -622,6 +622,7 @@ public:
     } sMLDConfiguration;
     std::vector<sMLDConfiguration> mld_configurations;
     std::string em_handle_third_party;
+    bool em_ap_controller_found = false;
 
 private:
     std::list<sRadio> m_radios;

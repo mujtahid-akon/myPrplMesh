@@ -58,6 +58,8 @@ using namespace multi_vendor;
 
 static constexpr uint8_t AUTOCONFIG_DISCOVERY_TIMEOUT_SECONDS = 3;
 #define HANDLE_THIRD_PARTY_ENABLE "1"
+#define VENDOR_HIDE_SSID 0x80
+#define VENDOR_BSS_CFG 0x02
 
 #define FSM_MOVE_STATE(radio_iface, new_state)                                                     \
     ({                                                                                             \
@@ -1046,7 +1048,6 @@ void ApAutoConfigurationTask::handle_ap_autoconfiguration_response(
     }
     bool controller_found          = false;
     bool multi_ap_controller_found = false;
-    bool em_ap_controller_found    = false;
     for (int i = 0; i < tlvSupportedService->supported_service_list_length(); i++) {
         auto supportedServiceTuple = tlvSupportedService->supported_service_list(i);
         if (!std::get<0>(supportedServiceTuple)) {
@@ -1059,12 +1060,12 @@ void ApAutoConfigurationTask::handle_ap_autoconfiguration_response(
         }
         if (std::get<1>(supportedServiceTuple) ==
             wfa_map::tlvSupportedService::eSupportedService::EM_AP_CONTROLLER) {
-            em_ap_controller_found = true;
+            db->em_ap_controller_found = true;
         }
     }
     if (db->em_handle_third_party == HANDLE_THIRD_PARTY_ENABLE) {
 
-        if (multi_ap_controller_found && em_ap_controller_found) {
+        if (multi_ap_controller_found && (db->em_ap_controller_found)) {
             controller_found = true;
         } else {
             LOG(DEBUG) << "Detected third party vendor controller. Ignore the message.";
@@ -1544,8 +1545,11 @@ bool ApAutoConfigurationTask::handle_wsc_m2_tlv(
             LOG(ERROR) << "Invalid config data, skip it";
             continue;
         }
-        if (!airties_vs_ap_autoconfiguration_wsc_parse_hidden_ssid(m2, config)) {
-            LOG(INFO) << "Hidden SSID parameter not found in Vendor Extension";
+        if (db->em_ap_controller_found) {
+            LOG(DEBUG) << "EM+ controller is found. Check for Hidden SSID parameters";
+            if (!airties_vs_ap_autoconfiguration_wsc_parse_hidden_ssid(m2, config)) {
+                LOG(INFO) << "Hidden SSID parameter not found in Vendor Extension";
+            }
         }
 
         bool bSTA = bool(config.bss_type & WSC::eWscVendorExtSubelementBssType::BACKHAUL_STA);

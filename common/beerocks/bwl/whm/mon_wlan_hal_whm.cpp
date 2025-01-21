@@ -846,6 +846,8 @@ bool mon_wlan_hal_whm::sta_unassoc_rssi_measurement(
         amxc_ts_t time;
         memset(&time, 0, sizeof(amxc_ts_t));
         amxc_ts_parse(&time, time_stamp_str.c_str(), time_stamp_str.size());
+        uint32_t timestamp_ms = time.sec * 1000 + time.nsec / 1000000;
+        // TimeStamp is datetime as per RFC3339 and maybe contains fractions of seconds information
 
         if (new_list.find(mac_address_amx) != new_list.end()) {
             //NonAssociatedDevice exists -->get the result and update the data
@@ -854,14 +856,15 @@ bool mon_wlan_hal_whm::sta_unassoc_rssi_measurement(
                 signal_strength,
                 channel,
                 operating_class,
-                (uint32_t)time.sec,
+                timestamp_ms,
             };
             stats.push_back(new_stat);
             LOG(DEBUG) << " read unassociated station stats for mac_address: " << mac_address_amx
                        << " SignalStrength: " << signal_strength << " channel: " << channel
                        << " operating_class: " << operating_class
                        << " TimeStamp(string): " << time_stamp_str
-                       << " and TimeStamp(seconds): " << (uint32_t)time.sec;
+                       << " and TimeStamp(seconds): " << time.sec
+                       << " and TimeStamp(milliseconds): " << timestamp_ms;
             new_list.erase(mac_address_amx); // consumed!
         } else { // -->controller is not interested on it any more--> remove it from the dm
             amx_un_stations_to_be_removed.push_back(mac_address_amx);

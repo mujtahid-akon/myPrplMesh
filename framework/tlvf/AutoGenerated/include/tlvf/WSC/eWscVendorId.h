@@ -24,14 +24,20 @@ enum eWscVendorId {
     WSC_VENDOR_ID_WFA_1 = 0x0,
     WSC_VENDOR_ID_WFA_2 = 0x37,
     WSC_VENDOR_ID_WFA_3 = 0x2a,
+    WSC_VENDOR_ID_AIRTIES_1 = 0x88,
+    WSC_VENDOR_ID_AIRTIES_2 = 0x41,
+    WSC_VENDOR_ID_AIRTIES_3 = 0xfc,
 };
 // Enum AutoPrint generated code snippet begining- DON'T EDIT!
 // clang-format off
 static const char *eWscVendorId_str(eWscVendorId enum_value) {
     switch (enum_value) {
-    case WSC_VENDOR_ID_WFA_1: return "WSC_VENDOR_ID_WFA_1";
-    case WSC_VENDOR_ID_WFA_2: return "WSC_VENDOR_ID_WFA_2";
-    case WSC_VENDOR_ID_WFA_3: return "WSC_VENDOR_ID_WFA_3";
+    case WSC_VENDOR_ID_WFA_1:     return "WSC_VENDOR_ID_WFA_1";
+    case WSC_VENDOR_ID_WFA_2:     return "WSC_VENDOR_ID_WFA_2";
+    case WSC_VENDOR_ID_WFA_3:     return "WSC_VENDOR_ID_WFA_3";
+    case WSC_VENDOR_ID_AIRTIES_1: return "WSC_VENDOR_ID_AIRTIES_1";
+    case WSC_VENDOR_ID_AIRTIES_2: return "WSC_VENDOR_ID_AIRTIES_2";
+    case WSC_VENDOR_ID_AIRTIES_3: return "WSC_VENDOR_ID_AIRTIES_3";
     }
     static std::string out_str = std::to_string(int(enum_value));
     return out_str.c_str();

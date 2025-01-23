@@ -58,6 +58,8 @@ using namespace multi_vendor;
 
 static constexpr uint8_t AUTOCONFIG_DISCOVERY_TIMEOUT_SECONDS = 3;
 #define HANDLE_THIRD_PARTY_ENABLE "1"
+#define VENDOR_HIDE_SSID 0x80
+#define VENDOR_BSS_CFG 0x02
 
 #define FSM_MOVE_STATE(radio_iface, new_state)                                                     \
     ({                                                                                             \
@@ -1046,7 +1048,6 @@ void ApAutoConfigurationTask::handle_ap_autoconfiguration_response(
     }
     bool controller_found          = false;
     bool multi_ap_controller_found = false;
-    bool em_ap_controller_found    = false;
     for (int i = 0; i < tlvSupportedService->supported_service_list_length(); i++) {
         auto supportedServiceTuple = tlvSupportedService->supported_service_list(i);
         if (!std::get<0>(supportedServiceTuple)) {
@@ -1059,12 +1060,12 @@ void ApAutoConfigurationTask::handle_ap_autoconfiguration_response(
         }
         if (std::get<1>(supportedServiceTuple) ==
             wfa_map::tlvSupportedService::eSupportedService::EM_AP_CONTROLLER) {
-            em_ap_controller_found = true;
+            db->em_ap_controller_found = true;
         }
     }
     if (db->em_handle_third_party == HANDLE_THIRD_PARTY_ENABLE) {
 
-        if (multi_ap_controller_found && em_ap_controller_found) {
+        if (multi_ap_controller_found && (db->em_ap_controller_found)) {
             controller_found = true;
         } else {
             LOG(DEBUG) << "Detected third party vendor controller. Ignore the message.";
@@ -1544,6 +1545,12 @@ bool ApAutoConfigurationTask::handle_wsc_m2_tlv(
             LOG(ERROR) << "Invalid config data, skip it";
             continue;
         }
+        if (db->em_ap_controller_found) {
+            LOG(DEBUG) << "EM+ controller is found. Check for Hidden SSID parameters";
+            if (!airties_vs_ap_autoconfiguration_wsc_parse_hidden_ssid(m2, config)) {
+                LOG(INFO) << "Hidden SSID parameter not found in Vendor Extension";
+            }
+        }
 
         bool bSTA = bool(config.bss_type & WSC::eWscVendorExtSubelementBssType::BACKHAUL_STA);
         bool fBSS = bool(config.bss_type & WSC::eWscVendorExtSubelementBssType::FRONTHAUL_BSS);
@@ -1563,6 +1570,7 @@ bool ApAutoConfigurationTask::handle_wsc_m2_tlv(
         ss << "fBSS: " << fBSS << std::endl;
         ss << "bBSS: " << bBSS << std::endl;
         ss << "teardown: " << teardown << std::endl;
+        ss << "hidden_ssid " << config.hidden_ssid << std::endl;
         if (bBSS) {
             ss << "profile1_backhaul_sta_association_disallowed: " << bBSS_p1_disallowed;
             ss << "profile2_backhaul_sta_association_disallowed: " << bBSS_p2_disallowed;
@@ -1916,6 +1924,34 @@ bool ApAutoConfigurationTask::ap_autoconfiguration_wsc_calculate_keys(
     return true;
 }
 
+bool ApAutoConfigurationTask::airties_vs_ap_autoconfiguration_wsc_parse_hidden_ssid(
+    WSC::m2 &m2, WSC::configData::config &config)
+{
+    bool retval = false;
+    for (auto &vendor_ext_attr : m2.getAttrList<WSC::cWscAttrVendorExtension>()) {
+        if ((WSC::eWscVendorId::WSC_VENDOR_ID_AIRTIES_1 != vendor_ext_attr->vendor_id_0()) ||
+            (WSC::eWscVendorId::WSC_VENDOR_ID_AIRTIES_2 != vendor_ext_attr->vendor_id_1()) ||
+            (WSC::eWscVendorId::WSC_VENDOR_ID_AIRTIES_3 != vendor_ext_attr->vendor_id_2())) {
+            continue;
+        }
+
+        LOG(INFO) << "Vendor OUI: " << vendor_ext_attr->vendor_id_0()
+                  << vendor_ext_attr->vendor_id_1() << vendor_ext_attr->vendor_id_2()
+                  << "is received";
+        auto vendor_data = vendor_ext_attr->vendor_data();
+
+        if (vendor_data[0] == VENDOR_BSS_CFG) {
+            //Hidden BSS attribute is set
+            config.hidden_ssid = (vendor_data[1] == VENDOR_HIDE_SSID) ? true : false;
+            retval             = true;
+            break;
+        }
+    }
+
+    LOG(INFO) << "Hidden SSID is set to " << config.hidden_ssid;
+    return retval;
+}
+
 bool ApAutoConfigurationTask::ap_autoconfiguration_wsc_authenticate(
     const std::string &fronthaul_iface, WSC::m2 &m2, uint8_t authkey[32])
 {
@@ -2139,6 +2175,9 @@ bool ApAutoConfigurationTask::validate_reconfiguration(
                 bool(config.bss_type & WSC::eWscVendorExtSubelementBssType::FRONTHAUL_BSS)) {
                 matching_fields++;
             }
+            if (bss.hidden_ssid && bool(config.hidden_ssid)) {
+                matching_fields++;
+            }
 
             return (matching_fields >= minimal_similarity);
         };
@@ -2176,6 +2215,9 @@ bool ApAutoConfigurationTask::validate_reconfiguration(
             !bool(config.bss_type & WSC::eWscVendorExtSubelementBssType::FRONTHAUL_BSS)) {
             LOG(DEBUG) << "BSS type needs reconfiguration: bss.fronthaul_bss: " << bss.fronthaul_bss
                        << " bss_type: " << config.bss_type;
+            return true;
+        }
+        if (bss.hidden_ssid && !bool(config.hidden_ssid)) {
             return true;
         }
 
@@ -2243,6 +2285,7 @@ bool ApAutoConfigurationTask::validate_reconfiguration(
             iter->encr_type   = remaining_bss.encr_type;
             iter->network_key = remaining_bss.network_key;
             iter->bss_type    = remaining_bss.bss_type;
+            iter->hidden_ssid = remaining_bss.hidden_ssid;
 
         } else if (final_config.size() < radio->front.radio_max_bss) {
             LOG(DEBUG) << "SSID " << remaining_bss.ssid
@@ -2262,7 +2305,9 @@ bool ApAutoConfigurationTask::validate_reconfiguration(
                       << ", network_key: " << config.network_key
                       << ", authentication_type: " << std::hex << int(config.auth_type)
                       << ", encryption_type: " << std::hex << int(config.encr_type)
-                      << ", bss_type: " << std::hex << int(config.bss_type) << std::endl;
+                      << ", bss_type: " << std::hex << int(config.bss_type) << std::endl
+                      << ", Hidden SSID: " << config.hidden_ssid << ", bss_type: " << std::hex
+                      << int(config.bss_type) << std::endl;
     }
 
     // Set final configuration.
@@ -2317,13 +2362,15 @@ bool ApAutoConfigurationTask::send_ap_bss_configuration_message(
         ss << "- SSID: " << config.ssid << std::endl
            << "- Key: " << config.network_key << std::endl
            << "- Auth: " << std::hex << int(config.auth_type) << std::endl
-           << "- Encr: " << std::hex << int(config.encr_type) << std::endl;
+           << "- Encr: " << std::hex << int(config.encr_type) << std::endl
+           << "- Hidden_SSID: " << config.hidden_ssid << std::endl;
 
         c->set_ssid(config.ssid);
         c->set_network_key(config.network_key);
         c->authentication_type_attr().data = config.auth_type;
         c->encryption_type_attr().data     = config.encr_type;
         c->mld_id()                        = config.mld_id;
+        c->hidden_ssid()                   = config.hidden_ssid;
         request->add_wifi_credentials(c);
     }
     LOG(INFO) << "Sending reconfiguration: " << std::endl << ss.str();

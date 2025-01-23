@@ -276,7 +276,18 @@ private:
     bool ap_autoconfiguration_wsc_parse_encrypted_settings(WSC::m2 &m2, uint8_t authkey[32],
                                                            uint8_t keywrapkey[16],
                                                            WSC::configData::config &config);
-
+    /**
+     * @brief Parse the vendor extension from m2 for hidden SSID bit, 
+     * and load that into the BSS configuration
+     *
+     * This BSS configuration will be used to hide or unhide of the respective SSIDs.
+     *
+     * @param [in] m2 WSC M2 TLV from the Controller.
+     * @param [out] config BSS configuration.
+     * @return true on success, otherwise false.
+     */
+    bool airties_vs_ap_autoconfiguration_wsc_parse_hidden_ssid(WSC::m2 &m2,
+                                                               WSC::configData::config &config);
     bool add_wsc_m1_tlv(const std::string &radio_iface);
 };
 

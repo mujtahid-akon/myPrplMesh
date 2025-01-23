@@ -147,6 +147,9 @@ cConfigData:
   mld_id:
     _type: int8_t
     _value: 0
+  hidden_ssid:
+    _type: uint8_t
+    _value: 0
 
 cWscAttrEncryptedSettings:
   _type: class

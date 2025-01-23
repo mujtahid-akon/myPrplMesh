@@ -374,6 +374,42 @@ typedef struct sNodeHostap {
     }
 } __attribute__((packed)) sNodeHostap;
 
+typedef struct sNodeHostapVendorSpec {
+    char iface_name[beerocks::message::IFACE_NAME_LENGTH];
+    uint8_t iface_type;
+    sMacAddr iface_mac;
+    uint8_t ant_num;
+    uint8_t ant_gain;
+    uint8_t tx_power;
+    beerocks::eFreqType frequency_band;
+    beerocks::eWiFiBandwidth max_bandwidth;
+    uint8_t ht_supported;
+    uint8_t ht_capability;
+    uint8_t ht_mcs_set[beerocks::message::HT_MCS_SET_SIZE];
+    uint8_t vht_supported;
+    uint16_t vht_capability;
+    uint8_t vht_mcs_set[beerocks::message::VHT_MCS_SET_SIZE];
+    uint8_t he_supported;
+    uint16_t he_capability;
+    uint64_t wifi6_capability;
+    uint8_t he_mcs_set[beerocks::message::HE_MCS_SET_SIZE];
+    //Boolean. When set to 'true', the radio can be used only for zwdfs purpose.
+    uint8_t zwdfs;
+    //Boolean
+    uint8_t hybrid_mode_supported;
+    void struct_swap(){
+        iface_mac.struct_swap();
+        tlvf_swap(8*sizeof(beerocks::eFreqType), reinterpret_cast<uint8_t*>(&frequency_band));
+        tlvf_swap(8*sizeof(beerocks::eWiFiBandwidth), reinterpret_cast<uint8_t*>(&max_bandwidth));
+        tlvf_swap(16, reinterpret_cast<uint8_t*>(&vht_capability));
+        tlvf_swap(16, reinterpret_cast<uint8_t*>(&he_capability));
+        tlvf_swap(64, reinterpret_cast<uint8_t*>(&wifi6_capability));
+    }
+    void struct_init(){
+        iface_mac.struct_init();
+    }
+} __attribute__((packed)) sNodeHostapVendorSpec;
+
 typedef struct sVapsList {
     sVapInfo vaps[beerocks::IFACE_TOTAL_VAPS];
     void struct_swap(){

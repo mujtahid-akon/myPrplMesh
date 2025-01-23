@@ -809,7 +809,6 @@ bool ApAutoConfigurationTask::send_ap_autoconfiguration_wsc_m1_message(
     notification->hostap().wifi6_capability = radio->wifi6_capability;
     std::copy_n(radio->he_mcs_set.begin(), beerocks::message::HE_MCS_SET_SIZE,
                 notification->hostap().he_mcs_set);
-    notification->hostap().eht_supported = radio->eht_supported;
 
     notification->hostap().ant_gain = config.radios.at(radio_iface).hostap_ant_gain;
 

@@ -81,7 +81,7 @@ class cACTION_CONTROL_SLAVE_JOINED_NOTIFICATION : public BaseClass
         sPlatformSettings& platform_settings();
         sWlanSettings& wlan_settings();
         sBackhaulParams& backhaul_params();
-        sNodeHostap& hostap();
+        sNodeHostapVendorSpec& hostap();
         sApChannelSwitch& cs_params();
         uint8_t& low_pass_filter_on();
         uint8_t& enable_repeater_mode();
@@ -98,7 +98,7 @@ class cACTION_CONTROL_SLAVE_JOINED_NOTIFICATION : public BaseClass
         sPlatformSettings* m_platform_settings = nullptr;
         sWlanSettings* m_wlan_settings = nullptr;
         sBackhaulParams* m_backhaul_params = nullptr;
-        sNodeHostap* m_hostap = nullptr;
+        sNodeHostapVendorSpec* m_hostap = nullptr;
         sApChannelSwitch* m_cs_params = nullptr;
         uint8_t* m_low_pass_filter_on = nullptr;
         uint8_t* m_enable_repeater_mode = nullptr;

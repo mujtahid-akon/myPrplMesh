@@ -538,7 +538,11 @@ void LinkMetricsCollectionTask::handle_unassociated_sta_link_metrics_query(
             radio->front.iface_mac, std::unordered_map<uint8_t, std::list<sMacAddr>>()));
     }
 
-    bool station_connected(false); //if a station is already connected to the agent
+    if (!m_cmdu_tx.create(message_id, ieee1905_1::eMessageType::ACK_MESSAGE)) {
+        LOG(ERROR) << "cmdu creation of type ACK_MESSAGE, has failed";
+        return;
+    }
+
     for (size_t count = 0; count < unassociated_sta_link_metrics_query_tlv->channel_list_length();
          count++) {
         auto &one_channel_params =
@@ -559,7 +563,7 @@ void LinkMetricsCollectionTask::handle_unassociated_sta_link_metrics_query(
                     auto &un_station_mac = std::get<1>(one_channel_params.sta_list(internal_count));
                     if (radio->associated_clients.find(un_station_mac) !=
                         radio->associated_clients.end()) {
-                        station_connected = true;
+
                         /*
                     If any of the STAs specified in the Unassociated STA Link Metrics Query message is associated with
                     any BSS operated by the Multi-AP Agent (an error scenario), for each of those associated STAs, the Multi-AP Agent shall
@@ -575,8 +579,7 @@ void LinkMetricsCollectionTask::handle_unassociated_sta_link_metrics_query(
                             wfa_map::tlvErrorCode::STA_ASSOCIATED_WITH_A_BSS_OPERATED_BY_THE_AGENT;
 
                         error_code_tlv->sta_mac() = un_station_mac;
-                        // send the ack containing the error
-                        m_btl_ctx.send_cmdu_to_controller({}, m_cmdu_tx);
+
                         LOG(WARNING)
                             << " Station with mac_addr: " << tlvf::mac_to_string(un_station_mac)
                             << " is already connected to the radio with mac_addr: "
@@ -588,14 +591,8 @@ void LinkMetricsCollectionTask::handle_unassociated_sta_link_metrics_query(
             }
         }
     }
-    if (!station_connected) { // if station is connected, an acknowledgment including an error message is already sent
-        const auto mid      = cmdu_rx.getMessageId();
-        auto cmdu_tx_header = m_cmdu_tx.create(mid, ieee1905_1::eMessageType::ACK_MESSAGE);
-        if (!cmdu_tx_header) {
-            LOG(ERROR) << "cmdu creation of type ACK_MESSAGE, has failed";
-            return;
-        }
-    }
+    // send the ack potentially containing the error code(s)
+    m_btl_ctx.send_cmdu_to_controller({}, m_cmdu_tx);
 
     //send differents telemeries for each radio
     for (auto &radio : map_stations_per_radio) {

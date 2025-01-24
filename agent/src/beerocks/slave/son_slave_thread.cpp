@@ -3681,10 +3681,14 @@ bool slave_thread::handle_cmdu_monitor_message(const std::string &fronthaul_ifac
             }
 
             stations_stats one_station_stats;
-            one_station_stats.channel_number                   = station_in.channel;
-            one_station_stats.uplink_rcpi_dbm_enc              = station_in.signal_strength;
-            one_station_stats.sta_mac                          = station_in.sta_mac;
-            one_station_stats.measurement_to_report_delta_msec = station_in.time_stamp;
+            one_station_stats.channel_number      = station_in.channel;
+            one_station_stats.uplink_rcpi_dbm_enc = station_in.signal_strength;
+            one_station_stats.sta_mac             = station_in.sta_mac;
+            one_station_stats.measurement_to_report_delta_msec =
+                (uint32_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                    std::chrono::steady_clock::now().time_since_epoch() -
+                    std::chrono::milliseconds(station_in.time_stamp))
+                    .count();
 
             map_stations_per_operating_class[station_in.operating_class].push_back(
                 one_station_stats);

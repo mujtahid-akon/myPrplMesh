@@ -188,6 +188,8 @@ struct RadioInfo {
     /**< 32-byte attribute containing the MCS set as defined in 802.11ax */
     std::array<uint8_t, beerocks::message::HE_MCS_SET_SIZE> he_mcs_set;
 
+    bool eht_supported = false; ///< Is 802.11be (Extremely High Throughput) protocol supported
+
     ChanSwReason last_csa_sw_reason = ChanSwReason::Unknown;
     // Key = channel
     std::map<uint8_t, sChannelInfo> channels_list;

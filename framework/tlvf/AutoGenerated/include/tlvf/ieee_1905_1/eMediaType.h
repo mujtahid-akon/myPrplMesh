@@ -32,6 +32,7 @@ enum eMediaType: uint16_t {
     IEEE_802_11AD_60_GHZ = 0x106,
     IEEE_802_11AF = 0x107,
     IEEE_802_11AX = 0x108,
+    IEEE_802_11BE = 0x109,
     IEEE_1901_WAVELET = 0x200,
     IEEE_1901_FFT = 0x201,
     MOCA_V1_1 = 0x300,
@@ -52,6 +53,7 @@ static const char *eMediaType_str(eMediaType enum_value) {
     case IEEE_802_11AD_60_GHZ:          return "IEEE_802_11AD_60_GHZ";
     case IEEE_802_11AF:                 return "IEEE_802_11AF";
     case IEEE_802_11AX:                 return "IEEE_802_11AX";
+    case IEEE_802_11BE:                 return "IEEE_802_11BE";
     case IEEE_1901_WAVELET:             return "IEEE_1901_WAVELET";
     case IEEE_1901_FFT:                 return "IEEE_1901_FFT";
     case MOCA_V1_1:                     return "MOCA_V1_1";

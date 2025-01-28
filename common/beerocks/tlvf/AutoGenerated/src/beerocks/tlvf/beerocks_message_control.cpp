@@ -185,8 +185,8 @@ sBackhaulParams& cACTION_CONTROL_SLAVE_JOINED_NOTIFICATION::backhaul_params() {
     return (sBackhaulParams&)(*m_backhaul_params);
 }
 
-sNodeHostap& cACTION_CONTROL_SLAVE_JOINED_NOTIFICATION::hostap() {
-    return (sNodeHostap&)(*m_hostap);
+sNodeHostapVendorSpec& cACTION_CONTROL_SLAVE_JOINED_NOTIFICATION::hostap() {
+    return (sNodeHostapVendorSpec&)(*m_hostap);
 }
 
 sApChannelSwitch& cACTION_CONTROL_SLAVE_JOINED_NOTIFICATION::cs_params() {
@@ -245,7 +245,7 @@ size_t cACTION_CONTROL_SLAVE_JOINED_NOTIFICATION::get_initial_size()
     class_size += sizeof(sPlatformSettings); // platform_settings
     class_size += sizeof(sWlanSettings); // wlan_settings
     class_size += sizeof(sBackhaulParams); // backhaul_params
-    class_size += sizeof(sNodeHostap); // hostap
+    class_size += sizeof(sNodeHostapVendorSpec); // hostap
     class_size += sizeof(sApChannelSwitch); // cs_params
     class_size += sizeof(uint8_t); // low_pass_filter_on
     class_size += sizeof(uint8_t); // enable_repeater_mode
@@ -282,9 +282,9 @@ bool cACTION_CONTROL_SLAVE_JOINED_NOTIFICATION::init()
         return false;
     }
     if (!m_parse__) { m_backhaul_params->struct_init(); }
-    m_hostap = reinterpret_cast<sNodeHostap*>(m_buff_ptr__);
-    if (!buffPtrIncrementSafe(sizeof(sNodeHostap))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(sNodeHostap) << ") Failed!";
+    m_hostap = reinterpret_cast<sNodeHostapVendorSpec*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(sNodeHostapVendorSpec))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(sNodeHostapVendorSpec) << ") Failed!";
         return false;
     }
     if (!m_parse__) { m_hostap->struct_init(); }

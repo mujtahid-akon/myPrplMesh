@@ -399,6 +399,7 @@ bool base_wlan_hal_whm::fsm_setup() { return true; }
 HALState base_wlan_hal_whm::attach(bool block)
 {
     m_radio_info.radio_state = eRadioState::ENABLED;
+    populate_channels_max_tx_power();
     refresh_radio_info();
     return (m_hal_state = HALState::Operational);
 }
@@ -443,9 +444,8 @@ bool base_wlan_hal_whm::refresh_radio_info()
     if (radio->read_child(s_val, "PossibleChannels")) {
         auto channels_vec = beerocks::string_utils::str_split(s_val, ',');
         for (auto &chan_str : channels_vec) {
-            uint32_t chanNum          = beerocks::string_utils::stoi(chan_str);
-            auto &channel_info        = m_radio_info.channels_list[chanNum];
-            channel_info.tx_power_dbm = m_radio_info.tx_power;
+            uint32_t chanNum   = beerocks::string_utils::stoi(chan_str);
+            auto &channel_info = m_radio_info.channels_list[chanNum];
 
             std::unordered_set<std::string> cleared_channels_set;
             std::unordered_set<std::string> radar_triggered_channels_set;
@@ -652,7 +652,17 @@ bool base_wlan_hal_whm::refresh_radio_info()
         beerocks::utils::convert_bandwidth_to_enum(m_radio_info.bandwidth),
         m_radio_info.channel_ext_above);
 
-    radio->read_child(m_radio_info.tx_power, "TransmitPower");
+    AmbiorixVariant result;
+    AmbiorixVariant args;
+    if (m_ambiorix_cl.call(m_radio_path, "getCurrentTransmitPowerdBm", args, result)) {
+        auto results_as_list = result.read_children<AmbiorixVariantListSmartPtr>();
+        if (!results_as_list) {
+            LOG(ERROR) << "failed reading results!";
+        }
+        if (!(*results_as_list)[0].get(m_radio_info.tx_power)) {
+            LOG(ERROR) << "failed getting results!";
+        }
+    }
     bool enable_flag = false;
     // because of the async nature of pwhm calls, and because of the strict Radio.Status
     // implementation, Radio.Status follows a path that goes through the Status=Down / Disabled
@@ -1107,6 +1117,41 @@ void base_wlan_hal_whm::subscribe_to_scan_complete_events()
                          AMX_CL_SCAN_COMPLETE_EVT + "')";
 
     m_ambiorix_cl.subscribe_to_object_event(m_radio_path, event_handler, filter);
+}
+
+void base_wlan_hal_whm::populate_channels_max_tx_power()
+{
+
+    if (m_radio_path.empty()) {
+        m_ambiorix_cl.resolve_path(wbapi_utils::search_path_radio_by_iface(m_radio_info.iface_name),
+                                   m_radio_path);
+    }
+    auto radio = m_ambiorix_cl.get_object(m_radio_path);
+    if (!radio) {
+        LOG(ERROR) << " cannot fill channels max tx power, radio object missing ";
+        return;
+    }
+
+    std::string s_val;
+    if (radio->read_child(s_val, "PossibleChannels")) {
+        auto channels_vec = beerocks::string_utils::str_split(s_val, ',');
+        for (auto &chan_str : channels_vec) {
+            uint16_t chanNum = beerocks::string_utils::stoi(chan_str);
+            AmbiorixVariant result;
+            AmbiorixVariant args(AMXC_VAR_ID_HTABLE);
+            args.add_child("channel", chanNum);
+            if (m_ambiorix_cl.call(m_radio_path, "getMaxTransmitPowerdBm", args, result)) {
+                auto &channel_info   = m_radio_info.channels_list[chanNum];
+                auto results_as_list = result.read_children<AmbiorixVariantListSmartPtr>();
+                if (!results_as_list) {
+                    LOG(ERROR) << "failed reading results!";
+                }
+                if (!(*results_as_list)[0].get(channel_info.tx_power_dbm)) {
+                    LOG(ERROR) << "failed getting results!";
+                }
+            }
+        }
+    }
 }
 
 } // namespace whm

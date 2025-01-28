@@ -148,6 +148,7 @@ protected:
     // Private data-members:
 private:
     bool fsm_setup();
+    void populate_channels_max_tx_power();
 
 protected:
     std::shared_ptr<beerocks::wbapi::sAmbiorixEventHandler> m_rssi_event_handler;

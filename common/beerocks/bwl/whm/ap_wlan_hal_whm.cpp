@@ -208,8 +208,8 @@ bool ap_wlan_hal_whm::set_channel(int chan, beerocks::eWiFiBandwidth bw, int cen
     bool auto_channel_enable = false;
     m_ambiorix_cl.get_param(auto_channel_enable, m_radio_path, "AutoChannelEnable");
     if (auto_channel_enable) {
-        LOG(ERROR) << "unable to set channel!, AutoChannelEnable option is enabled";
-        return false;
+        LOG(INFO) << "Don't need to set channel!, AutoChannelEnable mode was already set by pWHM";
+        return true;
     }
 
     AmbiorixVariant new_obj(AMXC_VAR_ID_HTABLE);

@@ -363,6 +363,9 @@ typedef struct sChannelScanResults {
     //The current radio channel used by the neighboring WiFi radio.
     uint32_t channel = 0;
 
+    //The channel utilization measured by the AP.
+    uint32_t utilization = 0;
+
     //An indicator of radio signal strength (RSSI) of the neighboring WiFi radio measured in dBm, as an average of the last 100 packets received.
     int32_t signal_strength_dBm = 0;
 
@@ -409,6 +412,9 @@ typedef struct sChannelScanResults {
 
     //LOAD BSS IE is present or absence in scanned BSS. If scanned BSS does not have LOAD BSS IE present then this field will be 0.
     uint32_t load_bss_ie_present = 0;
+
+    //This indicates whether the results contain spectrum information.
+    uint8_t spectrum_info_present = 0;
 } sChannelScanResults;
 
 typedef struct {

@@ -2035,14 +2035,16 @@ bool Monitor::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr)
                       out_result.supported_data_transfer_rates_kbps);
 
             // Primery values
-            out_result.channel             = in_result.channel;
-            out_result.signal_strength_dBm = in_result.signal_strength_dBm;
-            out_result.beacon_period_ms    = in_result.beacon_period_ms;
-            out_result.noise_dBm           = in_result.noise_dBm;
-            out_result.dtim_period         = in_result.dtim_period;
-            out_result.channel_utilization = in_result.channel_utilization;
-            out_result.station_count       = in_result.station_count;
-            out_result.load_bss_ie_present = in_result.load_bss_ie_present;
+            out_result.channel               = in_result.channel;
+            out_result.signal_strength_dBm   = in_result.signal_strength_dBm;
+            out_result.beacon_period_ms      = in_result.beacon_period_ms;
+            out_result.noise_dBm             = in_result.noise_dBm;
+            out_result.utilization           = in_result.utilization;
+            out_result.dtim_period           = in_result.dtim_period;
+            out_result.channel_utilization   = in_result.channel_utilization;
+            out_result.station_count         = in_result.station_count;
+            out_result.load_bss_ie_present   = in_result.load_bss_ie_present;
+            out_result.spectrum_info_present = in_result.spectrum_info_present;
 
             // Enums
             out_result.mode = beerocks_message::eChannelScanResultMode(uint8_t(in_result.mode));

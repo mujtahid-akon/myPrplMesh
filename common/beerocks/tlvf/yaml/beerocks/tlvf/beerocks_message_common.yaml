@@ -953,6 +953,9 @@ sChannelScanResults:
   channel:
     _comment: The current radio channel used by the neighboring WiFi radio.
     _type: uint32_t
+  utilization:
+    _comment: The channel utilization measured by the AP.
+    _type: uint32_t
   signal_strength_dBm:
     _type: int32_t
     _comment: An indicator of radio signal strength (RSSI) of the neighboring WiFi radio measured in dBm, as an average of the last 100 packets received.
@@ -1003,6 +1006,10 @@ sChannelScanResults:
   load_bss_ie_present:
     _comment: This indicates that scanned BSS has BSS LOAD IE present or not.
     _type: uint32_t
+    _value: 0
+  spectrum_info_present:
+    _comment: This indicates whether the results contain spectrum information.
+    _type: uint8_t
     _value: 0
 
 

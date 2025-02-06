@@ -69,6 +69,7 @@
   tags:
     - shell
     - docker-build
+    - rdkb-build
   needs: []
 
 .test-upgrade-image:

@@ -16,6 +16,7 @@
 #include <tlvf/CmduMessageTx.h>
 #include <tlvf/WSC/configData.h>
 #include <tlvf/WSC/m2.h>
+#include <tlvf/WSC/m8.h>
 #include <tlvf/wfa_map/tlvProfile2ErrorCode.h>
 
 namespace beerocks {
@@ -136,7 +137,7 @@ private:
                                               const sMacAddr &src_mac);
 
     /**
-     * @brief Parse AP-Autoconfiguration and apply configuration if M2 is present.
+     * @brief Parse AP-Autoconfiguration and apply configuration if M2/M8 is present.
      *
      * @param cmdu_rx Received CMDU.
      * @return true on success, otherwise false.
@@ -170,6 +171,8 @@ private:
                            const std::vector<WSC::m2> &m2_list,
                            std::vector<WSC::configData::config> &configs,
                            std::unordered_set<std::string> &misconfigured_ssids);
+    bool handle_wsc_m8_tlv(const std::string &radio_iface, std::shared_ptr<WSC::m8> m8,
+                           std::vector<WSC::configData::config> &configs);
     bool handle_agent_ap_mld_configuration_tlv(ieee1905_1::CmduMessageRx &cmdu_rx,
                                                std::vector<WSC::configData::config> &configs);
 
@@ -220,6 +223,11 @@ private:
     bool send_ap_bss_configuration_message(const std::string &radio_iface,
                                            const std::vector<WSC::configData::config> &configs);
 
+    bool send_bsta_configuration(const sMacAddr &radio_mac, const WSC::configData::config &config);
+
+    bool send_enable_disable_endpoint(const sMacAddr &radio_mac, const bool enable,
+                                      const bool force);
+
     bool validate_reconfiguration(const std::string &radio_iface,
                                   std::vector<WSC::configData::config> &configs);
 
@@ -241,41 +249,47 @@ private:
      * @brief Diffie-Hellman public key exchange keys calculation class member params authkey and
      * keywrapauth are computed on success.
      *
-     * @param[in] m2 WSC M2 received from the controller.
+     * @param[in] remote_pubkey Public key received from the controller in WSC tlv.
+     * @param[in] nonce Nonce received from the controller in WSC tlv.
      * @param[out] authkey 32 bytes calculated authentication key.
      * @param[out] keywrapkey 16 bytes calculated key wrap key.
      * @return true on success, otherwise false.
      */
-    bool ap_autoconfiguration_wsc_calculate_keys(const std::string &fronthaul_iface, WSC::m2 &m2,
+    bool ap_autoconfiguration_wsc_calculate_keys(const std::string &fronthaul_iface,
+                                                 const uint8_t *remote_pubkey, const uint8_t *nonce,
                                                  uint8_t authkey[32], uint8_t keywrapkey[16]);
 
     /**
      * @brief ap autoconfiguration global authenticator attribute calculation.
      *
-     * Calculate authentication on the Full M1 || M2* whereas M2* = M2 without the authenticator
+     * Calculate authentication on the Full (M1 || M2*) or (M1 || M8*) whereas M2*|M8* = M2*|M8* without the authenticator
      * attribute. M1 is a saved buffer of the swapped M1 sent in the WSC autoconfiguration sent by
      * the agent.
      *
-     * @param [in] m2 WSC M2 attribute list from the Controller.
+     * @param [in] wsc WSC M2 or M8 attribute list from the Controller.
+     * @param [in] authenticator M2 or M8 authenticator attribute from the Controller.
      * @param [out] authkey Authentication key.
      * @return true on success, otherwise false.
      */
-    bool ap_autoconfiguration_wsc_authenticate(const std::string &fronthaul_iface, WSC::m2 &m2,
-                                               uint8_t authkey[32]);
+    bool
+    ap_autoconfiguration_wsc_authenticate(const std::string &fronthaul_iface, WSC::WscAttrList &wsc,
+                                          uint8_t authkey[32],
+                                          uint8_t authenticator[WSC::WSC_AUTHENTICATOR_LENGTH]);
 
     /**
-     * @brief Parse the encrypted settings from m2, and load the into the BSS configuration
+     * @brief Parse the encrypted settings from m2 or m8, and load the into the BSS configuration
      * @a config.
-     * 
-     * @param [in] m2 WSC M2 attribute list from the Controller.
+     *
+     * @param [in] encrypted_settings WSC M2/M8 Encrypted settings attribute from the Controller.
      * @param [in] authkey Authentication key.
      * @param [in] keywrapkey Key wrapper.
      * @param [out] config BSS configuration.
      * @return true on success, otherwise false.
      */
-    bool ap_autoconfiguration_wsc_parse_encrypted_settings(WSC::m2 &m2, uint8_t authkey[32],
-                                                           uint8_t keywrapkey[16],
-                                                           WSC::configData::config &config);
+    bool ap_autoconfiguration_wsc_parse_encrypted_settings(
+        WSC::cWscAttrEncryptedSettings encrypted_settings, uint8_t authkey[32],
+        uint8_t keywrapkey[16], WSC::configData::config &config);
+
     /**
      * @brief Parse the vendor extension from m2 for hidden SSID bit, 
      * and load that into the BSS configuration

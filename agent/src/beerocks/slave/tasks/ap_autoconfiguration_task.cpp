@@ -1141,8 +1141,23 @@ void ApAutoConfigurationTask::handle_ap_autoconfiguration_wsc(ieee1905_1::CmduMe
     LOG(DEBUG) << "Received AP_AUTOCONFIGURATION_WSC_MESSAGE for iface " << radio->front.iface_name;
 
     std::vector<WSC::m2> m2_list;
+    std::shared_ptr<WSC::m8> m8 = nullptr;
     for (auto tlv : cmdu_rx.getClassList<ieee1905_1::tlvWsc>()) {
-        auto m2 = WSC::m2::parse(*tlv);
+        std::shared_ptr<WSC::m2> m2 = nullptr;
+        // Manually check the TLV subtype (M2 or M8) to apply the adequate parsing
+        WSC::WscAttrList::wsc_header *tlv_header =
+            reinterpret_cast<WSC::WscAttrList::wsc_header *>(tlv->payload());
+        if (tlv_header == nullptr) {
+            LOG(ERROR) << "Can't extract WSC header";
+            continue;
+        }
+        if (tlv_header->msg_type_value == WSC::eWscMessageType::WSC_MSG_TYPE_M2) {
+            m2 = WSC::m2::parse(*tlv);
+        } else if (!m8) {
+            m8 = WSC::m8::parse(*tlv);
+        } else {
+            LOG(INFO) << "Not a valid Registration Protocol messages - Ignoring WSC CMDU";
+        }
         if (!m2) {
             LOG(INFO) << "Not a valid M2 - Ignoring WSC CMDU";
             continue;
@@ -1174,6 +1189,10 @@ void ApAutoConfigurationTask::handle_ap_autoconfiguration_wsc(ieee1905_1::CmduMe
         LOG(ERROR) << "handle_wsc_m2_tlv has failed!";
         return;
     }
+    if (m8 && !handle_wsc_m8_tlv(radio->front.iface_name, m8, configs)) {
+        LOG(ERROR) << "handle_wsc_m8_tlv has failed!";
+        return;
+    }
     if (!handle_agent_ap_mld_configuration_tlv(cmdu_rx, configs)) {
         LOG(ERROR) << "handle_agent_ap_mld_configuration_tlv has failed!";
         return;
@@ -1202,6 +1221,22 @@ void ApAutoConfigurationTask::handle_ap_autoconfiguration_wsc(ieee1905_1::CmduMe
                     radio->front.iface_mac, configs);
             }
 
+            if (m8) {
+                auto bSTA_it = std::find_if(
+                    configs.begin(), configs.end(), [&](const WSC::configData::config &config) {
+                        return ((config.bss_type ==
+                                 static_cast<uint8_t>(
+                                     WSC::eWscVendorExtSubelementBssType::BACKHAUL_STA)));
+                    });
+
+                if (bSTA_it == configs.end()) {
+                    return;
+                }
+                send_bsta_configuration(radio->front.iface_mac, *bSTA_it);
+                configs.erase(bSTA_it);
+            } else if (db->controller_info.early_ap_capability) {
+                send_enable_disable_endpoint(radio->front.iface_mac, false, true);
+            }
             send_ap_bss_configuration_message(radio->front.iface_name, configs);
         } else {
             LOG(INFO) << "Reconfiguration is not needed";
@@ -1548,17 +1583,19 @@ bool ApAutoConfigurationTask::handle_wsc_m2_tlv(
         uint8_t authkey[32];
         uint8_t keywrapkey[16];
         LOG(DEBUG) << "M2 Parse: calculate keys";
-        if (!ap_autoconfiguration_wsc_calculate_keys(radio->front.iface_name, m2, authkey,
-                                                     keywrapkey))
+        if (!ap_autoconfiguration_wsc_calculate_keys(radio->front.iface_name, m2.public_key(),
+                                                     m2.registrar_nonce(), authkey, keywrapkey))
             return false;
 
-        if (!ap_autoconfiguration_wsc_authenticate(radio->front.iface_name, m2, authkey))
+        if (!ap_autoconfiguration_wsc_authenticate(radio->front.iface_name, m2, authkey,
+                                                   reinterpret_cast<uint8_t *>(m2.authenticator())))
             return false;
 
         WSC::configData::config config;
-        if (!ap_autoconfiguration_wsc_parse_encrypted_settings(m2, authkey, keywrapkey, config)) {
+        if (!ap_autoconfiguration_wsc_parse_encrypted_settings(m2.encrypted_settings(), authkey,
+                                                               keywrapkey, config)) {
             LOG(ERROR) << "Invalid config data, skip it";
-            continue;
+            return false;
         }
         if (db->em_ap_controller_found) {
             LOG(DEBUG) << "EM+ controller is found. Check for Hidden SSID parameters";
@@ -1692,6 +1729,48 @@ bool ApAutoConfigurationTask::handle_wsc_m2_tlv(
     return true;
 }
 
+// Zero or one WSC TLV (containing M8)
+bool ApAutoConfigurationTask::handle_wsc_m8_tlv(const std::string &radio_iface,
+                                                std::shared_ptr<WSC::m8> m8,
+                                                std::vector<WSC::configData::config> &configs)
+{
+    auto db    = AgentDB::get();
+    auto radio = db->radio(radio_iface);
+    uint8_t authkey[32];
+    uint8_t keywrapkey[16];
+    LOG(DEBUG) << "M8 Parse: calculate keys";
+    if (!ap_autoconfiguration_wsc_calculate_keys(radio->front.iface_name, m8->public_key(),
+                                                 m8->registrar_nonce(), authkey, keywrapkey))
+        return false;
+
+    if (!ap_autoconfiguration_wsc_authenticate(radio->front.iface_name, *m8, authkey,
+                                               reinterpret_cast<uint8_t *>(m8->authenticator())))
+        return false;
+
+    WSC::configData::config config;
+    if (!ap_autoconfiguration_wsc_parse_encrypted_settings(m8->encrypted_settings(), authkey,
+                                                           keywrapkey, config)) {
+        LOG(ERROR) << "Invalid config data, skip it";
+        return false;
+    }
+
+    if (!(config.bss_type & WSC::eWscVendorExtSubelementBssType::BACKHAUL_STA)) {
+        LOG(ERROR) << "Invalid config data, not a bSTA one";
+        return false;
+    }
+
+    std::stringstream ss;
+    ss << "Parsed bSTA config data: " << std::endl;
+    ss << "bssid: " << config.bssid << std::endl;
+    ss << "ssid: " << config.ssid << std::endl;
+    LOG(INFO) << ss.str();
+    configs.push_back(config);
+
+    LOG(INFO) << "Finished M8 parsing";
+
+    return true;
+}
+
 bool ApAutoConfigurationTask::handle_agent_ap_mld_configuration_tlv(
     ieee1905_1::CmduMessageRx &cmdu_rx, std::vector<WSC::configData::config> &configs)
 {
@@ -1761,6 +1840,20 @@ bool ApAutoConfigurationTask::handle_agent_ap_mld_configuration_tlv(
         }
     }
 
+    return true;
+}
+
+bool ApAutoConfigurationTask::send_bsta_configuration(const sMacAddr &radio_mac,
+                                                      const WSC::configData::config &config)
+{
+    // Place holder
+    return true;
+}
+
+bool ApAutoConfigurationTask::send_enable_disable_endpoint(const sMacAddr &radio_mac,
+                                                           const bool enable, const bool force)
+{
+    // Place holder
     return true;
 }
 
@@ -1921,24 +2014,6 @@ void ApAutoConfigurationTask::handle_vs_apply_vlan_policy_request(
     m_traffic_separation_configurator->apply_policy();
 }
 
-bool ApAutoConfigurationTask::ap_autoconfiguration_wsc_calculate_keys(
-    const std::string &fronthaul_iface, WSC::m2 &m2, uint8_t authkey[32], uint8_t keywrapkey[16])
-{
-    const auto &radio_conf_params = m_radios_conf_params[fronthaul_iface];
-    if (!radio_conf_params.dh) {
-        LOG(ERROR) << "diffie hellman member not initialized";
-        return false;
-    }
-
-    auto db = AgentDB::get();
-    mapf::encryption::wps_calculate_keys(*radio_conf_params.dh, m2.public_key(),
-                                         WSC::eWscLengths::WSC_PUBLIC_KEY_LENGTH,
-                                         radio_conf_params.dh->nonce(), db->bridge.mac.oct,
-                                         m2.registrar_nonce(), authkey, keywrapkey);
-
-    return true;
-}
-
 bool ApAutoConfigurationTask::airties_vs_ap_autoconfiguration_wsc_parse_hidden_ssid(
     WSC::m2 &m2, WSC::configData::config &config)
 {
@@ -1967,8 +2042,27 @@ bool ApAutoConfigurationTask::airties_vs_ap_autoconfiguration_wsc_parse_hidden_s
     return retval;
 }
 
+bool ApAutoConfigurationTask::ap_autoconfiguration_wsc_calculate_keys(
+    const std::string &fronthaul_iface, const uint8_t *remote_pubkey, const uint8_t *nonce,
+    uint8_t authkey[32], uint8_t keywrapkey[16])
+{
+    const auto &radio_conf_params = m_radios_conf_params[fronthaul_iface];
+    if (!radio_conf_params.dh) {
+        LOG(ERROR) << "diffie hellman member not initialized";
+        return false;
+    }
+
+    auto db = AgentDB::get();
+    mapf::encryption::wps_calculate_keys(
+        *radio_conf_params.dh, remote_pubkey, WSC::eWscLengths::WSC_PUBLIC_KEY_LENGTH,
+        radio_conf_params.dh->nonce(), db->bridge.mac.oct, nonce, authkey, keywrapkey);
+
+    return true;
+}
+
 bool ApAutoConfigurationTask::ap_autoconfiguration_wsc_authenticate(
-    const std::string &fronthaul_iface, WSC::m2 &m2, uint8_t authkey[32])
+    const std::string &fronthaul_iface, WSC::WscAttrList &wsc, uint8_t authkey[32],
+    uint8_t authenticator[WSC::WSC_AUTHENTICATOR_LENGTH])
 {
     const auto &radio_conf_params = m_radios_conf_params[fronthaul_iface];
     if (!radio_conf_params.m1_auth_buf) {
@@ -1976,20 +2070,14 @@ bool ApAutoConfigurationTask::ap_autoconfiguration_wsc_authenticate(
         return false;
     }
 
-    // This is the content of M1 and M2, without the type and length.
-    uint8_t buf[radio_conf_params.m1_auth_buf_len + m2.getMessageLength() -
+    // This is the content of M1 and M2/M8, without the type and length.
+    uint8_t buf[radio_conf_params.m1_auth_buf_len + wsc.getMessageLength() -
                 WSC::cWscAttrAuthenticator::get_initial_size()];
     auto next = std::copy_n(radio_conf_params.m1_auth_buf, radio_conf_params.m1_auth_buf_len, buf);
-    m2.swap(); // swap to get network byte order
-
-    if (m2.getMessageLength() > WSC::cWscAttrAuthenticator::get_initial_size()) {
-        std::copy_n(m2.getMessageBuff(),
-                    m2.getMessageLength() - WSC::cWscAttrAuthenticator::get_initial_size(), next);
-    } else {
-        LOG(ERROR) << "Error: m2.getMessageLength() is less than "
-                      "WSC::cWscAttrAuthenticator::get_initial_size()";
-    }
-    m2.swap(); // swap back
+    wsc.swap(); // swap to get network byte order
+    std::copy_n(wsc.getMessageBuff(),
+                wsc.getMessageLength() - WSC::cWscAttrAuthenticator::get_initial_size(), next);
+    wsc.swap(); // swap back
 
     uint8_t kwa[WSC::WSC_AUTHENTICATOR_LENGTH];
     // Add KWA which is the 1st 64 bits of HMAC of config_data using AuthKey
@@ -1998,11 +2086,10 @@ bool ApAutoConfigurationTask::ap_autoconfiguration_wsc_authenticate(
         return false;
     }
 
-    if (!std::equal(kwa, kwa + sizeof(kwa), reinterpret_cast<uint8_t *>(m2.authenticator()))) {
+    if (!std::equal(kwa, kwa + sizeof(kwa), authenticator)) {
         LOG(ERROR) << "WSC Global authentication failed";
         LOG(DEBUG) << "authenticator: "
-                   << utils::dump_buffer(reinterpret_cast<uint8_t *>(m2.authenticator()),
-                                         WSC::WSC_AUTHENTICATOR_LENGTH);
+                   << utils::dump_buffer(authenticator, WSC::WSC_AUTHENTICATOR_LENGTH);
         LOG(DEBUG) << "calculated:    " << utils::dump_buffer(kwa, WSC::WSC_AUTHENTICATOR_LENGTH);
         LOG(DEBUG) << "authenticator key: " << utils::dump_buffer(authkey, 32);
         LOG(DEBUG) << "authenticator buf:" << std::endl << utils::dump_buffer(buf, sizeof(buf));
@@ -2014,25 +2101,25 @@ bool ApAutoConfigurationTask::ap_autoconfiguration_wsc_authenticate(
 }
 
 bool ApAutoConfigurationTask::ap_autoconfiguration_wsc_parse_encrypted_settings(
-    WSC::m2 &m2, uint8_t authkey[32], uint8_t keywrapkey[16], WSC::configData::config &config)
+    WSC::cWscAttrEncryptedSettings encrypted_settings, uint8_t authkey[32], uint8_t keywrapkey[16],
+    WSC::configData::config &config)
 {
-    auto encrypted_settings = m2.encrypted_settings();
-    uint8_t *iv             = reinterpret_cast<uint8_t *>(encrypted_settings.iv());
-    auto ciphertext         = reinterpret_cast<uint8_t *>(encrypted_settings.encrypted_settings());
-    int cipherlen           = encrypted_settings.encrypted_settings_length();
+    uint8_t *iv     = reinterpret_cast<uint8_t *>(encrypted_settings.iv());
+    auto ciphertext = reinterpret_cast<uint8_t *>(encrypted_settings.encrypted_settings());
+    int cipherlen   = encrypted_settings.encrypted_settings_length();
     // leave room for up to 16 bytes internal padding length - see aes_decrypt()
     int datalen = cipherlen + 16;
     uint8_t decrypted[datalen];
 
-    // LOG(DEBUG) << "M2 Parse: received encrypted settings with length " << cipherlen;
+    // LOG(DEBUG) << "WSC Message received encrypted settings with length " << cipherlen;
 
-    LOG(DEBUG) << "M2 Parse: aes decrypt";
+    LOG(DEBUG) << "WSC Message Parse: aes decrypt";
     if (!mapf::encryption::aes_decrypt(keywrapkey, iv, ciphertext, cipherlen, decrypted, datalen)) {
         LOG(ERROR) << "aes decrypt failure";
         return false;
     }
 
-    LOG(DEBUG) << "M2 Parse: parse config_data, len = " << datalen;
+    LOG(DEBUG) << "WSC Message Parse: parse config_data, len = " << datalen;
     // LOG(DEBUG) << "decrypted config_data buffer: " << std::endl
     //            << utils::dump_buffer(decrypted, datalen);
 
@@ -2049,7 +2136,7 @@ bool ApAutoConfigurationTask::ap_autoconfiguration_wsc_parse_encrypted_settings(
 
     // get length of config_data for KWA authentication
     size_t len = config_data->getMessageLength();
-    // Protect against M2 buffer overflow attacks
+    // Protect against M2|M8 buffer overflow attacks
     if (len > size_t(datalen)) {
         LOG(ERROR) << "invalid config data length";
         return false;

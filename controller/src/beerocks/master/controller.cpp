@@ -1705,7 +1705,10 @@ bool Controller::handle_tlv_wifi7_agent_capabilities(ieee1905_1::CmduMessageRx &
         return true;
     }
 
-    // placeholder //
+    if (!database.set_wifi7_agent_capabilities(*wifi7_agt_caps_tlv, agent)) {
+        LOG(ERROR) << "Couldn't set values for WiFi 7 agent capabilities data model";
+        return false;
+    }
 
     return true;
 }

@@ -42,6 +42,7 @@
 #include <tlvf/wfa_map/tlvProfile2CacStatusReport.h>
 #include <tlvf/wfa_map/tlvProfile2ChannelScanResult.h>
 #include <tlvf/wfa_map/tlvSpatialReuseReport.h>
+#include <tlvf/wfa_map/tlvWifi7AgentCapabilities.h>
 
 #include <algorithm>
 #include <array>
@@ -1131,6 +1132,21 @@ public:
      * and values for its parameters set, false otherwise.
      */
     bool set_ap_wifi6_capabilities(wfa_map::tlvApWifi6Capabilities &wifi6_caps_tlv);
+
+    /**
+     * @brief Add optional sub-object of WIFI7 Agent Capabilities data element,
+     * set values for its parameters.
+     *
+     * Example of full path to object:
+     * "Device.WiFi.DataElements.Network.Device.1.Radio.1.Capabilities.WiFi7AgentCapabilities"
+     *
+     * @param wifi7_agt_caps_tlv TLV with WIFI7 Agent Capabilities included in
+     * 'AP Capability Report' message
+     * @return True if sub-object was successfully added
+     * and values for its parameters set, false otherwise.
+     */
+    bool set_wifi7_agent_capabilities(wfa_map::tlvWifi7AgentCapabilities &wifi7_agt_caps_tlv,
+                                      std::shared_ptr<Agent> agent);
 
     /**
      * @brief add 'HTCapabilities' data element, set values to its parameters.
@@ -3042,6 +3058,12 @@ private:
      */
     bool dm_set_radio_bss(const sMacAddr &al_mac, const sMacAddr &radio_mac, const sMacAddr &bssid,
                           bool is_vbss = false);
+
+    bool set_internal_wifi7_radio_capabilities(
+        wfa_map::cRadioWifi7Capabilities &radio_wifi7_capabilities, Agent::sRadio &radio,
+        bool is_bsta);
+    bool set_wifi7_support(const Agent::sRadio &radio, bool is_bsta);
+    bool set_wifi7_capabilities(const Agent::sRadio &radio, bool is_bsta);
 
     int network_optimization_task_id           = -1;
     int channel_selection_task_id              = -1;

@@ -11,11 +11,13 @@
 
 #include "task.h"
 
+#include <beerocks/tlvf/beerocks_message_monitor.h>
 #include <tlvf/CmduMessageTx.h>
 #include <tlvf/ieee_1905_1/eLinkMetricsType.h>
 #include <tlvf/ieee_1905_1/eMediaType.h>
 #include <tlvf/wfa_map/tlvApMetrics.h>
 #include <tlvf/wfa_map/tlvAssociatedStaLinkMetrics.h>
+#include <tlvf/wfa_map/tlvBeaconMetricsQuery.h>
 
 #include "bcl/network/network_utils.h"
 #include <bcl/beerocks_timer_manager.h>
@@ -292,6 +294,27 @@ private:
         uint8_t receive_other;
     };
     std::vector<sRadioMetrics> m_radio_ap_metric_response;
+
+    struct sBeaconMetricsQuery {
+        uint16_t mid;
+        std::string iface_name;
+        beerocks_message::sBeaconRequest11k params;
+        struct sChanReport {
+            uint8_t op_class;
+            uint8_t channel;
+        };
+        std::vector<sChanReport> chan_report_list;
+        uint8_t curr_chan_idx;
+        int req_timer = beerocks::net::FileDescriptor::invalid_descriptor;
+    };
+
+    /* To store the Beacon Metrics Queries to be sent */
+    std::vector<sBeaconMetricsQuery> m_beacon_metrics_query;
+
+    /* Timer callback for scheduled Beacon Metrics Queries */
+    bool beacon_metrics_query_cb(int fd);
+    bool schedule_beacon_metrics_query(wfa_map::tlvBeaconMetricsQuery &beacon_metrics_query,
+                                       uint16_t mid, const std::string &iface_name);
 };
 
 } // namespace beerocks

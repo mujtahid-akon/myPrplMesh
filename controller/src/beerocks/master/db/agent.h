@@ -159,6 +159,8 @@ public:
 
         bool is_acs_enabled = false;
 
+        bool eht_supported = false;
+
         /** Name of the Wi-Fi chip vendor of this radio */
         std::string chipset_vendor;
         /* Frequency type of the radio is obtained from WSC M1*/

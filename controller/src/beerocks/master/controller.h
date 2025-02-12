@@ -375,6 +375,11 @@ private:
     bool handle_cmdu_1905_qos_management_notification_message(const sMacAddr &src_mac,
                                                               ieee1905_1::CmduMessageRx &cmdu_rx);
 
+    bool handle_ap_capability_report(const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx,
+                                     const bool early);
+    bool handle_cmdu_1905_early_ap_capability_report_message(const sMacAddr &src_mac,
+                                                             ieee1905_1::CmduMessageRx &cmdu_rx);
+
     bool autoconfig_wsc_parse_radio_caps(
         const sMacAddr &radio_mac,
         std::shared_ptr<wfa_map::tlvApRadioBasicCapabilities> radio_caps);
@@ -396,7 +401,8 @@ private:
      * @param agent shared pointer
      * @return True on success, false otherwise.
     */
-    bool handle_tlv_apCapability(ieee1905_1::CmduMessageRx &cmdu_rx, std::shared_ptr<Agent> agent);
+    bool handle_tlv_apCapability(ieee1905_1::CmduMessageRx &cmdu_rx, std::shared_ptr<Agent> agent,
+                                 bool early);
 
     /**
      * @brief Get info from 'AP WIFI6 Capabilities' TLV,
@@ -406,6 +412,37 @@ private:
      * @return True on success, false otherwise.
     */
     bool handle_tlv_ap_wifi6_capabilities(ieee1905_1::CmduMessageRx &cmdu_rx);
+
+    /**
+     * @brief Get info from 'WIFI7 Agent Capabilities' TLV,
+     * set data to WiFi7 Agent Capabilities data element.
+     *
+     * @param cmdu_rx AP Capability Report message.
+     * @param agent shared ptr of agent sending the message
+     * @return True on success, false otherwise.
+    */
+    bool handle_tlv_wifi7_agent_capabilities(ieee1905_1::CmduMessageRx &cmdu_rx,
+                                             std::shared_ptr<Agent> agent);
+
+    /**
+     * @brief Get info from 'EHT Operations' TLV,
+     * set data to EHT Operatons data element.
+     *
+     * @param cmdu_rx AP Capability Report message.
+     * @return True on success, false otherwise.
+    */
+    bool handle_tlv_eht_operations(ieee1905_1::CmduMessageRx &cmdu_rx, const sMacAddr &al_mac);
+
+    /**
+     * @brief Get info from 'Agent AP MLD Configuration' TLV,
+     * set data to Agent AP MLD Configuration data element.
+     *
+     * @param cmdu_rx AP Capability Report message.
+     * @param src_mac MAC address of the sender of the message
+     * @return True on success, false otherwise.
+    */
+    bool handle_tlv_agent_ap_mld_configuration(ieee1905_1::CmduMessageRx &cmdu_rx,
+                                               const sMacAddr &src_mac);
 
     /**
      * @brief Get info from 'AP VHT Capabilities' TLV,

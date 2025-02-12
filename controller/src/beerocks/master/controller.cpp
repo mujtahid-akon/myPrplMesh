@@ -52,6 +52,7 @@
 #include <tlvf/ieee_1905_1/tlvSupportedFreqBand.h>
 #include <tlvf/ieee_1905_1/tlvSupportedRole.h>
 #include <tlvf/wfa_map/tlv1905LayerSecurityCapability.h>
+#include <tlvf/wfa_map/tlvAgentApMldConfiguration.h>
 #include <tlvf/wfa_map/tlvAkmSuiteCapabilities.h>
 #include <tlvf/wfa_map/tlvApCapability.h>
 #include <tlvf/wfa_map/tlvApExtendedMetrics.h>
@@ -70,8 +71,10 @@
 #include <tlvf/wfa_map/tlvChannelSelectionResponse.h>
 #include <tlvf/wfa_map/tlvClientCapabilityReport.h>
 #include <tlvf/wfa_map/tlvClientInfo.h>
+#include <tlvf/wfa_map/tlvControllerCapability.h>
 #include <tlvf/wfa_map/tlvDeviceInventory.h>
 #include <tlvf/wfa_map/tlvDscpMappingTable.h>
+#include <tlvf/wfa_map/tlvEHTOperations.h>
 #include <tlvf/wfa_map/tlvErrorCode.h>
 #include <tlvf/wfa_map/tlvHigherLayerData.h>
 #include <tlvf/wfa_map/tlvOperatingChannelReport.h>
@@ -98,6 +101,7 @@
 #include <tlvf/wfa_map/tlvTunnelledProtocolType.h>
 #include <tlvf/wfa_map/tlvTunnelledSourceInfo.h>
 #include <tlvf/wfa_map/tlvUnassociatedStaLinkMetricsQuery.h>
+#include <tlvf/wfa_map/tlvWifi7AgentCapabilities.h>
 
 #include <net/if.h> // if_nametoindex
 
@@ -311,6 +315,7 @@ bool Controller::start()
             ieee1905_1::eMessageType::VIRTUAL_BSS_RESPONSE_MESSAGE,
             ieee1905_1::eMessageType::VIRTUAL_BSS_MOVE_CANCEL_RESPONSE_MESSAGE,
             ieee1905_1::eMessageType::TRIGGER_CHANNEL_SWITCH_ANNOUNCEMENT_RESPONSE_MESSAGE,
+            ieee1905_1::eMessageType::EARLY_AP_CAPABILITY_REPORT_MESSAGE,
         })) {
         LOG(ERROR) << "Failed subscribing to the Bus";
         return false;
@@ -604,6 +609,8 @@ bool Controller::handle_cmdu_1905_1_message(const sMacAddr &src_mac,
         return handle_cmdu_1905_associated_sta_link_metrics_response_message(src_mac, cmdu_rx);
     case ieee1905_1::eMessageType::QOS_MANAGEMENT_NOTIFICATION_MESSAGE:
         return handle_cmdu_1905_qos_management_notification_message(src_mac, cmdu_rx);
+    case ieee1905_1::eMessageType::EARLY_AP_CAPABILITY_REPORT_MESSAGE:
+        return handle_cmdu_1905_early_ap_capability_report_message(src_mac, cmdu_rx);
 
     // Empty cases are used to prevent error logs. Below message types are processed within tasks.
     case ieee1905_1::eMessageType::TOPOLOGY_RESPONSE_MESSAGE:
@@ -782,6 +789,14 @@ bool Controller::handle_cmdu_1905_autoconfiguration_search(const sMacAddr &src_m
             profile2_ap_capability_tlv->capabilities_bit_field().byte_counter_units =
                 wfa_map::tlvProfile2ApCapability::eByteCounterUnits::KIBIBYTES;
         }
+
+        // Indicate support for KiB / MiB byte counters
+        auto tlvControllerCapability = cmdu_tx.addClass<wfa_map::tlvControllerCapability>();
+        if (!tlvControllerCapability) {
+            LOG(ERROR) << "addClass wfa_map::tlvControllerCapability failed";
+            return false;
+        }
+        tlvControllerCapability->flags().early_ap_capability = 1;
     }
 
     auto beerocks_header = beerocks::message_com::parse_intel_vs_message(cmdu_rx);
@@ -1681,8 +1696,36 @@ bool Controller::handle_tlv_ap_wifi6_capabilities(ieee1905_1::CmduMessageRx &cmd
     return ret_val;
 }
 
+bool Controller::handle_tlv_wifi7_agent_capabilities(ieee1905_1::CmduMessageRx &cmdu_rx,
+                                                     std::shared_ptr<Agent> agent)
+{
+    auto wifi7_agt_caps_tlv = cmdu_rx.getClass<wfa_map::tlvWifi7AgentCapabilities>();
+    if (!wifi7_agt_caps_tlv) {
+        LOG(DEBUG) << "Cound't find WiFi 7 agent capabitites TLV";
+        return true;
+    }
+
+    // placeholder //
+
+    return true;
+}
+
+bool Controller::handle_tlv_eht_operations(ieee1905_1::CmduMessageRx &cmdu_rx,
+                                           const sMacAddr &al_mac)
+{
+    auto eht_operations_tlv = cmdu_rx.getClass<wfa_map::tlvEHTOperations>();
+    if (!eht_operations_tlv) {
+        LOG(DEBUG) << "Cound't find EHT Operations TLV";
+        return true;
+    }
+
+    // placeholder //
+
+    return true;
+}
+
 bool Controller::handle_tlv_apCapability(ieee1905_1::CmduMessageRx &cmdu_rx,
-                                         std::shared_ptr<Agent> agent)
+                                         std::shared_ptr<Agent> agent, bool early)
 {
     auto tlv_ap_capability = cmdu_rx.getClass<wfa_map::tlvApCapability>();
     if (!tlv_ap_capability) {
@@ -1929,97 +1972,27 @@ bool Controller::handle_tlv_ap_vht_capabilities(ieee1905_1::CmduMessageRx &cmdu_
     return ret_val;
 }
 
+bool Controller::handle_tlv_agent_ap_mld_configuration(ieee1905_1::CmduMessageRx &cmdu_rx,
+                                                       const sMacAddr &src_mac)
+{
+    auto agent_ap_mld_configuration_tlv = cmdu_rx.getClass<wfa_map::tlvAgentApMldConfiguration>();
+    if (!agent_ap_mld_configuration_tlv) {
+        LOG(ERROR) << "addClass wfa_map::tlvAgentApMldConfiguration failed";
+        return false;
+    }
+
+    // placeholder //
+
+    return true;
+}
+
 bool Controller::handle_cmdu_1905_ap_capability_report(const sMacAddr &src_mac,
                                                        ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     auto mid = cmdu_rx.getMessageId();
     LOG(INFO) << "Received AP_CAPABILITY_REPORT_MESSAGE, mid=" << std::dec << int(mid);
 
-    auto agent = database.m_agents.get(src_mac);
-    if (!agent) {
-        LOG(ERROR) << "Agent with mac is not found in database mac=" << src_mac;
-        return false;
-    }
-
-    agent->radios.keep_new_prepare();
-
-    for (auto radio_tlv : cmdu_rx.getClassList<wfa_map::tlvApRadioBasicCapabilities>()) {
-
-        LOG(DEBUG) << "Radio is reported in AP Capabilites with ruid=" << radio_tlv->radio_uid();
-        database.add_radio(radio_tlv->radio_uid(), agent->al_mac);
-
-        //TODO: We can decide to parse Radio CAPs here instead of WSC (autoconfig_wsc_parse_radio_caps)
-        // to lower CPU usage on onboarding (PPM-1727)
-
-        // Remove all previously set Capabilities of radio from data model
-        database.clear_ap_capabilities(radio_tlv->radio_uid());
-    }
-
-    auto removed = agent->radios.keep_new_remove_old();
-    for (const auto &removed_radio : removed) {
-
-        LOG(INFO) << "Radio is not reported on AP_CAPABILITY_REPORT, remove radio object ruid="
-                  << removed_radio->radio_uid;
-
-        database.dm_remove_radio(*removed_radio);
-        son_actions::handle_dead_radio(removed_radio->radio_uid, true, database, m_task_pool);
-    }
-
-    bool all_radio_capabilities_saved_successfully = true;
-    if (agent->profile > wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_1 &&
-        !handle_tlv_profile2_channel_scan_capabilities(agent, cmdu_rx)) {
-        LOG(ERROR) << "Profile2 Channel Scan Capabilities are not supplied for Agent " << src_mac
-                   << " with profile enum " << agent->profile;
-        all_radio_capabilities_saved_successfully = false;
-    }
-
-    if (!handle_tlv_ap_ht_capabilities(cmdu_rx)) {
-        LOG(ERROR) << "Couldn't handle TLV AP HT Capabilities";
-        return false;
-    }
-    if (!handle_tlv_ap_vht_capabilities(cmdu_rx)) {
-        LOG(ERROR) << "Couldn't handle TLV AP VHTCapabilities";
-        return false;
-    }
-    if (!handle_tlv_apCapability(cmdu_rx, agent)) {
-        LOG(ERROR) << "Couldn't handle TLV tlvApCapability";
-    }
-    if (agent->profile > wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_3 &&
-        !handle_tlv_ap_wifi6_capabilities(cmdu_rx)) {
-        LOG(ERROR) << "Couldn't handle TLV AP WIFI6Capabilities";
-        return false;
-    }
-
-    // Profile-2 Multi AP profile is added for higher than Profile-1 agents.
-    if (agent->profile > wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_1 &&
-        !handle_tlv_profile2_ap_capability(agent, cmdu_rx)) {
-        LOG(ERROR) << "Profile2 AP Capability is not supplied for Agent " << src_mac
-                   << " with profile enum " << agent->profile;
-    }
-
-    if (!handle_tlv_profile2_ap_radio_advanced_capabilities(*agent, cmdu_rx)) {
-        LOG(ERROR) << "Couldn't handle AP Radio Advanced Capabilities TLV from Agent " << src_mac;
-    }
-
-    if (agent->profile > wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_1 &&
-        !handle_tlv_profile2_cac_capabilities(*agent, cmdu_rx)) {
-        LOG(ERROR) << "Profile2 CAC Capabilities are not supplied for Agent " << src_mac
-                   << " with profile enum " << agent->profile;
-    }
-
-    if (agent->profile > wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_2 &&
-        !handle_tlv_profile3_1905_layer_security_capabilities(*agent, cmdu_rx)) {
-        LOG(ERROR) << "Profile3 1905 Layer Security Capability is not supplied for Agent "
-                   << src_mac << " with profile enum " << agent->profile;
-    }
-
-    if (agent->profile > wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_2 &&
-        !handle_tlv_profile3_device_inventory(*agent, cmdu_rx)) {
-        LOG(ERROR) << "Profile3 Device Inventory is not supplied for Agent " << src_mac
-                   << " with profile enum " << agent->profile;
-    }
-
-    return all_radio_capabilities_saved_successfully;
+    return handle_ap_capability_report(src_mac, cmdu_rx, false);
 }
 
 bool Controller::handle_cmdu_1905_operating_channel_report(const sMacAddr &src_mac,
@@ -4719,6 +4692,118 @@ bool Controller::handle_cmdu_1905_qos_management_notification_message(
 
     // TODO: Implement sending of remaining TLVs of Service Prioritization Request message (PPM-2366)
     return son_actions::send_cmdu_to_agent(src_mac, cmdu_tx, database);
+}
+
+bool Controller::handle_ap_capability_report(const sMacAddr &src_mac,
+                                             ieee1905_1::CmduMessageRx &cmdu_rx, const bool early)
+{
+    auto agent = database.m_agents.get(src_mac);
+    if (!agent) {
+        LOG(ERROR) << "Agent with mac is not found in database mac=" << src_mac;
+        return false;
+    }
+
+    agent->radios.keep_new_prepare();
+
+    for (auto radio_tlv : cmdu_rx.getClassList<wfa_map::tlvApRadioBasicCapabilities>()) {
+
+        LOG(DEBUG) << "Radio is reported in AP Capabilites with ruid=" << radio_tlv->radio_uid();
+        database.add_radio(radio_tlv->radio_uid(), agent->al_mac);
+
+        //TODO: We can decide to parse Radio CAPs here instead of WSC (autoconfig_wsc_parse_radio_caps)
+        // to lower CPU usage on onboarding (PPM-1727)
+
+        // Remove all previously set Capabilities of radio from data model
+        database.clear_ap_capabilities(radio_tlv->radio_uid());
+    }
+
+    auto removed = agent->radios.keep_new_remove_old();
+    for (const auto &removed_radio : removed) {
+
+        LOG(INFO) << "Radio is not reported on AP_CAPABILITY_REPORT, remove radio object ruid="
+                  << removed_radio->radio_uid;
+
+        database.dm_remove_radio(*removed_radio);
+        son_actions::handle_dead_radio(removed_radio->radio_uid, true, database, m_task_pool);
+    }
+
+    bool all_radio_capabilities_saved_successfully = true;
+    if (!early &&
+        agent->profile > wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_1 &&
+        !handle_tlv_profile2_channel_scan_capabilities(agent, cmdu_rx)) {
+        LOG(ERROR) << "Profile2 Channel Scan Capabilities are not supplied for Agent " << src_mac
+                   << " with profile enum " << agent->profile;
+        all_radio_capabilities_saved_successfully = false;
+    }
+
+    // Reset Radios Capabilities
+    for (const auto &radio : agent->radios) {
+        radio.second->eht_supported = false;
+    }
+    if (!handle_tlv_ap_ht_capabilities(cmdu_rx)) {
+        LOG(ERROR) << "Couldn't handle TLV AP HT Capabilities";
+        return false;
+    }
+    if (!handle_tlv_ap_vht_capabilities(cmdu_rx)) {
+        LOG(ERROR) << "Couldn't handle TLV AP VHT Capabilities";
+        return false;
+    }
+    if (!handle_tlv_eht_operations(cmdu_rx, src_mac)) {
+        LOG(DEBUG) << "Couldn't handle TLV AP EHT Operations";
+        return false;
+    }
+    if (!handle_tlv_apCapability(cmdu_rx, agent, early)) {
+        LOG(ERROR) << "Couldn't handle TLV tlvApCapability";
+    }
+    if (agent->profile > wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_3 &&
+        !handle_tlv_ap_wifi6_capabilities(cmdu_rx)) {
+        LOG(ERROR) << "Couldn't handle TLV AP WIFI6Capabilities";
+        return false;
+    }
+
+    if (!handle_tlv_wifi7_agent_capabilities(cmdu_rx, agent)) {
+        LOG(DEBUG) << "Couldn't handle TLV WIFI7AgentCapabilities";
+        return false;
+    }
+
+    // Profile-2 Multi AP profile is added for higher than Profile-1 agents.
+    if (!handle_tlv_profile2_ap_capability(agent, cmdu_rx)) {
+        LOG(ERROR) << "Profile2 AP Capability is not supplied for Agent " << src_mac
+                   << " with profile enum " << agent->profile;
+    }
+
+    if (!handle_tlv_profile2_ap_radio_advanced_capabilities(*agent, cmdu_rx)) {
+        LOG(ERROR) << "Couldn't handle AP Radio Advanced Capabilities TLV from Agent " << src_mac;
+    }
+
+    if (agent->profile > wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_1 &&
+        !handle_tlv_profile2_cac_capabilities(*agent, cmdu_rx)) {
+        LOG(ERROR) << "Profile2 CAC Capabilities are not supplied for Agent " << src_mac
+                   << " with profile enum " << agent->profile;
+    }
+
+    if (agent->profile > wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_2 &&
+        !handle_tlv_profile3_1905_layer_security_capabilities(*agent, cmdu_rx)) {
+        LOG(ERROR) << "Profile3 1905 Layer Security Capability is not supplied for Agent "
+                   << src_mac << " with profile enum " << agent->profile;
+    }
+
+    if (agent->profile > wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_2 &&
+        !handle_tlv_profile3_device_inventory(*agent, cmdu_rx)) {
+        LOG(ERROR) << "Profile3 Device Inventory is not supplied for Agent " << src_mac
+                   << " with profile enum " << agent->profile;
+    }
+
+    return all_radio_capabilities_saved_successfully;
+}
+
+bool Controller::handle_cmdu_1905_early_ap_capability_report_message(
+    const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+    auto mid = cmdu_rx.getMessageId();
+    LOG(INFO) << "Received EARLY_AP_CAPABILITY_REPORT_MESSAGE, mid=" << std::dec << int(mid);
+
+    return handle_ap_capability_report(src_mac, cmdu_rx, true);
 }
 
 bool Controller::add_unassociated_station(const sMacAddr &station_mac_addr, uint8_t channel,

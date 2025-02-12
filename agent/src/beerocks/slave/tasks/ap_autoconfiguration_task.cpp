@@ -7,6 +7,7 @@
  */
 
 #include "ap_autoconfiguration_task.h"
+#include "link_metrics_collection_task.h"
 
 #include "../agent_db.h"
 #include "../son_slave_thread.h"
@@ -1387,14 +1388,17 @@ void ApAutoConfigurationTask::handle_multi_ap_policy_config_request(
         /**
          * The AP Metrics Reporting Interval field indicates if periodic AP metrics reporting is
          * to be enabled, and if so the cadence.
-         *
-         * Store configured interval value and restart the timer.
-         *
-         * Reporting interval value works just for enabling/disabling auto sending AP Metrics
-         * Response, which will be send every 500 ms.
          */
         db->link_metrics_policy.reporting_interval_sec =
             metric_reporting_policy_tlv->metrics_reporting_interval_sec();
+
+        /**
+         * Notify the link metrics collection task that the metric reporting policy has been
+         * updated. It will start or update a timer for periodic reporting if necessary.
+         */
+        m_btl_ctx.task_pool_send_event(
+            eTaskType::LINK_METRICS_COLLECTION,
+            LinkMetricsCollectionTask::eEvent::METRIC_REPORTING_POLICY_UPDATED);
     }
 
     /** Channel Scan Policy **/

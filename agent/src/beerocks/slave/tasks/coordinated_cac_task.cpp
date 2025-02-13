@@ -334,9 +334,8 @@ void CacFsm::config_fsm()
                     return false;
                 }
 
-                cancel_cac_request->cs_params().channel = m_original_channel;
-                cancel_cac_request->cs_params().bandwidth =
-                    beerocks::utils::convert_bandwidth_to_int(m_original_bandwidth);
+                cancel_cac_request->cs_params().channel              = m_original_channel;
+                cancel_cac_request->cs_params().bandwidth            = m_original_bandwidth;
                 cancel_cac_request->cs_params().vht_center_frequency = m_original_center_frequency;
                 cancel_cac_request->cs_params().channel_ext_above_primary =
                     m_original_secondary_channel_offset;

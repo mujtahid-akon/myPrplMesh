@@ -176,6 +176,8 @@ enum eWiFiBandwidth : uint8_t {
     BANDWIDTH_80,
     BANDWIDTH_80_80,
     BANDWIDTH_160,
+    BANDWIDTH_320_1,
+    BANDWIDTH_320_2,
     BANDWIDTH_320,
     BANDWIDTH_MAX,
 };

@@ -145,12 +145,13 @@ bool ap_wlan_hal_dummy::set_start_disabled(bool enable, int vap_id) { return tru
 bool ap_wlan_hal_dummy::set_channel(int chan, beerocks::eWiFiBandwidth bw, int center_channel)
 {
     m_radio_info.channel         = chan;
-    m_radio_info.bandwidth       = beerocks::utils::convert_bandwidth_to_int(bw);
+    m_radio_info.bandwidth       = bw;
     m_radio_info.vht_center_freq = center_channel;
     m_radio_info.is_dfs_channel  = son::wireless_utils::is_dfs_channel(chan);
     std::stringstream value;
     value << "channel: " << chan << std::endl;
-    value << "bw: " << m_radio_info.bandwidth << std::endl;
+    value << "bw: " << beerocks::utils::convert_bandwidth_to_string(m_radio_info.bandwidth)
+          << std::endl;
     value << "center_channel: " << center_channel << std::endl;
     return write_status_file("channel", value.str());
 }
@@ -308,7 +309,8 @@ bool ap_wlan_hal_dummy::update_vap_credentials(
     return true;
 }
 
-bool ap_wlan_hal_dummy::sta_unassoc_rssi_measurement(const std::string &mac, int chan, int bw,
+bool ap_wlan_hal_dummy::sta_unassoc_rssi_measurement(const std::string &mac, int chan,
+                                                     beerocks::eWiFiBandwidth bw,
                                                      int vht_center_frequency, int delay,
                                                      int window_size)
 {
@@ -334,8 +336,8 @@ bool ap_wlan_hal_dummy::sta_softblock_remove(const std::string &vap_name,
 bool ap_wlan_hal_dummy::switch_channel(int chan, beerocks::eWiFiBandwidth bw,
                                        int vht_center_frequency, int csa_beacon_count)
 {
-    auto bw_int = beerocks::utils::convert_bandwidth_to_int(bw);
-    LOG(TRACE) << __func__ << " channel: " << chan << ", bw: " << bw_int
+    LOG(TRACE) << __func__ << " channel: " << chan
+               << ", bw: " << beerocks::utils::convert_bandwidth_to_string(bw)
                << ", vht_center_frequency: " << vht_center_frequency;
 
     m_radio_info.last_csa_sw_reason = ChanSwReason::Unknown;

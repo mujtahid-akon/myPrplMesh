@@ -145,7 +145,7 @@ static void bml_utils_dump_conn_map(
 
             if (node->channel) { // channel != 0
                 ss << ", ch: " << std::to_string(node->channel) << ", bw: "
-                   << utils::convert_bandwidth_to_int((beerocks::eWiFiBandwidth)node->bw)
+                   << utils::convert_bandwidth_to_string((beerocks::eWiFiBandwidth)node->bw)
                    << utils::convert_channel_ext_above_to_string(node->channel_ext_above_secondary,
                                                                  (beerocks::eWiFiBandwidth)node->bw)
                    << ", rx_rssi: " << std::to_string(node->rx_rssi);
@@ -164,7 +164,7 @@ static void bml_utils_dump_conn_map(
                     ss << std::endl;
                 } else {
                     ss << ", ch: " << std::to_string(node->channel) << ", bw: "
-                       << utils::convert_bandwidth_to_int((beerocks::eWiFiBandwidth)node->bw)
+                       << utils::convert_bandwidth_to_string((beerocks::eWiFiBandwidth)node->bw)
                        << utils::convert_channel_ext_above_to_string(
                               node->channel_ext_above_secondary, (beerocks::eWiFiBandwidth)node->bw)
                        << std::endl;
@@ -203,7 +203,7 @@ static void bml_utils_dump_conn_map(
                            ? std::string("(CAC)")
                            : std::string())
                    << ", bw: "
-                   << utils::convert_bandwidth_to_int((beerocks::eWiFiBandwidth)radio->bw)
+                   << utils::convert_bandwidth_to_string((beerocks::eWiFiBandwidth)radio->bw)
                    << utils::convert_channel_ext_above_to_string(
                           radio->channel_ext_above_secondary, (beerocks::eWiFiBandwidth)radio->bw)
                    << ", freq: "

@@ -100,7 +100,9 @@ public:
     static std::string get_iface_string_from_iface_vap_ids(const std::string &iface, int8_t vap_id);
 
     static beerocks::eWiFiBandwidth convert_bandwidth_to_enum(int bandwidth_int);
-    static int convert_bandwidth_to_int(beerocks::eWiFiBandwidth bw);
+    static std::string convert_bandwidth_to_string(beerocks::eWiFiBandwidth bandwidth);
+    static int count_target_bandwidth(beerocks::eWiFiBandwidth bandwidth,
+                                      beerocks::eWiFiBandwidth target_bandwidth);
     static std::string convert_frequency_type_to_string(beerocks::eFreqType freq_type);
     static std::string convert_channel_ext_above_to_string(bool channel_ext_above_secondary,
                                                            beerocks::eWiFiBandwidth bandwidth);

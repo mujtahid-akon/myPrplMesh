@@ -80,7 +80,11 @@ std::vector<uint8_t> get_operating_class_non_oper_channels(
             for (const auto &bw_info : channel_info.supported_bw_list) {
                 auto channel = channel_info_element.first;
                 if (oper_class.band != bw_info.bandwidth) {
-                    continue;
+                    if (!((bw_info.bandwidth == beerocks::eWiFiBandwidth::BANDWIDTH_320_1 ||
+                           bw_info.bandwidth == beerocks::eWiFiBandwidth::BANDWIDTH_320_2) &&
+                          oper_class.band == beerocks::eWiFiBandwidth::BANDWIDTH_320)) {
+                        continue;
+                    }
                 }
 
                 auto is_there_any_unavailable_overlapping_channel = [&]() -> bool {

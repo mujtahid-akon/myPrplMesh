@@ -527,7 +527,8 @@ bool sta_wlan_hal_whm::set_4addr_mode(bool enable)
 
 bool sta_wlan_hal_whm::set_3addr_mcast(bool enable) { return true; }
 
-bool sta_wlan_hal_whm::unassoc_rssi_measurement(const std::string &mac, int chan, int bw,
+bool sta_wlan_hal_whm::unassoc_rssi_measurement(const std::string &mac, int chan,
+                                                beerocks::eWiFiBandwidth bw,
                                                 int vht_center_frequency, int delay,
                                                 int window_size)
 {

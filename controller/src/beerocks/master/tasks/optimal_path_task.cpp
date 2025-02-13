@@ -699,7 +699,8 @@ void optimal_path_task::work()
                         << (dl_rssi <= database.config.roaming_rssi_cutoff_db ? "  ** below cutoff"
                                                                               : "")
                         << std::endl
-                        << "   Bandwidth=" << beerocks::utils::convert_bandwidth_to_int(hostap_bw)
+                        << "   Bandwidth="
+                        << beerocks::utils::convert_bandwidth_to_string(hostap_bw)
                         << "   estimated_phy_rate=" << (hostap_phy_rate / (1024.0 * 1024.0))
                         << " [Mbps]"
                         << " weighted_phy_rate=" << (weighted_phy_rate / (1024.0 * 1024.0))
@@ -1447,7 +1448,7 @@ void optimal_path_task::work()
                                     ? "  ** below cutoff"
                                     : "")
                             << std::endl
-                            << "Bandwidth=" << utils::convert_bandwidth_to_int(hostap_params.bw)
+                            << "Bandwidth=" << utils::convert_bandwidth_to_string(hostap_params.bw)
                             << std::endl
                             << "    estimated_phy_rate=" << (hostap_phy_rate / (1024.0 * 1024.0))
                             << " [Mbps]"

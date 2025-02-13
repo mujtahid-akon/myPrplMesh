@@ -59,9 +59,9 @@ public:
                            const std::string &backhaul_wps_ssid,
                            const std::string &backhaul_wps_passphrase,
                            const std::string &bridge_ifname) override;
-    virtual bool sta_unassoc_rssi_measurement(const std::string &mac, int chan, int bw,
-                                              int vht_center_frequency, int delay,
-                                              int window_size) override;
+    virtual bool sta_unassoc_rssi_measurement(const std::string &mac, int chan,
+                                              beerocks::eWiFiBandwidth bw, int vht_center_frequency,
+                                              int delay, int window_size) override;
     virtual bool sta_softblock_add(const std::string &vap_name, const std::string &client_mac,
                                    uint8_t reject_error_code, uint8_t probe_snr_threshold_hi,
                                    uint8_t probe_snr_threshold_lo,

@@ -54,9 +54,9 @@ public:
     virtual bool set_4addr_mode(bool enable) override;
     virtual bool set_3addr_mcast(bool enable) override;
 
-    virtual bool unassoc_rssi_measurement(const std::string &mac, int chan, int bw,
-                                          int vht_center_frequency, int delay,
-                                          int window_size) override;
+    virtual bool unassoc_rssi_measurement(const std::string &mac, int chan,
+                                          beerocks::eWiFiBandwidth bw, int vht_center_frequency,
+                                          int delay, int window_size) override;
 
     virtual bool is_connected() override;
     virtual int get_channel() override;

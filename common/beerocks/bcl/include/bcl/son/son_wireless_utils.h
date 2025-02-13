@@ -70,6 +70,15 @@ constexpr uint32_t BAND_5G_MAX_FREQ  = 5895U;
 constexpr uint32_t BAND_6G_MIN_FREQ  = 5945U;
 constexpr uint32_t BAND_6G_MAX_FREQ  = 7125U;
 
+#define BANDWIDTH_320_2_LOWER_CHANNEL_LIMIT 29
+#define BANDWIDTH_320_1_UPPER_CHANNEL_LIMIT 193
+
+#define OPCLASS_5GHZ_USING_CENTER_CHANNEL_FIRST 128
+#define OPCLASS_5GHZ_USING_CENTER_CHANNEL_LAST 130
+#define OPCLASS_6GHZ_USING_CENTER_CHANNEL_FIRST 132
+#define OPCLASS_6GHZ_EXCEPTION 136
+#define OPCLASS_6GHZ_USING_CENTER_CHANNEL_LAST 137
+
 namespace son {
 class wireless_utils {
 public:
@@ -504,10 +513,31 @@ public:
      */
     static uint16_t get_vht_mcs_set(uint8_t vht_mcs, uint8_t vht_ss);
 
+    /**
+     * @brief Check if bandwidth is 320-1 or 320-2
+     *
+     * @param wifi_channel the wifiChannel object
+     * @return False if bandwidth is not any of them, true otherwise
+     */
+    static bool is_320MHz_channelization(const beerocks::WifiChannel &wifi_channel);
+
+    /**
+     * @brief Check if bandwidth is 320-1 or 320-2
+     *
+     * @param freq_type the frequency type - 2.4GHz, 5GHz, or 6GHz
+     * @param bandwidth the bandwidth
+     * @return False if bandwidth is not any of them, true otherwise
+     */
+    static bool is_320MHz_channelization(beerocks::eFreqType freq_type,
+                                         beerocks::eWiFiBandwidth bandwidth);
+
     static bool is_operating_class_using_central_channel(int operating_class)
     {
-        return ((128 <= operating_class && operating_class <= 130) ||
-                (132 <= operating_class && operating_class <= 136));
+        return ((OPCLASS_5GHZ_USING_CENTER_CHANNEL_FIRST <= operating_class &&
+                 operating_class <= OPCLASS_5GHZ_USING_CENTER_CHANNEL_LAST) ||
+                (OPCLASS_6GHZ_USING_CENTER_CHANNEL_FIRST <= operating_class &&
+                 operating_class <= OPCLASS_6GHZ_USING_CENTER_CHANNEL_LAST &&
+                 operating_class != OPCLASS_6GHZ_EXCEPTION));
     }
 
 private:

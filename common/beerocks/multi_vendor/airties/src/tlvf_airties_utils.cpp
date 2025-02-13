@@ -7,6 +7,7 @@
  */
 
 #include "tlvf_airties_utils.h"
+#include "agent_db.h"
 #include <bcl/beerocks_config_file.h>
 #include <bcl/beerocks_utils.h>
 #include <bcl/son/son_wireless_utils.h>
@@ -19,10 +20,21 @@
 #include <sys/ioctl.h>
 #include <tlvf/airties/eAirtiesTLVId.h>
 #include <tlvf/airties/supported_features.h>
+#include <tlvf/airties/tlvAirtiesDeviceInfo.h>
 #include <tlvf/airties/tlvAirtiesMsgType.h>
 #include <tlvf/airties/tlvVersionReporting.h>
 
 using namespace airties;
+using namespace beerocks;
+using namespace wbapi;
+
+/*
+ * This Macro is to enable or disable
+ * a bit in an octet. This is used for setting 
+ * Gateway/Extender information in Device Info TLV.
+ */
+#define TLV_BIT_ENABLE 0x1
+#define TLV_BIT_DISABLE 0x0
 
 /**
  * @brief Check if the Spanning Tree Protocol (STP) is enabled.
@@ -170,6 +182,64 @@ bool tlvf_airties_utils::add_airties_version_reporting_tlv(ieee1905_1::CmduMessa
         feature_id++;
     }
     LOG(INFO) << "Added the airties-specific version reporting TLV";
+    return true;
+}
+
+/*
+ * Function to update the Client details.
+ * If the client details are not present, 
+ * then the hard coded values will be saved in TLV.
+ */
+void update_client_details(std::shared_ptr<airties::tlvAirtiesDeviceInfo> &tlvDevinfo)
+{
+    std::string client_id     = "";
+    std::string client_secret = "";
+    std::string dm_path       = "X_AIRTIES_Obj.CloudComm.";
+
+    auto cli_det = tlvf_air_utils.m_ambiorix_cl.get_object(dm_path);
+    if (!cli_det) {
+        LOG(ERROR) << "Failed to get the ambiorix object for path,"
+                      " Setting default values "
+                   << dm_path;
+    }
+    //Retrieve the Client ID from DM
+    if (cli_det) {
+        cli_det->read_child<>(client_id, "ClientID");
+        cli_det->read_child<>(client_secret, "ClientPassword");
+    }
+
+    tlvDevinfo->set_client_id(client_id);
+    tlvDevinfo->set_client_secret(client_secret);
+}
+
+bool tlvf_airties_utils::add_airties_deviceinfo_tlv(ieee1905_1::CmduMessageTx &m_cmdu_tx)
+{
+    uint32_t randomBootid;
+    auto db = beerocks::AgentDB::get();
+
+    srand((unsigned)time(NULL));
+    randomBootid = rand();
+
+    auto tlvAirtiesDeviceInfo = m_cmdu_tx.addClass<airties::tlvAirtiesDeviceInfo>();
+    if (!tlvAirtiesDeviceInfo) {
+        LOG(ERROR) << "addClass wfa_map::tlvDeviceInfo failed";
+        return false;
+    }
+    tlvAirtiesDeviceInfo->vendor_oui() =
+        (sVendorOUI(airties::tlvAirtiesMsgType::airtiesVendorOUI::OUI_AIRTIES));
+    tlvAirtiesDeviceInfo->tlv_id()  = static_cast<int>(airties::eAirtiesTlVId::AIRTIES_DEVICE_INFO);
+    tlvAirtiesDeviceInfo->boot_id() = randomBootid;
+
+    update_client_details(tlvAirtiesDeviceInfo);
+
+    if (db->device_conf.local_gw) { //it's a controller
+        tlvAirtiesDeviceInfo->flags1().gateway_product_class  = TLV_BIT_ENABLE;
+        tlvAirtiesDeviceInfo->flags2().device_role_indication = TLV_BIT_ENABLE;
+    } else {
+        tlvAirtiesDeviceInfo->flags1().extender_product_class = TLV_BIT_ENABLE;
+        tlvAirtiesDeviceInfo->flags2().device_role_indication = TLV_BIT_DISABLE;
+    }
+    LOG(INFO) << "Added Device Info TLV";
     return true;
 }
 

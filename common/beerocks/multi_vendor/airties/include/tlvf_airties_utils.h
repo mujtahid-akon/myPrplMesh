@@ -13,10 +13,22 @@
 
 #include <beerocks/tlvf/beerocks_message.h>
 
+#include "ambiorix_client.h"
+#include "wbapi_utils.h"
+
 namespace airties {
 
 class tlvf_airties_utils {
 public:
+    beerocks::wbapi::AmbiorixClient m_ambiorix_cl;
+
+    tlvf_airties_utils()
+    {
+        LOG_IF(!m_ambiorix_cl.connect(AMBIORIX_USP_BACKEND_PATH, AMBIORIX_PWHM_USP_BACKEND_URI),
+               FATAL)
+            << "Unable to connect to the ambiorix backend!";
+    }
+
     bool is_airties_platform_common_stp_enabled() const;
 
     /**
@@ -28,9 +40,11 @@ public:
      */
     static bool add_airties_version_reporting_tlv(ieee1905_1::CmduMessageTx &cmdu_tx);
 
+    static bool add_airties_deviceinfo_tlv(ieee1905_1::CmduMessageTx &cmdu_tx);
+
     static bool add_airties_msgtype_tlv(ieee1905_1::CmduMessageTx &cmdu_tx);
 };
-
+static tlvf_airties_utils tlvf_air_utils;
 } // namespace airties
 
 #endif // __TLVF_AIRTIES_UTILS_H__

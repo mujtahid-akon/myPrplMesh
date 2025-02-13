@@ -117,6 +117,7 @@ public:
         bool profile2_backhaul_sta_association_disallowed = false;
         bool hidden_ssid                                  = false;
         int8_t mld_id                                     = -1;
+        bool bSTA                                         = false;
     } sBssInfoConf;
 
     typedef struct {

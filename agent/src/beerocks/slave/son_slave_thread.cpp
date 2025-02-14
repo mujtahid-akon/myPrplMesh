@@ -5452,8 +5452,19 @@ bool slave_thread::update_vaps_info(const std::string &iface,
     return true;
 }
 
-void slave_thread::notify_controller_discovery()
+bool slave_thread::send_event(eEvent event)
 {
-    m_task_pool.send_event(eTaskType::CONTROLLER_CONNECTIVITY,
-                           ControllerConnectivityTask::eEvent::CONTROLLER_DISCOVERED);
+    switch (event) {
+    case CONTROLLER_DISCOVERED:
+        m_task_pool.send_event(eTaskType::CONTROLLER_CONNECTIVITY,
+                               ControllerConnectivityTask::eEvent::CONTROLLER_DISCOVERED);
+        return true;
+    case CONTROLLER_EARLY_AP_CAPABILITY:
+        m_task_pool.send_event(eTaskType::CAPABILITY_REPORTING,
+                               CapabilityReportingTask::eEvent::EARLY_AP_CAPABILITY);
+        return true;
+    default:
+        LOG(DEBUG) << "No known target for event " << event;
+        return false;
+    }
 }

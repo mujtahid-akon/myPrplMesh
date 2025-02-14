@@ -3107,6 +3107,8 @@ void BackhaulManager::handle_dev_reset_default(
             wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_1_AS_OF_R4;
     }
 
+    db->controller_info.early_ap_capability_report_sent = false;
+
     //check if wired interface is enabled or try to enable it.
     if (!beerocks::net::network_utils::linux_iface_is_up_and_running(eth_iface)) {
         LOG(INFO) << "The wired interface " << eth_iface << " is not up, lets try to enable it";

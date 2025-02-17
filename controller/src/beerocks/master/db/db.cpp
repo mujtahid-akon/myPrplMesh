@@ -1526,6 +1526,278 @@ bool db::set_ap_wifi6_capabilities(wfa_map::tlvApWifi6Capabilities &wifi6_caps_t
     return ret_val;
 }
 
+bool db::set_internal_wifi7_radio_capabilities(
+    wfa_map::cRadioWifi7Capabilities &radio_wifi7_capabilities, Agent::sRadio &radio, bool is_bsta)
+{
+
+    auto wifi7_support = is_bsta ? radio_wifi7_capabilities.bsta_modes_support()
+                                 : radio_wifi7_capabilities.ap_modes_support();
+    auto wifi7_capabilities = is_bsta ? radio_wifi7_capabilities.bsta_wifi7_capabilities()
+                                      : radio_wifi7_capabilities.ap_wifi7_capabilities();
+
+    Agent::sRadio::sWiFi7Capabilities::sRole &wifi7_role =
+        is_bsta ? radio.wifi7_capabilities.bsta_role : radio.wifi7_capabilities.ap_role;
+
+    wifi7_role.str_support   = static_cast<bool>(wifi7_support.str_support);
+    wifi7_role.nstr_support  = static_cast<bool>(wifi7_support.nstr_support);
+    wifi7_role.emlsr_support = static_cast<bool>(wifi7_support.emlsr_support);
+    wifi7_role.emlmr_support = static_cast<bool>(wifi7_support.emlmr_support);
+
+    if (wifi7_role.str_support || wifi7_role.nstr_support || wifi7_role.emlsr_support ||
+        wifi7_role.emlmr_support)
+        radio.eht_supported = true;
+
+    wifi7_role.str_freq_separations.clear();
+    for (auto str_record_idx = 0; str_record_idx < wifi7_capabilities->num_str_records();
+         ++str_record_idx) {
+        auto str_config(wifi7_capabilities->str_config(str_record_idx));
+        if (!std::get<0>(str_config)) {
+            LOG(ERROR) << "getting str config entry " << str_record_idx << " has failed!";
+            return false;
+        }
+
+        Agent::sRadio::sWiFi7Capabilities::sRole::sFreqSeparation freq_sep;
+        freq_sep.ruid = std::get<1>(str_config).ruid();
+        freq_sep.freq_separation =
+            static_cast<uint8_t>(std::get<1>(str_config).frequency_separation().freq_separation);
+        wifi7_role.str_freq_separations.push_back(freq_sep);
+    }
+
+    wifi7_role.nstr_freq_separations.clear();
+    for (auto nstr_record_idx = 0; nstr_record_idx < wifi7_capabilities->num_nstr_records();
+         ++nstr_record_idx) {
+        auto nstr_config(wifi7_capabilities->nstr_config(nstr_record_idx));
+        if (!std::get<0>(nstr_config)) {
+            LOG(ERROR) << "getting nstr config entry " << nstr_record_idx << " has failed!";
+            return false;
+        }
+
+        Agent::sRadio::sWiFi7Capabilities::sRole::sFreqSeparation freq_sep;
+        freq_sep.ruid = std::get<1>(nstr_config).ruid();
+        freq_sep.freq_separation =
+            static_cast<uint8_t>(std::get<1>(nstr_config).frequency_separation().freq_separation);
+        wifi7_role.nstr_freq_separations.push_back(freq_sep);
+    }
+
+    wifi7_role.emlsr_freq_separations.clear();
+    for (auto emlsr_record_idx = 0; emlsr_record_idx < wifi7_capabilities->num_emlsr_records();
+         ++emlsr_record_idx) {
+        auto emlsr_config(wifi7_capabilities->emlsr_config(emlsr_record_idx));
+        if (!std::get<0>(emlsr_config)) {
+            LOG(ERROR) << "getting emlsr config entry " << emlsr_record_idx << " has failed!";
+            return false;
+        }
+
+        Agent::sRadio::sWiFi7Capabilities::sRole::sFreqSeparation freq_sep;
+        freq_sep.ruid = std::get<1>(emlsr_config).ruid();
+        freq_sep.freq_separation =
+            static_cast<uint8_t>(std::get<1>(emlsr_config).frequency_separation().freq_separation);
+        wifi7_role.emlsr_freq_separations.push_back(freq_sep);
+    }
+
+    wifi7_role.emlmr_freq_separations.clear();
+    for (auto emlmr_record_idx = 0; emlmr_record_idx < wifi7_capabilities->num_emlmr_records();
+         ++emlmr_record_idx) {
+        auto emlmr_config(wifi7_capabilities->emlmr_config(emlmr_record_idx));
+        if (!std::get<0>(emlmr_config)) {
+            LOG(ERROR) << "getting emlmr config entry " << emlmr_record_idx << " has failed!";
+            return false;
+        }
+
+        Agent::sRadio::sWiFi7Capabilities::sRole::sFreqSeparation freq_sep;
+        freq_sep.ruid = std::get<1>(emlmr_config).ruid();
+        freq_sep.freq_separation =
+            static_cast<uint8_t>(std::get<1>(emlmr_config).frequency_separation().freq_separation);
+        wifi7_role.emlmr_freq_separations.push_back(freq_sep);
+    }
+
+    LOG(DEBUG) << "Radio " << radio.radio_uid << ((is_bsta) ? " bSTA" : " AP")
+               << " Wi-Fi 7 support [STR = " << wifi7_role.str_support
+               << ", NSTR = " << wifi7_role.nstr_support << ", EMLSR = " << wifi7_role.emlsr_support
+               << ", EMLMR = " << wifi7_role.emlmr_support << "]";
+
+    return true;
+}
+
+bool db::set_wifi7_support(const Agent::sRadio &radio, bool is_bsta)
+{
+    bool ret_val(true);
+
+    const Agent::sRadio::sWiFi7Capabilities::sRole &wifi7_role =
+        is_bsta ? radio.wifi7_capabilities.bsta_role : radio.wifi7_capabilities.ap_role;
+    std::string path_to_obj = radio.dm_path + ".Capabilities.";
+    path_to_obj += (is_bsta ? "WiFi7bSTARole." : "WiFi7APRole.");
+
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "STRSupport", wifi7_role.str_support);
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "NSTRSupport", wifi7_role.nstr_support);
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "EMLSRSupport", wifi7_role.emlsr_support);
+    ret_val &= m_ambiorix_datamodel->set(path_to_obj, "EMLMRSupport", wifi7_role.emlmr_support);
+
+    return ret_val;
+}
+
+bool db::set_wifi7_capabilities(const Agent::sRadio &radio, bool is_bsta)
+{
+    bool ret_val(true);
+
+    const Agent::sRadio::sWiFi7Capabilities::sRole &wifi7_role =
+        is_bsta ? radio.wifi7_capabilities.bsta_role : radio.wifi7_capabilities.ap_role;
+
+    // Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.Capabilities
+    std::string path_to_obj = radio.dm_path + ".Capabilities.";
+    path_to_obj += (is_bsta ? "WiFi7bSTARole." : "WiFi7APRole.");
+
+    // Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.Capabilities.[WiFi7APRole/WiFi7bSTARole].STRFreqSeparations.{i}
+    m_ambiorix_datamodel->remove_all_instances(path_to_obj + "STRFreqSeparation");
+    for (const auto &str_freq_separation : wifi7_role.str_freq_separations) {
+        if (str_freq_separation.freq_separation != 0) {
+            auto path_to_obj_str =
+                m_ambiorix_datamodel->add_instance(path_to_obj + "STRFreqSeparation");
+            if (path_to_obj_str.empty()) {
+                LOG(ERROR) << "add_instance() failed for STRFreqSeparations on radio "
+                           << radio.radio_uid;
+                return false;
+            }
+
+            ret_val &= m_ambiorix_datamodel->set(path_to_obj_str, "RUID", str_freq_separation.ruid);
+            ret_val &= m_ambiorix_datamodel->set(path_to_obj_str, "FreqSeparation",
+                                                 str_freq_separation.freq_separation);
+        }
+    }
+
+    // Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.Capabilities.[WiFi7APRole/WiFi7bSTARole].NSTRFreqSeparations.{i}
+    m_ambiorix_datamodel->remove_all_instances(path_to_obj + "NSTRFreqSeparation");
+    for (const auto &nstr_freq_separation : wifi7_role.nstr_freq_separations) {
+        if (nstr_freq_separation.freq_separation != 0) {
+            auto path_to_obj_nstr =
+                m_ambiorix_datamodel->add_instance(path_to_obj + "NSTRFreqSeparation");
+            if (path_to_obj_nstr.empty()) {
+                LOG(ERROR) << "add_instance() failed for NSTRFreqSeparations on radio "
+                           << radio.radio_uid;
+                return false;
+            }
+
+            ret_val &=
+                m_ambiorix_datamodel->set(path_to_obj_nstr, "RUID", nstr_freq_separation.ruid);
+            ret_val &= m_ambiorix_datamodel->set(path_to_obj_nstr, "FreqSeparation",
+                                                 nstr_freq_separation.freq_separation);
+        }
+    }
+
+    // Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.Capabilities.[WiFi7APRole/WiFi7bSTARole].EMLSRFreqSeparations.{i}
+    m_ambiorix_datamodel->remove_all_instances(path_to_obj + "EMLSRFreqSeparation");
+    for (const auto &emlsr_freq_separation : wifi7_role.emlsr_freq_separations) {
+        if (emlsr_freq_separation.freq_separation != 0) {
+            auto path_to_obj_emlsr =
+                m_ambiorix_datamodel->add_instance(path_to_obj + "EMLSRFreqSeparation");
+            if (path_to_obj_emlsr.empty()) {
+                LOG(ERROR) << "add_instance() failed for EMLSRFreqSeparations on radio "
+                           << radio.radio_uid;
+                return false;
+            }
+
+            ret_val &=
+                m_ambiorix_datamodel->set(path_to_obj_emlsr, "RUID", emlsr_freq_separation.ruid);
+            ret_val &= m_ambiorix_datamodel->set(path_to_obj_emlsr, "FreqSeparation",
+                                                 emlsr_freq_separation.freq_separation);
+        }
+    }
+
+    // Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.Capabilities.[WiFi7APRole/WiFi7bSTARole].EMLMRFreqSeparations.{i}
+    m_ambiorix_datamodel->remove_all_instances(path_to_obj + "EMLMRFreqSeparation");
+    for (const auto &emlmr_freq_separation : wifi7_role.emlmr_freq_separations) {
+        if (emlmr_freq_separation.freq_separation != 0) {
+            auto path_to_obj_emlmr =
+                m_ambiorix_datamodel->add_instance(path_to_obj + "EMLMRFreqSeparation");
+            if (path_to_obj_emlmr.empty()) {
+                LOG(ERROR) << "add_instance() failed for EMLMRFreqSeparations on radio "
+                           << radio.radio_uid;
+                return false;
+            }
+
+            ret_val &=
+                m_ambiorix_datamodel->set(path_to_obj_emlmr, "RUID", emlmr_freq_separation.ruid);
+            ret_val &= m_ambiorix_datamodel->set(path_to_obj_emlmr, "FreqSeparation",
+                                                 emlmr_freq_separation.freq_separation);
+        }
+    }
+
+    return ret_val;
+}
+
+bool db::set_wifi7_agent_capabilities(wfa_map::tlvWifi7AgentCapabilities &wifi7_agt_caps_tlv,
+                                      std::shared_ptr<Agent> agent)
+{
+
+    bool ret_val(true);
+
+    if (!agent) {
+        LOG(ERROR) << "Failed to get agent";
+        return false;
+    }
+
+    agent->ap_maximum_links = static_cast<uint8_t>(wifi7_agt_caps_tlv.flags1().ap_maximum_links);
+    agent->bsta_maximum_links =
+        static_cast<uint8_t>(wifi7_agt_caps_tlv.flags1().bsta_maximum_links);
+
+    if (!agent->dm_path.empty()) {
+        // Device.x
+        auto path_to_obj_agent = agent->dm_path + ".";
+        ret_val &=
+            m_ambiorix_datamodel->set(path_to_obj_agent, "MaxNumMLDs",
+                                      static_cast<uint8_t>(wifi7_agt_caps_tlv.max_num_mlds()));
+        ret_val &= m_ambiorix_datamodel->set(
+            path_to_obj_agent, "APMLDMaxLinks",
+            static_cast<uint8_t>(wifi7_agt_caps_tlv.flags1().ap_maximum_links));
+        ret_val &= m_ambiorix_datamodel->set(
+            path_to_obj_agent, "bSTAMLDMaxLinks",
+            static_cast<uint8_t>(wifi7_agt_caps_tlv.flags1().bsta_maximum_links));
+        ret_val &= m_ambiorix_datamodel->set(
+            path_to_obj_agent, "TIDLinkMapCapacity",
+            std::to_string(
+                static_cast<uint8_t>(wifi7_agt_caps_tlv.flags2().tid_to_link_mapping_capability)));
+    }
+
+    for (auto radio_idx = 0; radio_idx < wifi7_agt_caps_tlv.num_radio(); ++radio_idx) {
+        auto radio_wifi7_capability =
+            std::get<1>(wifi7_agt_caps_tlv.radio_wifi7_capabilities(radio_idx));
+        auto radio = get_radio_by_uid(radio_wifi7_capability.ruid());
+        if (!radio) {
+            LOG(ERROR) << "Failed to get radio with RUID: " << radio_wifi7_capability.ruid();
+            return false;
+        }
+
+        if (!set_internal_wifi7_radio_capabilities(radio_wifi7_capability, *radio, false)) {
+            LOG(ERROR) << "Couldn't set internal AP WiFi7 capabilities for radio"
+                       << radio->radio_uid;
+        }
+
+        if (!set_internal_wifi7_radio_capabilities(radio_wifi7_capability, *radio, true)) {
+            LOG(ERROR) << "Couldn't set internal bSTA WiFi7 capabilities for radio"
+                       << radio->radio_uid;
+        }
+
+        if (radio->dm_path.empty()) {
+            continue;
+        }
+
+        if (!set_wifi7_support(*radio, false)) {
+            LOG(ERROR) << "Couldn't set AP WiFi7 support for radio " << radio->radio_uid;
+        }
+        if (!set_wifi7_capabilities(*radio, false)) {
+            LOG(ERROR) << "Couldn't set AP WiFi7 capabilities for radio " << radio->radio_uid;
+        }
+        if (!set_wifi7_support(*radio, true)) {
+            LOG(ERROR) << "Couldn't set bSTA WiFi7 support for radio " << radio->radio_uid;
+        }
+        if (!set_wifi7_capabilities(*radio, true)) {
+            LOG(ERROR) << "Couldn't set bSTA WiFi7 capabilities for radio " << radio->radio_uid;
+        }
+    }
+
+    return ret_val;
+}
+
 bool db::dm_set_sta_ht_capabilities(const std::string &path_to_sta,
                                     const beerocks::message::sRadioCapabilities &sta_cap)
 {

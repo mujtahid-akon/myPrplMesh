@@ -160,6 +160,27 @@ public:
         bool is_acs_enabled = false;
 
         bool eht_supported = false;
+        struct sWiFi7Capabilities {
+            typedef struct {
+                typedef struct {
+                    sMacAddr ruid           = beerocks::net::network_utils::ZERO_MAC;
+                    uint8_t freq_separation = 0;
+                } sFreqSeparation;
+
+                std::vector<sFreqSeparation> str_freq_separations;
+                std::vector<sFreqSeparation> nstr_freq_separations;
+                std::vector<sFreqSeparation> emlsr_freq_separations;
+                std::vector<sFreqSeparation> emlmr_freq_separations;
+
+                bool str_support   = false;
+                bool nstr_support  = false;
+                bool emlsr_support = false;
+                bool emlmr_support = false;
+            } sRole;
+
+            sRole ap_role;
+            sRole bsta_role;
+        } wifi7_capabilities;
 
         /** Name of the Wi-Fi chip vendor of this radio */
         std::string chipset_vendor;
@@ -507,6 +528,9 @@ public:
         beerocks::eNodeState state = beerocks::STATE_DISCONNECTED;
     };
     beerocks::mac_map<sEthSwitch> eth_switches;
+
+    uint8_t ap_maximum_links   = 0;
+    uint8_t bsta_maximum_links = 0;
 
     friend class ::son::db;
 

@@ -25,9 +25,8 @@ public:
     Amxrt() { amxrt_new(); }
     ~Amxrt()
     {
-        //FIXME: Re-enable once destruction order of Amxrt is fixed. See PPM-3032.
-        //amxrt_stop();
-        //amxrt_delete();
+        amxrt_stop();
+        amxrt_delete();
     }
 
     /**

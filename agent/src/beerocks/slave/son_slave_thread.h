@@ -235,6 +235,11 @@ public:
 
     inline const sAgentConfig &get_agent_conf() { return config; }
 
+    inline void task_pool_send_event(eTaskType task_type, uint8_t event)
+    {
+        m_task_pool.send_event(task_type, event);
+    }
+
     void fsm_stop();
 
 private:

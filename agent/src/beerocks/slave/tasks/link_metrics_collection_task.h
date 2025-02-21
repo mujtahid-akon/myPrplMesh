@@ -18,6 +18,8 @@
 #include <tlvf/wfa_map/tlvAssociatedStaLinkMetrics.h>
 
 #include "bcl/network/network_utils.h"
+#include <bcl/beerocks_timer_manager.h>
+#include <bcl/network/file_descriptor.h>
 
 #include "../helpers/link_metrics/link_metrics.h"
 
@@ -28,7 +30,8 @@ class slave_thread;
 
 class LinkMetricsCollectionTask : public Task {
 public:
-    LinkMetricsCollectionTask(slave_thread &btl_ctx, ieee1905_1::CmduMessageTx &cmdu_tx);
+    LinkMetricsCollectionTask(slave_thread &btl_ctx, ieee1905_1::CmduMessageTx &cmdu_tx,
+                              std::shared_ptr<beerocks::TimerManager> timer_manager);
 
     bool handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, uint32_t iface_index,
                      const sMacAddr &dst_mac, const sMacAddr &src_mac, int fd,
@@ -41,15 +44,18 @@ public:
      * @brief eEvent list is used on link metrics task.
      *
      * RESET_QUERIES is sent when DEV_RESET_DEFAULT is triggered, to clean up already started processes.
+     * METRIC_REPORTING_POLICY_UPDATED is sent when metric reporting policy is updated.
      *
      */
     enum eEvent : uint8_t {
         RESET_QUERIES,
+        METRIC_REPORTING_POLICY_UPDATED,
     };
 
 private:
     slave_thread &m_btl_ctx;
     ieee1905_1::CmduMessageTx &m_cmdu_tx;
+    std::shared_ptr<beerocks::TimerManager> m_timer_manager;
 
     void handle_link_metric_query(ieee1905_1::CmduMessageRx &cmdu_rx, const sMacAddr &src_mac);
     void handle_combined_infrastructure_metrics(ieee1905_1::CmduMessageRx &cmdu_rx,
@@ -186,6 +192,24 @@ private:
     void recalculate_byte_units(ieee1905_1::CmduMessageRx &cmdu_rx);
 
     /**
+     * @brief Callback of the timer that sends periodic AP Metrics Report
+     *
+     * @return None
+     */
+    void ap_metrics_reporting_cb(void);
+
+    /**
+     * @brief Schedules periodic reporting according to the new metric reporting policy
+     *
+     * Creates a timer with the reporting interval if periodic reporting is required.
+     * A reporting period of 0 means that periodic reporting is disabled, and if there
+     * is an existing timer, it is removed.
+     *
+     * @return None
+     */
+    void handle_metric_reporting_policy_updated_event(void);
+
+    /**
      * AP Metrics Reporting configuration and status information type.
      */
     struct sApMetricsReportingInfo {
@@ -196,10 +220,8 @@ private:
          */
         uint8_t reporting_interval_s = 0;
 
-        /**
-         * Time point at which AP metrics were reported for the last time.
-         */
-        std::chrono::steady_clock::time_point last_reporting_time_point;
+        /* Timer for periodic AP Metrics Reporting */
+        int report_timer = beerocks::net::FileDescriptor::invalid_descriptor;
     };
 
     /**

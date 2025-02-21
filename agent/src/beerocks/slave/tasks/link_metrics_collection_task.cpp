@@ -42,9 +42,11 @@ using namespace multi_vendor;
 
 namespace beerocks {
 
-LinkMetricsCollectionTask::LinkMetricsCollectionTask(slave_thread &btl_ctx,
-                                                     ieee1905_1::CmduMessageTx &cmdu_tx)
-    : Task(eTaskType::LINK_METRICS_COLLECTION), m_btl_ctx(btl_ctx), m_cmdu_tx(cmdu_tx)
+LinkMetricsCollectionTask::LinkMetricsCollectionTask(
+    slave_thread &btl_ctx, ieee1905_1::CmduMessageTx &cmdu_tx,
+    std::shared_ptr<beerocks::TimerManager> timer_manager)
+    : Task(eTaskType::LINK_METRICS_COLLECTION), m_btl_ctx(btl_ctx), m_cmdu_tx(cmdu_tx),
+      m_timer_manager(timer_manager)
 {
 }
 
@@ -90,74 +92,7 @@ bool LinkMetricsCollectionTask::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx,
     return true;
 }
 
-// If time period is less than define ms then agent can send the ap metrics response
-#define GRACE_PERIOD_MS 150
-
-void LinkMetricsCollectionTask::work()
-{
-    auto db = AgentDB::get();
-
-    if (!db->statuses.ap_autoconfiguration_completed) {
-        return;
-    }
-
-    /**
-     * Get current time. It is later used to compute elapsed time since some start time and
-     * check if a timeout has expired to perform periodic actions.
-     */
-    auto now = std::chrono::steady_clock::now();
-
-    /**
-     * If periodic AP metrics reporting is enabled, check if time interval has elapsed and if
-     * so, then report AP metrics.
-     */
-    if (db->link_metrics_policy.reporting_interval_sec !=
-        m_ap_metrics_reporting_info.reporting_interval_s) {
-        m_ap_metrics_reporting_info.reporting_interval_s =
-            db->link_metrics_policy.reporting_interval_sec;
-        m_ap_metrics_reporting_info.last_reporting_time_point = std::chrono::steady_clock::now();
-    }
-    if (0 == m_ap_metrics_reporting_info.reporting_interval_s) {
-        return;
-    }
-
-    auto elapsed_time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-                               now - m_ap_metrics_reporting_info.last_reporting_time_point)
-                               .count();
-    auto timeout_diff_ms =
-        (m_ap_metrics_reporting_info.reporting_interval_s * 1000 - elapsed_time_ms);
-    if (timeout_diff_ms > GRACE_PERIOD_MS) {
-        return;
-    }
-
-    m_ap_metrics_reporting_info.last_reporting_time_point = now;
-
-    // We must generate a new MID for the periodic AP Metrics Response messages that
-    // do not correspond to an AP Metrics Query message.
-    // We cannot set MID to 0 here because we must also differentiate periodic
-    // AP Metrics Response messages and messages received from monitor thread
-    // due to channel utilization crossed configured threshold value.
-    // As a temporary solution, set MID to UINT16_MAX here.
-    // TODO: to be fixed as part of #1328 - PPM-40
-
-    // AP Metrics Queries can be originated both from periodic or other sources.
-    // There is no differentiation in ap_metric_query about requested queries source.
-    // m_ap_metric_query can be converted to map (mid, requested bssid vector).
-    // Concurrent time based and explicit query based requests are problematic,
-    // especially, if periodic is triggered right after, explicits will be dropped.
-    // To fix existing problem (PPM-1203) of remained un-answered queries,
-    // query can be cleared in case of query is sent to all bissids.
-    m_ap_metric_query.clear();
-
-    // AP metrics response message will be sent only when there is respective AP metric
-    // query on queue(based on MID). Since AP metric query queue is cleared, AP metric responses also
-    // need to be cleared to avoid unnecessary stacking of responses which may lead to memory leak.
-    m_ap_metric_response.clear();
-    m_radio_ap_metric_response.clear();
-
-    // Send ap_metrics query on all bssids exists on the Agent.
-    send_ap_metric_query_message(UINT16_MAX);
-}
+void LinkMetricsCollectionTask::work() {}
 
 void LinkMetricsCollectionTask::handle_link_metric_query(ieee1905_1::CmduMessageRx &cmdu_rx,
                                                          const sMacAddr &src_mac)
@@ -1431,13 +1366,107 @@ bool LinkMetricsCollectionTask::get_neighbor_links(
     return true;
 }
 
+void LinkMetricsCollectionTask::ap_metrics_reporting_cb(void)
+{
+    auto db = AgentDB::get();
+    if (!db->statuses.ap_autoconfiguration_completed) {
+        return;
+    }
+
+    /**
+     * We must generate a new MID for the periodic AP Metrics Response messages that
+     * do not correspond to an AP Metrics Query message.
+     * We cannot set MID to 0 here because we must also differentiate periodic
+     * AP Metrics Response messages and messages received from monitor thread
+     * due to channel utilization crossed configured threshold value.
+     * As a temporary solution, set MID to UINT16_MAX here.
+     * TODO: to be fixed as part of #1328 - PPM-40
+     */
+
+    /**
+     * AP Metrics Queries can be originated both from periodic or other sources.
+     * There is no differentiation in ap_metric_query about requested queries source.
+     * m_ap_metric_query can be converted to map (mid, requested bssid vector).
+     * Concurrent time based and explicit query based requests are problematic,
+     * especially, if periodic is triggered right after, explicits will be dropped.
+     * To fix existing problem (PPM-1203) of remained un-answered queries,
+     * query can be cleared in case of query is sent to all bissids.
+     */
+    m_ap_metric_query.clear();
+
+    /**
+     * AP metrics response message will be sent only when there is respective AP metric
+     * query on queue(based on MID). Since AP metric query queue is cleared, AP metric responses also
+     * need to be cleared to avoid unnecessary stacking of responses which may lead to memory leak.
+     */
+    m_ap_metric_response.clear();
+    m_radio_ap_metric_response.clear();
+
+    /* Send ap_metrics query on all bssids exists on the Agent */
+    send_ap_metric_query_message(UINT16_MAX);
+}
+
+void LinkMetricsCollectionTask::handle_metric_reporting_policy_updated_event(void)
+{
+    auto db = AgentDB::get();
+
+    if (db->link_metrics_policy.reporting_interval_sec !=
+        m_ap_metrics_reporting_info.reporting_interval_s) {
+        m_ap_metrics_reporting_info.reporting_interval_s =
+            db->link_metrics_policy.reporting_interval_sec;
+    } else {
+        return;
+    }
+
+    /* Remove the existing timer */
+    if (m_ap_metrics_reporting_info.report_timer !=
+        beerocks::net::FileDescriptor::invalid_descriptor) {
+        m_timer_manager->remove_timer(m_ap_metrics_reporting_info.report_timer);
+    }
+
+    if (m_ap_metrics_reporting_info.reporting_interval_s == 0) {
+        LOG(DEBUG) << "Periodic AP Metrics Reporting disabled";
+        return;
+    }
+
+    std::chrono::milliseconds timer_interval(m_ap_metrics_reporting_info.reporting_interval_s *
+                                             1000);
+
+    /* Create a timer for periodic reporting */
+    m_ap_metrics_reporting_info.report_timer =
+        m_timer_manager->add_timer("AP Metrics Reporting", timer_interval, timer_interval,
+                                   [&](int fd, beerocks::EventLoop &loop) {
+                                       ap_metrics_reporting_cb();
+                                       return true;
+                                   });
+
+    if (m_ap_metrics_reporting_info.report_timer ==
+        beerocks::net::FileDescriptor::invalid_descriptor) {
+        LOG(ERROR) << "Failed to create the AP Metrics Response timer, "
+                      "periodic reporting disabled!";
+        return;
+    }
+}
+
 void LinkMetricsCollectionTask::handle_event(uint8_t event_enum_value, const void *event_obj)
 {
     switch (eEvent(event_enum_value)) {
     case RESET_QUERIES: {
         LOG(DEBUG) << "Received RESET_QUERIES event.";
+
+        if (m_ap_metrics_reporting_info.report_timer !=
+            beerocks::net::FileDescriptor::invalid_descriptor) {
+            m_timer_manager->remove_timer(m_ap_metrics_reporting_info.report_timer);
+        }
+
         m_ap_metric_query.clear();
         m_ap_metrics_reporting_info.reporting_interval_s = 0;
+
+        break;
+    }
+    case METRIC_REPORTING_POLICY_UPDATED: {
+        LOG(DEBUG) << "Received METRIC_REPORTING_POLICY_UPDATED event.";
+        handle_metric_reporting_policy_updated_event();
         break;
     }
     default: {

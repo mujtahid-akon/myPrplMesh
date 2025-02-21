@@ -63,13 +63,17 @@ public:
                                   [ieee1905_1::eMessageType::AP_METRICS_RESPONSE_MESSAGE]
                                       .push_back(add_device_metrics);
             } break;
+            case ieee1905_1::eMessageType::TOPOLOGY_RESPONSE_MESSAGE: {
+                tlv_function_table[AIRTIES_OUI][ieee1905_1::eMessageType::TOPOLOGY_RESPONSE_MESSAGE]
+                    .push_back(add_airties_ethernet_interface_tlv);
+            } break;
             default: {
                 LOG(WARNING) << "This msg type " << msg_type
                              << " is not added in the m_message_types vector for oui-" << std::hex
                              << AIRTIES_OUI;
             } break;
             }
-        }
+        } //End of for loop
     }
 
 private:
@@ -78,7 +82,8 @@ private:
         ieee1905_1::eMessageType::AP_AUTOCONFIGURATION_WSC_MESSAGE,
         ieee1905_1::eMessageType::AP_AUTOCONFIGURATION_SEARCH_MESSAGE,
         ieee1905_1::eMessageType::AP_CAPABILITY_REPORT_MESSAGE,
-        ieee1905_1::eMessageType::AP_METRICS_RESPONSE_MESSAGE};
+        ieee1905_1::eMessageType::AP_METRICS_RESPONSE_MESSAGE,
+        ieee1905_1::eMessageType::TOPOLOGY_RESPONSE_MESSAGE};
 };
 
 // Static object of the Airties vendor object. This ensures the airties vendor's handlers are

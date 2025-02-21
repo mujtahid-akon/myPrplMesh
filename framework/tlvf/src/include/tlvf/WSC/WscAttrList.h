@@ -239,6 +239,16 @@ public:
         }
         return true;
     }
+
+    // Purpose is to get the msg_type before parsing WSC tlv
+    typedef struct {
+        uint16_t version_attributes;
+        uint16_t version_length;
+        uint8_t version_value;
+        uint16_t msg_type_attributes;
+        uint16_t msg_type_length;
+        uint8_t msg_type_value;
+    } __attribute__((packed)) wsc_header;
 };
 
 } // namespace WSC

@@ -2926,6 +2926,7 @@ bool BackhaulManager::start_wps_pbc(const sMacAddr &radio_mac)
             return false;
         }
 
+#ifndef USE_PRPLMESH_WHM
         // Disable radio interface to make sure its not beaconing along while the supplicant is
         // scanning.Disable rest of radio interfaces to prevent stations from connecting (there is
         // no BH link anyway).
@@ -2948,6 +2949,7 @@ bool BackhaulManager::start_wps_pbc(const sMacAddr &radio_mac)
             }
             UTILS_SLEEP_MSEC(3000);
         }
+#endif
         if (!sta_wlan_hal->start_wps_pbc()) {
             LOG(ERROR) << "Failed to start wps";
             if (db->device_conf.certification_mode)

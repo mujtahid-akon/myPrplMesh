@@ -851,20 +851,21 @@ bool Controller::handle_cmdu_1905_autoconfiguration_search(const sMacAddr &src_m
 }
 
 /**
- * @brief Encrypt the config data using AES and add to the WSC M2 TLV
+ * @brief Encrypt the config data using AES and add to the WSC M2/M8 TLV
  *        The encrypted data length is the config data length padded to 16 bytes boundary.
  *
- * @param[in] m2 WSC M2 TLV
+ * @param[out] iv initialization vector from M2/M8 to be filled
+ * @param[out] encrypted_settings encrypted settings from M2/M8 to be filled
  * @param[in] config_data config data in network byte order (swapped)
  * @param[in] authkey 32 bytes calculated authentication key
  * @param[in] keywrapkey 16 bytes calculated key wrap key
  * @return true on success
  * @return false on failure
  */
-bool Controller::autoconfig_wsc_add_m2_encrypted_settings(WSC::m2::config &m2_cfg,
-                                                          WSC::configData &config_data,
-                                                          uint8_t authkey[32],
-                                                          uint8_t keywrapkey[16])
+bool Controller::autoconfig_wsc_add_encrypted_settings(uint8_t &iv,
+                                                       std::vector<uint8_t> &encrypted_settings,
+                                                       WSC::configData &config_data,
+                                                       uint8_t authkey[32], uint8_t keywrapkey[16])
 {
     // Step 1 - key wrap authenticator calculation
     uint8_t *plaintext = config_data.getMessageBuff();
@@ -893,98 +894,123 @@ bool Controller::autoconfig_wsc_add_m2_encrypted_settings(WSC::m2::config &m2_cf
     // Create encrypted_settings
     int cipherlen = plaintextlen + 16;
     uint8_t ciphertext[cipherlen];
-    if (!mapf::encryption::create_iv(m2_cfg.iv, WSC::WSC_ENCRYPTED_SETTINGS_IV_LENGTH)) {
+    if (!mapf::encryption::create_iv(&iv, WSC::WSC_ENCRYPTED_SETTINGS_IV_LENGTH)) {
         LOG(ERROR) << "create iv failure";
         return false;
     }
-    if (!mapf::encryption::aes_encrypt(keywrapkey, m2_cfg.iv, plaintext, plaintextlen, ciphertext,
+    if (!mapf::encryption::aes_encrypt(keywrapkey, &iv, plaintext, plaintextlen, ciphertext,
                                        cipherlen)) {
         LOG(ERROR) << "aes encrypt failure";
         return false;
     }
-    m2_cfg.encrypted_settings = std::vector<uint8_t>(ciphertext, ciphertext + cipherlen);
+    encrypted_settings = std::vector<uint8_t>(ciphertext, ciphertext + cipherlen);
 
     return true;
 }
 
 /**
- * @brief Calculate keys and update M2 attributes.
+ * @brief Calculate keys and update M2/M8 attributes.
  *
  * @param[in] m1 WSC M1 attribute list received from the radio agent
- * @param[in] m2 WSC configuration struct used for creating WSC::m2
+ * @param[in] enrollee_nonce enrollee nonce
+ * @param[in] registrar_nonce registrar nonce
+ * @param[in] pub_key public key
  * @param[in] dh diffie helman key exchange class containing the keypair
  * @param[out] authkey 32 bytes calculated authentication key
  * @param[out] keywrapkey 16 bytes calculated key wrap key
  * @return true on success
  * @return false on failure
  */
-void Controller::autoconfig_wsc_calculate_keys(WSC::m1 &m1, WSC::m2::config &m2,
+void Controller::autoconfig_wsc_calculate_keys(WSC::m1 &m1, uint8_t &enrollee_nonce,
+                                               uint8_t &registrar_nonce, uint8_t &pub_key,
                                                const mapf::encryption::diffie_hellman &dh,
                                                uint8_t authkey[32], uint8_t keywrapkey[16])
 {
-    std::copy_n(m1.enrollee_nonce(), WSC::eWscLengths::WSC_NONCE_LENGTH, m2.enrollee_nonce);
-    std::copy_n(dh.nonce(), dh.nonce_length(), m2.registrar_nonce);
+    std::copy_n(m1.enrollee_nonce(), WSC::eWscLengths::WSC_NONCE_LENGTH, &enrollee_nonce);
+    std::copy_n(dh.nonce(), dh.nonce_length(), &registrar_nonce);
     mapf::encryption::wps_calculate_keys(
         dh, m1.public_key(), WSC::eWscLengths::WSC_PUBLIC_KEY_LENGTH, m1.enrollee_nonce(),
-        m1.mac_addr().oct, m2.registrar_nonce, authkey, keywrapkey);
-    copy_pubkey(dh, m2.pub_key);
+        m1.mac_addr().oct, &registrar_nonce, authkey, keywrapkey);
+    copy_pubkey(dh, &pub_key);
 }
 
-/**
- * @brief autoconfig global authenticator attribute calculation
- *
- * Calculate authentication on the Full M1 || M2* whereas M2* = M2 without the authenticator
- * attribute.
- *
- * @param m1 WSC M1 attribute list
- * @param m2 WSC M2 TLV
- * @param authkey authentication key
- * @return true on success
- * @return false on failure
- */
-bool Controller::autoconfig_wsc_authentication(WSC::m1 &m1, WSC::m2 &m2, uint8_t authkey[32])
+WSC::configData::config
+prepare_wsc_config(const sMacAddr &ruid, const wireless_utils::sBssInfoConf *bss_info_conf, bool m8)
 {
-    // Authentication on Full M1 || M2* (without the authenticator attribute)
-    // This is the content of M1 and M2, without the type and length.
-    // Authentication is done on swapped data.
-    // Since m1 is parsed, it is in host byte order, and needs to be swapped.
-    // m2 is created, and already finalized so its in network byte order, so no
-    // need to swap it.
-    if (m1.getMessageLength() <= WSC::cWscAttrAuthenticator::get_initial_size() ||
-        m2.getMessageLength() <= WSC::cWscAttrAuthenticator::get_initial_size()) {
-        LOG(ERROR) << "Bad message length failure";
-        return false;
+    // Create ConfigData
+    WSC::configData::config cfg;
+    if (bss_info_conf) {
+        cfg.ssid        = bss_info_conf->ssid;
+        cfg.auth_type   = bss_info_conf->authentication_type;
+        cfg.encr_type   = bss_info_conf->encryption_type;
+        cfg.network_key = bss_info_conf->network_key;
+        if (m8) {
+            cfg.bss_type = WSC::eWscVendorExtSubelementBssType::BACKHAUL_STA;
+        } else {
+            cfg.bss_type = 0;
+            if (bss_info_conf->fronthaul) {
+                cfg.bss_type |= WSC::eWscVendorExtSubelementBssType::FRONTHAUL_BSS;
+            }
+            if (bss_info_conf->backhaul) {
+                cfg.bss_type |= WSC::eWscVendorExtSubelementBssType::BACKHAUL_BSS;
+            }
+            if (bss_info_conf->bSTA) {
+                cfg.bss_type |= WSC::eWscVendorExtSubelementBssType::BACKHAUL_STA;
+            }
+            if (bss_info_conf->profile1_backhaul_sta_association_disallowed) {
+                cfg.bss_type |= WSC::eWscVendorExtSubelementBssType::
+                    PROFILE1_BACKHAUL_STA_ASSOCIATION_DISALLOWED;
+            }
+            if (bss_info_conf->profile2_backhaul_sta_association_disallowed) {
+                cfg.bss_type |= WSC::eWscVendorExtSubelementBssType::
+                    PROFILE2_BACKHAUL_STA_ASSOCIATION_DISALLOWED;
+            }
+        }
+        LOG(DEBUG) << "WSC config_data:" << std::hex << std::endl
+                   << "     ssid: " << cfg.ssid << std::endl
+                   << "     authentication_type: " << int(cfg.auth_type) << std::endl
+                   << "     encryption_type: " << int(cfg.encr_type) << std::dec << std::endl
+                   << "     bss_type: " << std::hex << int(cfg.bss_type);
+    } else {
+        // Tear down. No need to set any parameter except the teardown bit and the MAC address.
+        cfg.bss_type = WSC::eWscVendorExtSubelementBssType::TEARDOWN;
+        LOG(DEBUG) << "WSC config_data: tear down";
     }
-    m1.swap();
-    uint8_t buf[m1.getMessageLength() + m2.getMessageLength() -
-                WSC::cWscAttrAuthenticator::get_initial_size()];
-    auto next = std::copy_n(m1.getMessageBuff(), m1.getMessageLength(), buf);
-    std::copy_n(m2.getMessageBuff(),
-                m2.getMessageLength() - WSC::cWscAttrAuthenticator::get_initial_size(), next);
-    // swap back
-    m1.swap();
-    uint8_t *kwa = reinterpret_cast<uint8_t *>(m2.authenticator());
-    // Add KWA which is the 1st 64 bits of HMAC of config_data using AuthKey
-    if (!mapf::encryption::kwa_compute(authkey, buf, sizeof(buf), kwa)) {
-        LOG(ERROR) << "kwa_compute failure";
-        return false;
-    }
-    return true;
+
+    // The MAC address in the config data is tricky... According to "Wi-Fi Simple Configuration
+    // Technical Specification v2.0.6", section 7.2.2 "Validation of Configuration Data" the MAC
+    // address should be validated to match the Enrollee's own MAC address. "IEEE Std 1905.1-2013"
+    // section 10.1.2, Table 10-1 "IEEE 802.11 settings (ConfigData) in M2 frame" says that it
+    // should be "AP’s MAC address (BSSID)". The Multi-AP doesn't say anything about the MAC
+    // addresses in M2, but it does say that the Enrollee MAC address in the M1 message must be the
+    // AL-MAC address.
+    //
+    // Clearly, we can't use the real BSSID for the MAC address, since it's the responsibility of
+    // the agent to use one of its assigned unique addresses as BSSID, and we don't have that
+    // information in the controller. So we could use the AL-MAC addresses or the Radio UID. It
+    // seems the most logical to make sure it matches the MAC address in the M1, since that stays
+    // the closest to the WSC-specified behaviour.
+    //
+    // Note that the BBF 1905.1 implementation (meshComms) simply ignores the MAC address in M2.
+    cfg.bssid = ruid;
+
+    return cfg;
 }
 
 /**
- * @brief add WSC M2 TLV to the current CMDU
+ * @brief add WSC M2/M8 TLV to the current CMDU
  *
  *        the config_data contains the secret ssid, authentication and encryption types,
  *        the network key, bssid and the key_wrap_auth attribute.
  *        It does encryption using the keywrapkey and HMAC with the authkey generated
- *        in the WSC keys calculation from the M1 and M2 nonce values, the radio agent's
+ *        in the WSC keys calculation from the M1 and M2/M8 nonce values, the radio agent's
  *        mac, and a random initialization vector.
  *        The encrypted config_data blob is copied to the encrypted_data attribute
- *        in the M2 TLV, which marks the WSC M2 TLV ready to be sent to the agent.
+ *        in the M2/M8 TLV, which marks the WSC M2/M8 TLV ready to be sent to the agent.
  *
  * @param m1 WSC M1 attribute list received from the radio agent as part of the WSC autoconfiguration
  *        CMDU
+ * @param bss_info_conf BSS configuration
  * @return true on success
  * @return false on failure
  */
@@ -1046,73 +1072,25 @@ bool Controller::autoconfig_wsc_add_m2(WSC::m1 &m1,
     mapf::encryption::diffie_hellman dh;
     uint8_t authkey[32];
     uint8_t keywrapkey[16];
-    autoconfig_wsc_calculate_keys(m1, m2_cfg, dh, authkey, keywrapkey);
+    autoconfig_wsc_calculate_keys(m1, *m2_cfg.enrollee_nonce, *m2_cfg.registrar_nonce,
+                                  *m2_cfg.pub_key, dh, authkey, keywrapkey);
 
     // Encrypted settings
     // Encrypted settings are the ConfigData + IV. First create the ConfigData,
     // Then copy it to the encrypted data, add an IV and encrypt.
     // Finally, add HMAC
 
-    // Create ConfigData
     uint8_t buf[1024];
-    WSC::configData::config cfg;
-    if (bss_info_conf) {
-        cfg.ssid        = bss_info_conf->ssid;
-        cfg.auth_type   = bss_info_conf->authentication_type;
-        cfg.encr_type   = bss_info_conf->encryption_type;
-        cfg.network_key = bss_info_conf->network_key;
-        cfg.bss_type    = 0;
-        if (bss_info_conf->fronthaul) {
-            cfg.bss_type |= WSC::eWscVendorExtSubelementBssType::FRONTHAUL_BSS;
-        }
-        if (bss_info_conf->backhaul) {
-            cfg.bss_type |= WSC::eWscVendorExtSubelementBssType::BACKHAUL_BSS;
-        }
-        if (bss_info_conf->profile1_backhaul_sta_association_disallowed) {
-            cfg.bss_type |=
-                WSC::eWscVendorExtSubelementBssType::PROFILE1_BACKHAUL_STA_ASSOCIATION_DISALLOWED;
-        }
-        if (bss_info_conf->profile2_backhaul_sta_association_disallowed) {
-            cfg.bss_type |=
-                WSC::eWscVendorExtSubelementBssType::PROFILE2_BACKHAUL_STA_ASSOCIATION_DISALLOWED;
-        }
-
-        LOG(DEBUG) << "WSC config_data:" << std::hex << std::endl
-                   << "     ssid: " << cfg.ssid << std::endl
-                   << "     authentication_type: " << int(cfg.auth_type) << std::endl
-                   << "     encryption_type: " << int(cfg.encr_type) << std::dec << std::endl
-                   << "     bss_type: " << std::hex << int(cfg.bss_type);
-    } else {
-        // Tear down. No need to set any parameter except the teardown bit and the MAC address.
-        cfg.bss_type = WSC::eWscVendorExtSubelementBssType::TEARDOWN;
-        LOG(DEBUG) << "WSC config_data: tear down";
-    }
-
-    // The MAC address in the config data is tricky... According to "Wi-Fi Simple Configuration
-    // Technical Specification v2.0.6", section 7.2.2 "Validation of Configuration Data" the MAC
-    // address should be validated to match the Enrollee's own MAC address. "IEEE Std 1905.1-2013"
-    // section 10.1.2, Table 10-1 "IEEE 802.11 settings (ConfigData) in M2 frame" says that it
-    // should be "AP’s MAC address (BSSID)". The Multi-AP doesn't say anything about the MAC
-    // addresses in M2, but it does say that the Enrollee MAC address in the M1 message must be the
-    // AL-MAC address.
-    //
-    // Clearly, we can't use the real BSSID for the MAC address, since it's the responsibility of
-    // the agent to use one of its assigned unique addresses as BSSID, and we don't have that
-    // information in the controller. So we could use the AL-MAC addresses or the Radio UID. It
-    // seems the most logical to make sure it matches the MAC address in the M1, since that stays
-    // the closest to the WSC-specified behaviour.
-    //
-    // Note that the BBF 1905.1 implementation (meshComms) simply ignores the MAC address in M2.
-    cfg.bssid = m1.mac_addr();
-
-    auto config_data = WSC::configData::create(cfg, buf, sizeof(buf));
+    WSC::configData::config cfg = prepare_wsc_config(m1.mac_addr(), bss_info_conf, false);
+    auto config_data            = WSC::configData::create(cfg, buf, sizeof(buf));
     if (!config_data) {
         LOG(ERROR) << "Failed to create configData";
         return false;
     }
     config_data->finalize();
 
-    if (!autoconfig_wsc_add_m2_encrypted_settings(m2_cfg, *config_data, authkey, keywrapkey))
+    if (!autoconfig_wsc_add_encrypted_settings(*m2_cfg.iv, m2_cfg.encrypted_settings, *config_data,
+                                               authkey, keywrapkey))
         return false;
 
     auto m2 = WSC::m2::create(*tlv, m2_cfg);
@@ -1121,7 +1099,66 @@ bool Controller::autoconfig_wsc_add_m2(WSC::m1 &m1,
 
     // Finalize m2 since it needs to be in network byte order for global authentication
     m2->finalize();
-    if (!autoconfig_wsc_authentication(m1, *m2, authkey))
+
+    if (!autoconfig_wsc_authentication(m1, m2, authkey))
+        return false;
+
+    return true;
+}
+
+bool Controller::autoconfig_wsc_add_m8(WSC::m1 &m1,
+                                       const wireless_utils::sBssInfoConf &bss_info_conf)
+{
+    auto tlv = cmdu_tx.addClass<ieee1905_1::tlvWsc>();
+    if (!tlv) {
+        LOG(ERROR) << "Failed creating tlvWsc";
+        return false;
+    }
+    // Allocate maximum allowed length for the payload, so it can accommodate variable length
+    // data inside the internal TLV list.
+    // On finalize(), the buffer is shrunk back to its real size.
+    size_t payload_length =
+        tlv->getBuffRemainingBytes() - ieee1905_1::tlvEndOfMessage::get_initial_size();
+    tlv->alloc_payload(payload_length);
+
+    WSC::m8::config m8_cfg;
+    m8_cfg.msg_type = WSC::eWscMessageType::WSC_MSG_TYPE_M8;
+
+    ///////////////////////////////
+    // @brief encryption support //
+    ///////////////////////////////
+    mapf::encryption::diffie_hellman dh;
+    uint8_t authkey[32];
+    uint8_t keywrapkey[16];
+    autoconfig_wsc_calculate_keys(m1, *m8_cfg.enrollee_nonce, *m8_cfg.registrar_nonce,
+                                  *m8_cfg.pub_key, dh, authkey, keywrapkey);
+
+    // Encrypted settings
+    // Encrypted settings are the ConfigData + IV. First create the ConfigData,
+    // Then copy it to the encrypted data, add an IV and encrypt.
+    // Finally, add HMAC
+
+    uint8_t buf[1024];
+    WSC::configData::config cfg = prepare_wsc_config(m1.mac_addr(), &bss_info_conf, true);
+    auto config_data            = WSC::configData::create(cfg, buf, sizeof(buf));
+    if (!config_data) {
+        LOG(ERROR) << "Failed to create configData";
+        return false;
+    }
+    config_data->finalize();
+
+    if (!autoconfig_wsc_add_encrypted_settings(*m8_cfg.iv, m8_cfg.encrypted_settings, *config_data,
+                                               authkey, keywrapkey))
+        return false;
+
+    auto m8 = WSC::m8::create(*tlv, m8_cfg);
+    if (!m8)
+        return false;
+
+    // Finalize m8 since it needs to be in network byte order for global authentication
+    m8->finalize();
+
+    if (!autoconfig_wsc_authentication(m1, m8, authkey))
         return false;
 
     return true;
@@ -1268,18 +1305,19 @@ bool Controller::handle_cmdu_1905_autoconfiguration_WSC(const sMacAddr &src_mac,
             bss_info_conf.backhaul = false;
         }
 
+        if (!agent->bSTA_reconfiguration_supported && bss_info_conf.backhaul) {
+            bss_info_conf.bSTA = true;
+        }
+
         if (!autoconfig_wsc_add_m2(*m1, &bss_info_conf)) {
             LOG(ERROR) << "Failed setting M2 attributes";
             return false;
         }
 
-        auto bss       = database.add_bss(*radio, radio->radio_uid, bss_info_conf.ssid);
-        bss->enabled   = false;
-        bss->fronthaul = bss_info_conf.fronthaul;
-        bss->backhaul  = bss_info_conf.backhaul;
-        if (!database.update_bss(src_mac, ruid, bss->bssid, bss->ssid)) {
-            LOG(ERROR) << "Failed to update VAP for radio " << ruid << " BSS " << bss->bssid
-                       << " SSID " << bss->ssid;
+        if (agent->bSTA_reconfiguration_supported && bss_info_conf.backhaul &&
+            !autoconfig_wsc_add_m8(*m1, bss_info_conf)) {
+            LOG(ERROR) << "Failed setting M8 attributes";
+            return false;
         }
         database.add_configured_bss_info(ruid, bss_info_conf);
         num_bsss++;
@@ -1745,6 +1783,9 @@ bool Controller::handle_tlv_apCapability(ieee1905_1::CmduMessageRx &cmdu_rx,
             tlv_ap_capability->value().support_unassociated_sta_link_metrics_on_operating_bssid;
     }
 
+    if (early && tlv_ap_capability->value().support_agent_backhaul_sta_reconfiguration) {
+        agent->bSTA_reconfiguration_supported = true;
+    }
     //TODO : shall we update the datamodel here ???
 
     return true;

@@ -34,6 +34,7 @@
 #include <tlvf/WSC/configData.h>
 #include <tlvf/WSC/m1.h>
 #include <tlvf/WSC/m2.h>
+#include <tlvf/WSC/m8.h>
 #include <tlvf/ieee_1905_1/tlvWsc.h>
 #include <tlvf/wfa_map/tlvApRadioBasicCapabilities.h>
 
@@ -455,11 +456,50 @@ private:
 
     // Autoconfig encryption support
     bool autoconfig_wsc_add_m2(WSC::m1 &m1, const wireless_utils::sBssInfoConf *bss_info_conf);
-    bool autoconfig_wsc_add_m2_encrypted_settings(WSC::m2::config &m2_cfg,
-                                                  WSC::configData &config_data, uint8_t authkey[32],
-                                                  uint8_t keywrapkey[16]);
-    bool autoconfig_wsc_authentication(WSC::m1 &m1, WSC::m2 &m2, uint8_t authkey[32]);
-    void autoconfig_wsc_calculate_keys(WSC::m1 &m1, WSC::m2::config &m2_cfg,
+    bool autoconfig_wsc_add_m8(WSC::m1 &m1, const wireless_utils::sBssInfoConf &bss_info_conf);
+    bool autoconfig_wsc_add_encrypted_settings(uint8_t &iv,
+                                               std::vector<uint8_t> &encrypted_settings,
+                                               WSC::configData &config_data, uint8_t authkey[32],
+                                               uint8_t keywrapkey[16]);
+
+    /**
+     * @brief autoconfig global authenticator attribute calculation
+     *
+     * Calculate authentication on the Full M1 || M2* whereas M2* = M2 without the authenticator
+     * attribute.
+     *
+     * @param m1 WSC M1 attribute list
+     * @param wsc WSC M2 or WSC M8
+     * @param authkey authentication key
+     * @return true on success
+     * @return false on failure
+     */
+    template <class C> bool autoconfig_wsc_authentication(WSC::m1 &m1, C &wsc, uint8_t authkey[32])
+    {
+        // Authentication on Full M1 || M2*/M8* (without the authenticator attribute)
+        // This is the content of M1 and M2/M8, without the type and length.
+        // Authentication is done on swapped data.
+        // Since m1 is parsed, it is in host byte order, and needs to be swapped.
+        // m2/m8 is created, and already finalized so its in network byte order, so no
+        // need to swap it.
+        m1.swap();
+        uint8_t buf[m1.getMessageLength() + wsc->getMessageLength() -
+                    WSC::cWscAttrAuthenticator::get_initial_size()];
+        auto next = std::copy_n(m1.getMessageBuff(), m1.getMessageLength(), buf);
+        std::copy_n(wsc->getMessageBuff(),
+                    wsc->getMessageLength() - WSC::cWscAttrAuthenticator::get_initial_size(), next);
+        // swap back
+        m1.swap();
+        uint8_t *kwa = reinterpret_cast<uint8_t *>(wsc->authenticator());
+        // Add KWA which is the 1st 64 bits of HMAC of config_data using AuthKey
+        if (!mapf::encryption::kwa_compute(authkey, buf, sizeof(buf), kwa)) {
+            LOG(ERROR) << "kwa_compute failure";
+            return false;
+        }
+        return true;
+    }
+    void autoconfig_wsc_calculate_keys(WSC::m1 &m1, uint8_t &enrollee_nonce,
+                                       uint8_t &registrar_nonce, uint8_t &pub_key,
                                        const mapf::encryption::diffie_hellman &dh,
                                        uint8_t authkey[32], uint8_t keywrapkey[16]);
 

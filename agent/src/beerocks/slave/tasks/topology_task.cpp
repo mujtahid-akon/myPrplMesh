@@ -21,6 +21,7 @@
 #include <tlvf/ieee_1905_1/tlvAlMacAddress.h>
 #include <tlvf/ieee_1905_1/tlvDeviceInformation.h>
 #include <tlvf/ieee_1905_1/tlvMacAddress.h>
+#include <tlvf/ieee_1905_1/tlvNon1905neighborDeviceList.h>
 
 #include <tlvf/wfa_map/tlvAgentApMldConfiguration.h>
 #include <tlvf/wfa_map/tlvApOperationalBSS.h>
@@ -29,8 +30,6 @@
 #include <tlvf/wfa_map/tlvSupportedService.h>
 
 #include <easylogging++.h>
-
-#include <linux/if_bridge.h>
 
 using namespace beerocks;
 using namespace net;
@@ -238,8 +237,13 @@ void TopologyTask::handle_topology_query(ieee1905_1::CmduMessageRx &cmdu_rx,
         return;
     }
 
+    if (!add_non_1905_neighbor_device_tlv()) {
+        LOG(ERROR) << "Failed to add non-1905 neighbor device TLV";
+        return;
+    }
+
     if (!add_1905_neighbor_device_tlv()) {
-        LOG(ERROR) << "Failed to add neighbor device TLV";
+        LOG(ERROR) << "Failed to add 1905 neighbor device TLV";
         return;
     }
 
@@ -699,6 +703,138 @@ bool TopologyTask::add_1905_neighbor_device_tlv()
             index++;
         }
     }
+    return true;
+}
+
+static void
+get_non_1905_neighbors(const std::string &bridge,
+                       std::unordered_map<sMacAddr, std::vector<sMacAddr>> &non_1905_neighbors)
+{
+    auto fdb_table = network_utils::linux_get_bridge_forwarding_table(bridge);
+    if (fdb_table.size() == 0) {
+        return;
+    }
+
+    auto db = AgentDB::get();
+
+    /**
+     * To determine whether a MAC address is related to 1905 neighbors.
+     * A MAC address is considered 1905 neighbor-related if it belongs to a
+     * 1905 neighbor or if it is a station discovered through that neighbor.
+     */
+    auto is_mac_related_to_1905_neighbor = [&](const sMacAddr &al_mac, uint8_t port_no) {
+        for (const auto &neighbors_on_local_iface : db->neighbor_devices) {
+            auto &neighbors = neighbors_on_local_iface.second;
+            for (const auto &neighbor_entry : neighbors) {
+                /* 1905 neighbor */
+                if (al_mac == neighbor_entry.first) {
+                    return true;
+                } else {
+                    auto fdb_entry = network_utils::linux_get_bridge_forwarding_table(
+                        bridge, neighbor_entry.first);
+                    if (fdb_entry.size() == 0) {
+                        continue;
+                    }
+
+                    /* Discovered through 1905 neighbor */
+                    if (fdb_entry[0].port_no == port_no) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    };
+
+    for (const auto &fdb_entry : fdb_table) {
+        /* Skip local entries */
+        if (fdb_entry.is_local == true) {
+            continue;
+        }
+
+        auto entry_mac  = tlvf::mac_from_array(fdb_entry.mac_addr);
+        auto entry_port = fdb_entry.port_no;
+
+        /* Skip 1905 neighbor-related entries */
+        if (is_mac_related_to_1905_neighbor(entry_mac, entry_port)) {
+            continue;
+        }
+
+        auto local_iface_name = network_utils::linux_get_ifname_from_port(bridge, entry_port);
+        if (local_iface_name.empty()) {
+            LOG(WARNING) << "Local ifname is empty";
+            continue;
+        }
+
+        std::string local_iface_mac_str;
+        if (!network_utils::linux_iface_get_mac(local_iface_name, local_iface_mac_str)) {
+            LOG(WARNING) << "Can't get the local interface mac";
+            continue;
+        }
+
+        non_1905_neighbors[tlvf::mac_from_string(local_iface_mac_str)].push_back(entry_mac);
+
+        LOG(DEBUG) << "Non-1905 neighbor(" << tlvf::mac_to_string(entry_mac)
+                   << ") found on interface " << local_iface_name << "(" << local_iface_mac_str
+                   << ", " << bridge << ")";
+    }
+}
+
+bool TopologyTask::add_non_1905_neighbor_device_tlv()
+{
+    auto bridges = network_utils::linux_get_bridges();
+    if (bridges.empty()) {
+        LOG(WARNING) << "No bridge interface found";
+        return true;
+    }
+
+    std::unordered_map<sMacAddr, std::vector<sMacAddr>> non_1905_neighbors;
+
+    for (const auto &bridge : bridges) {
+        get_non_1905_neighbors(bridge, non_1905_neighbors);
+    }
+
+    for (const auto &neighbors_entry : non_1905_neighbors) {
+        size_t index         = 0;
+        auto local_iface_mac = neighbors_entry.first;
+        auto &neighbors      = neighbors_entry.second;
+        std::shared_ptr<ieee1905_1::tlvNon1905neighborDeviceList> tlvNon1905neighborDeviceList =
+            nullptr;
+        for (const auto &neighbor_entry : neighbors) {
+            if (!tlvNon1905neighborDeviceList || (tlvNon1905neighborDeviceList->get_initial_size() +
+                                                      ((index + 1) * sizeof(sMacAddr)) >
+                                                  tlvf::MAX_TLV_SIZE)) {
+                tlvNon1905neighborDeviceList =
+                    m_cmdu_tx.addClass<ieee1905_1::tlvNon1905neighborDeviceList>();
+                if (!tlvNon1905neighborDeviceList) {
+                    LOG(ERROR) << "Failed to create tlvNon1905neighborDeviceList";
+                    return false;
+                }
+
+                tlvNon1905neighborDeviceList->mac_local_iface() = local_iface_mac;
+
+                index = 0;
+            }
+
+            if (!tlvNon1905neighborDeviceList->alloc_mac_non_1905_device()) {
+                LOG(ERROR) << "alloc_mac_non_1905_device() has failed";
+                return false;
+            }
+
+            auto mac_non_1905_device_tuple =
+                tlvNon1905neighborDeviceList->mac_non_1905_device(index);
+            if (!std::get<0>(mac_non_1905_device_tuple)) {
+                LOG(ERROR) << "Getting mac_non_1905_device element has failed";
+                return false;
+            }
+
+            auto &mac_non_1905_device = std::get<1>(mac_non_1905_device_tuple);
+            mac_non_1905_device       = neighbor_entry;
+
+            index++;
+        }
+    }
+
     return true;
 }
 

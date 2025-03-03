@@ -150,6 +150,16 @@ prplmesh_agent_stop() {
     killall_program beerocks_fronthaul
 }
 
+prplmesh_vendor_message_start() {
+    echo "prplmesh_vendor_message_start - start beerocks_vendor_message process..."
+    "$PRPLMESH_DIR/bin/beerocks_vendor_message" &
+}
+
+prplmesh_vendor_message_stop() {
+    echo "prplmesh_vendor_message_stop - stopping beerocks_vendor_message process..."
+    killall_program beerocks_vendor_message
+}
+
 prplmesh_delete_logs() {
     echo "deleting logs"
     rm -rf @BEEROCKS_LOG_FILES_PATH@
@@ -160,7 +170,7 @@ prplmesh_delete_logs() {
 
 prplmesh_watchdog() {
     # Store PIDs of the Controller and Agents
-    CURR_PIDS="$(pgrep -f 'beerocks_(agent|controller)' | wc -l)"
+    CURR_PIDS="$(pgrep -f 'beerocks_(agent|controller|vendor_message)' | wc -l)"
     PREV_PIDS="$CURR_PIDS"
 
     # Make sure there's at least one PID to monitor
@@ -172,7 +182,7 @@ prplmesh_watchdog() {
     # Monitor the number of running processes
     while [ "$CURR_PIDS" -ge "$PREV_PIDS" ]; do
         sleep 5
-        CURR_PIDS="$(pgrep -f 'beerocks_(agent|controller)' | wc -l)"
+        CURR_PIDS="$(pgrep -f 'beerocks_(agent|controller|vendor_message)' | wc -l)"
         if [ "$CURR_PIDS" -gt "$PREV_PIDS" ]; then
             PREV_PIDS=$CURR_PIDS
         fi
@@ -205,6 +215,7 @@ roll_logs_function()
     killall_program beerocks_controller USR1
     killall_program beerocks_agent USR1
     killall_program beerocks_fronthaul USR1
+    killall_program beerocks_vendor_message USR1
 
     # Cleanup
     rm -r $ROLL_PROGRESS_DIR
@@ -222,6 +233,7 @@ start_function() {
             prplmesh_platform_db_init "Multi-AP-Controller-and-Agent"
             prplmesh_controller_start
             prplmesh_agent_start
+            prplmesh_vendor_message_start
             ;;
         C | c)
             prplmesh_platform_db_init "Multi-AP-Controller"
@@ -232,6 +244,7 @@ start_function() {
         A | a)
             prplmesh_platform_db_init "Multi-AP-Agent" "WDS-Repeater"
             prplmesh_agent_start
+            prplmesh_vendor_message_start
             ;;
         * ) err "unsupported mode: $PRPLMESH_MODE"; usage; exit 1 ;;
     esac
@@ -246,6 +259,7 @@ stop_function() {
     prplmesh_agent_stop
     prplmesh_controller_stop
     prplmesh_framework_deinit
+    prplmesh_vendor_message_stop
     [ "$DELETE_LOGS" = "true" ] && prplmesh_delete_logs
 }
 
@@ -399,6 +413,9 @@ remove_processmonitor_entries() {
     (check_processmonitor_entry "agent") ||
     remove_processmonitor_entry "agent"
 
+    (check_processmonitor_entry "vendor_message") ||
+    remove_processmonitor_entry "vendor_message"
+
     (check_processmonitor_entry "controller") ||
     remove_processmonitor_entry "controller"
 }
@@ -465,6 +482,7 @@ main() {
 
             if [ "$PRPLMESH_MODE" = "CA" ] || [ "$PRPLMESH_MODE" = "A" ]; then
                 add_processmonitor "agent"
+                add_processmonitor "vendor_message"
             fi
             ;;
         "start_wait")

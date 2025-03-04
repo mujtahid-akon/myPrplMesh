@@ -12,19 +12,11 @@
 #if __linux
 #elif __unix
 #elif __posix
-#else
-#ifndef IS_WINDOWS
-#define IS_WINDOWS
-#endif
 #endif
 
-#ifdef IS_WINDOWS
-#include <winsock2.h>
-#else // Linux
 #include <arpa/inet.h>
 #include <stdint.h>
 #include <string.h>
-#endif
 
 inline uint64_t htonll(uint64_t x)
 {

@@ -5487,10 +5487,10 @@ bool slave_thread::update_vaps_info(const std::string &iface,
                    << ", p1_dis: " << bss.backhaul_bss_disallow_profile1_agent_association
                    << ", p2_dis: " << bss.backhaul_bss_disallow_profile2_agent_association;
 
-        for (auto &mld_conf : db->mld_configurations) {
-            if (mld_conf.ssid == bss.ssid) {
-                mld_conf.mac = vaps[vap_idx].ap_mld_mac;
-                for (auto &affiliated_ap : mld_conf.affiliated_aps) {
+        for (auto &ap_mld_conf : db->ap_mld_configurations) {
+            if (ap_mld_conf.mld_config.mld_ssid == bss.ssid) {
+                ap_mld_conf.mld_config.mld_mac = vaps[vap_idx].ap_mld_mac;
+                for (auto &affiliated_ap : ap_mld_conf.affiliated_aps) {
                     if (affiliated_ap.ruid == radio->front.iface_mac) {
                         affiliated_ap.bssid = bss.mac;
                         break;

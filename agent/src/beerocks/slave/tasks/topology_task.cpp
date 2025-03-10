@@ -268,9 +268,9 @@ void TopologyTask::handle_topology_query(ieee1905_1::CmduMessageRx &cmdu_rx,
     }
 
     auto db = AgentDB::get();
-    for (size_t i = 0; i < db->mld_configurations.size(); ++i) {
+    for (auto ap_mld_config : db->ap_mld_configurations) {
         // Next step, registering callback to avoid "get" method
-        for (auto affiliated_ap : db->mld_configurations[i].affiliated_aps) {
+        for (auto affiliated_ap : ap_mld_config.affiliated_aps) {
             if (affiliated_ap.ruid != net::network_utils::ZERO_MAC &&
                 affiliated_ap.bssid != net::network_utils::ZERO_MAC) {
                 auto radio = db->get_radio_by_mac(affiliated_ap.ruid);
@@ -1048,31 +1048,38 @@ bool TopologyTask::add_agent_ap_mld_configuration_tlv()
 {
     auto db(AgentDB::get());
 
-    if (!db->mld_configurations.empty()) {
+    if (!db->ap_mld_configurations.empty()) {
         auto tlvAgentApMldConfiguration = m_cmdu_tx.addClass<wfa_map::tlvAgentApMldConfiguration>();
         if (!tlvAgentApMldConfiguration) {
             LOG(ERROR) << "addClass wfa_map::tlvAgentAPMLDConfiguration failed";
             return false;
         }
 
-        for (const auto &mld_conf : db->mld_configurations) {
+        for (const auto &ap_mld_conf : db->ap_mld_configurations) {
 
             auto ap_mld(tlvAgentApMldConfiguration->create_ap_mld());
             ap_mld->ap_mld_mac_addr_valid().is_valid =
-                (mld_conf.mac != net::network_utils::ZERO_MAC);
-            ap_mld->set_ssid(mld_conf.ssid);
-            ap_mld->ap_mld_mac_addr() = mld_conf.mac;
-            ap_mld->modes().str       = mld_conf.str;
-            ap_mld->modes().nstr      = mld_conf.nstr;
-            ap_mld->modes().emlsr     = mld_conf.emlsr;
-            ap_mld->modes().emlmr     = mld_conf.emlmr;
+                (ap_mld_conf.mld_config.mld_mac != net::network_utils::ZERO_MAC);
+            ap_mld->set_ssid(ap_mld_conf.mld_config.mld_ssid);
+            ap_mld->ap_mld_mac_addr() = ap_mld_conf.mld_config.mld_mac;
+            if (ap_mld_conf.mld_config.mld_mode & AgentDB::sMLDConfiguration::mode::STR) {
+                ap_mld->modes().str = 1;
+            }
+            if (ap_mld_conf.mld_config.mld_mode & AgentDB::sMLDConfiguration::mode::NSTR) {
+                ap_mld->modes().nstr = 1;
+            }
+            if (ap_mld_conf.mld_config.mld_mode & AgentDB::sMLDConfiguration::mode::EMLSR) {
+                ap_mld->modes().emlsr = 1;
+            }
+            if (ap_mld_conf.mld_config.mld_mode & AgentDB::sMLDConfiguration::mode::EMLMR) {
+                ap_mld->modes().emlmr = 1;
+            }
 
-            LOG(DEBUG) << "Sending MLD configuration for " << mld_conf.ssid
-                       << "\n[ MAC  : " << mld_conf.mac << "]\n[ STR  : " << mld_conf.str
-                       << "]\n[ NSTR : " << mld_conf.nstr << "]\n[ EMLSR: " << mld_conf.emlsr
-                       << "]\n[ EMLMR: " << mld_conf.emlmr << "]";
+            LOG(DEBUG) << "Sending AP MLD configuration for " << ap_mld_conf.mld_config.mld_ssid
+                       << " [mac=" << ap_mld_conf.mld_config.mld_mac << ", mode=" << std::hex
+                       << ap_mld_conf.mld_config.mld_mode << "]";
 
-            for (const auto &affiliated_ap_conf : mld_conf.affiliated_aps) {
+            for (const auto &affiliated_ap_conf : ap_mld_conf.affiliated_aps) {
 
                 auto affiliated_ap(ap_mld->create_affiliated_ap());
                 affiliated_ap->affiliated_ap_fields_valid().affiliated_ap_mac_addr_valid =

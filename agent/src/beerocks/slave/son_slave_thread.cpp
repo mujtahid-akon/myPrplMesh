@@ -2624,7 +2624,6 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
 
         notification_out->cs_params() = notification_in->cs_params();
         send_cmdu_to_controller(fronthaul_iface, cmdu_tx);
-        send_operating_channel_report(fronthaul_iface);
 
         auto notification_out_bhm = message_com::create_vs_message<
             beerocks_message::cACTION_BACKHAUL_HOSTAP_CSA_NOTIFICATION>(cmdu_tx);
@@ -2666,7 +2665,6 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
         }
         notification_out->cs_params() = notification_in->cs_params();
         send_cmdu_to_controller(fronthaul_iface, cmdu_tx);
-        send_operating_channel_report(fronthaul_iface);
 
         auto notification_out_bhm = message_com::create_vs_message<
             beerocks_message::cACTION_BACKHAUL_HOSTAP_CSA_ERROR_NOTIFICATION>(cmdu_tx);
@@ -2990,7 +2988,6 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
          */
         if (!radio->front.zwdfs) {
             send_cmdu_to_controller(fronthaul_iface, cmdu_tx);
-            send_operating_channel_report(fronthaul_iface);
         }
 
         auto notification_out_bhm = message_com::create_vs_message<

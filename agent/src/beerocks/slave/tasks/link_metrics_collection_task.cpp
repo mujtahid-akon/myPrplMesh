@@ -165,8 +165,10 @@ void LinkMetricsCollectionTask::handle_link_metric_query(ieee1905_1::CmduMessage
     	   * allow it specify ALL_NEIGHBORS and if so, then we will just ignore the field
     	   * containing the MAC address of neighbor.
     	   */
-        neighbor_type     = tlvLinkMetricQuery->neighbor_type();
-        neighbor_al_mac   = tlvLinkMetricQuery->mac_al_1905_device();
+        neighbor_type = tlvLinkMetricQuery->neighbor_type();
+        if (neighbor_type != ieee1905_1::eLinkMetricNeighborType::ALL_NEIGHBORS) {
+            neighbor_al_mac = tlvLinkMetricQuery->mac_al_1905_device();
+        }
         link_metrics_type = tlvLinkMetricQuery->link_metrics_type();
     } else {
         neighbor_type = tlvLinkMetricQueryAllNeighbors->neighbor_type();

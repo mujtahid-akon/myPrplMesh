@@ -7,7 +7,6 @@
 
 # Set agent data model path
 set(DATAMODELS_PATH ${CMAKE_CURRENT_BINARY_DIR}/odl)
-message(STATUS "Using CMake version: ${CMAKE_VERSION}")
 
 # configure_file_odl func 
 include("${CMAKE_SOURCE_DIR}/cmake/ConfigureOdl.cmake")
@@ -19,7 +18,6 @@ foreach(file ${files})
 endforeach()
 
 # Parse agent.odl file
-message(STATUS "Parsing ODL using amxo: slave_config.odl")
 execute_process(COMMAND amxo-cg ${DATAMODELS_PATH}/slave_config.odl --no-warnings RESULT_VARIABLE DATAMODEL_PARSE_RESULT)
 
 # Check for parser errors

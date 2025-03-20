@@ -8,15 +8,21 @@
 
 #include "../common/utils/utils.h"
 #include "../common/utils/utils_net.h"
+
 #include <bcl/beerocks_string_utils.h>
 #include <bpl/bpl_cfg.h>
+
 #include <mapf/common/logger.h>
 #include <mapf/common/utils.h>
 
 #include <tlvf/WSC/eWscAuth.h>
 #include <tlvf/WSC/eWscEncr.h>
 
+#include "wbapi_utils.h"
+
 #include "bpl_cfg_pwhm.h"
+
+#include "bpl_cfg_amx_helper.h"
 
 using namespace mapf;
 using namespace beerocks;
@@ -370,12 +376,6 @@ int cfg_get_hostap_iface(int32_t radio_num, char hostap_iface[BPL_IFNAME_LEN])
         }
     }
     return RETURN_ERR;
-}
-
-int cfg_get_hostap_iface_steer_vaps(int32_t radio_num,
-                                    char hostap_iface_steer_vaps[BPL_LOAD_STEER_ON_VAPS_LEN])
-{
-    return 0;
 }
 
 bool bpl_cfg_get_monitored_BSSs_by_radio_iface(const std::string &iface,

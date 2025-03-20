@@ -399,6 +399,8 @@ static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slav
     auto amb_dm_obj = std::make_shared<beerocks::nbapi::AmbiorixDummy>();
 #endif //ENABLE_NBAPI
 
+    beerocks::bpl::set_ambiorix_impl_ptr(amb_dm_obj);
+
     {
         auto db           = beerocks::AgentDB::get();
         auto on_boot_scan = beerocks::string_utils::stoi(beerocks_slave_conf.on_boot_scan);
@@ -515,23 +517,6 @@ static void remove_residual_agent_files(const std::string &path, const std::stri
     }
 }
 
-/**
- * @brief Read management mode from BPL and updates agent database incase it is successfull
- *
- * @return management mode in agent database
- */
-// static uint8_t read_management_mode()
-// {
-//     auto db              = beerocks::AgentDB::get();
-//     auto management_mode = beerocks::bpl::cfg_get_management_mode();
-
-//     if (management_mode >= 0) {
-//         db->device_conf.management_mode = management_mode;
-//     }
-
-//     return db->device_conf.management_mode;
-// }
-
 int main(int argc, char *argv[])
 {
     std::cout << "Beerocks Agent Process Start" << std::endl;
@@ -609,15 +594,19 @@ int main(int argc, char *argv[])
             interfaces_map[interfaces[i].radio_num] = std::string(interfaces[i].ifname);
         }
     }
-        if (interfaces_map.empty()) {
-            std::cout << "INFO: No radio interfaces are available" << std::endl;
-            return 0;
-        }
-            // killall running slave
-            beerocks::os_utils::kill_pid(beerocks_slave_conf.temp_path + "pid/",
-                                         std::string(BEEROCKS_AGENT));
-            // Remove any residual agent files not cleared by previous instance
-            remove_residual_agent_files(beerocks_slave_conf.temp_path, std::string(BEEROCKS_AGENT));
-            // backhaul/platform manager slave
-            return run_beerocks_slave(beerocks_slave_conf, interfaces_map, argc, argv);
+
+    if (interfaces_map.empty()) {
+        std::cout << "INFO: No radio interfaces are available" << std::endl;
+        return 0;
+    }
+
+    // killall running slave
+    beerocks::os_utils::kill_pid(beerocks_slave_conf.temp_path + "pid/",
+                                 std::string(BEEROCKS_AGENT));
+
+    // Remove any residual agent files not cleared by previous instance
+    remove_residual_agent_files(beerocks_slave_conf.temp_path, std::string(BEEROCKS_AGENT));
+
+    // backhaul/platform manager slave
+    return run_beerocks_slave(beerocks_slave_conf, interfaces_map, argc, argv);
 }

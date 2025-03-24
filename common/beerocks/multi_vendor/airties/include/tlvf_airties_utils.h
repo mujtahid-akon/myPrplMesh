@@ -17,19 +17,15 @@
 #include "ambiorix_client.h"
 #include "wbapi_utils.h"
 
+namespace beerocks {
+namespace bpl {
+extern beerocks::wbapi::AmbiorixClient m_ambiorix_cl;
+} // namespace bpl
+} // namespace beerocks
 namespace airties {
 
 class tlvf_airties_utils {
 public:
-    beerocks::wbapi::AmbiorixClient m_ambiorix_cl;
-
-    tlvf_airties_utils()
-    {
-        LOG_IF(!m_ambiorix_cl.connect(AMBIORIX_USP_BACKEND_PATH, AMBIORIX_PWHM_USP_BACKEND_URI),
-               FATAL)
-            << "Unable to connect to the ambiorix backend!";
-    }
-
     bool is_airties_platform_common_stp_enabled() const;
 
     /**
@@ -58,7 +54,6 @@ public:
     static bool get_all_counters_info(
         std::shared_ptr<airties::tlvAirtiesEthernetStatsallcntr> &tlvAirtiesEthStats);
 };
-static tlvf_airties_utils tlvf_air_utils;
 } // namespace airties
 
 #endif // __TLVF_AIRTIES_UTILS_H__

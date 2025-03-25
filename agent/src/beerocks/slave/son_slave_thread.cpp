@@ -1179,7 +1179,7 @@ bool slave_thread::handle_cmdu_control_message(int fd,
         LOG(INFO) << "rx_rssi measurement request for client mac=" << request_in->params().mac
                   << " ip=" << network_utils::ipv4_to_string(request_in->params().ipv4)
                   << " channel=" << int(request_in->params().channel) << " bandwidth="
-                  << utils::convert_bandwidth_to_int(
+                  << beerocks::utils::convert_bandwidth_to_string(
                          (beerocks::eWiFiBandwidth)request_in->params().bandwidth)
                   << " cross=" << int(request_in->params().cross)
                   << " id=" << int(beerocks_header->id());
@@ -5319,7 +5319,7 @@ void slave_thread::fill_channel_list_to_agent_db(
 
         for (const auto &supported_bw : radio->channels_list[channel].supported_bw_list) {
             LOG(DEBUG) << "channel=" << int(channel) << ", bw="
-                       << beerocks::utils::convert_bandwidth_to_int(
+                       << beerocks::utils::convert_bandwidth_to_string(
                               beerocks::eWiFiBandwidth(supported_bw.bandwidth))
                        << ", rank=" << supported_bw.rank
                        << ", multiap_preference=" << int(supported_bw.multiap_preference);

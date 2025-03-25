@@ -121,7 +121,7 @@ int bml_utils_node_to_string(const struct BML_NODE *node, char *buffer, int buff
                            ? std::to_string(node->data.gw_ire.radio[i].channel)
                            : std::string("N/A"))
                    << ", Bandwidth: "
-                   << beerocks::utils::convert_bandwidth_to_int(
+                   << beerocks::utils::convert_bandwidth_to_string(
                           beerocks::eWiFiBandwidth(node->data.gw_ire.radio[i].bw))
                    << ", CAC Completed: "
                    << std::to_string(node->data.gw_ire.radio[i].cac_completed)

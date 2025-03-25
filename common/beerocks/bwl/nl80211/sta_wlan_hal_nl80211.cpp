@@ -249,7 +249,8 @@ bool sta_wlan_hal_nl80211::set_4addr_mode(bool enable) { return true; }
 
 bool sta_wlan_hal_nl80211::set_3addr_mcast(bool enable) { return true; }
 
-bool sta_wlan_hal_nl80211::unassoc_rssi_measurement(const std::string &mac, int chan, int bw,
+bool sta_wlan_hal_nl80211::unassoc_rssi_measurement(const std::string &mac, int chan,
+                                                    beerocks::eWiFiBandwidth bw,
                                                     int vht_center_frequency, int delay,
                                                     int window_size)
 {

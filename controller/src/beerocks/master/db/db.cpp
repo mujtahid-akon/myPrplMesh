@@ -2313,7 +2313,7 @@ std::string db::get_hostap_supported_channels_string(const sMacAddr &radio_mac)
     for (const auto &val : supported_channels) {
         if (val.get_channel() > 0) {
             os << " ch = " << int(val.get_channel()) << " | dfs = " << int(val.is_dfs_channel())
-               << " | bw = " << beerocks::utils::convert_bandwidth_to_int(val.get_bandwidth())
+               << " | bw = " << beerocks::utils::convert_bandwidth_to_string(val.get_bandwidth())
                << " | tx_pow = " << int(val.get_tx_power()) << std::endl;
         }
     }
@@ -5492,19 +5492,21 @@ bool db::update_sta_wifi_channel_bw(const sMacAddr &mac, beerocks::eWiFiBandwidt
 
     if (bw == eWiFiBandwidth::BANDWIDTH_MAX) {
         LOG(INFO) << "update wifiChannel station " << mac << " bw from "
-                  << beerocks::utils::convert_bandwidth_to_int(pSta->wifi_channel.get_bandwidth())
+                  << beerocks::utils::convert_bandwidth_to_string(
+                         pSta->wifi_channel.get_bandwidth())
                   << "MHz to MAX";
     } else {
         LOG(INFO) << "update wifiChannel station " << mac << " bw from "
-                  << beerocks::utils::convert_bandwidth_to_int(pSta->wifi_channel.get_bandwidth())
+                  << beerocks::utils::convert_bandwidth_to_string(
+                         pSta->wifi_channel.get_bandwidth())
                   << " to " << bw;
     }
 
     eWiFiBandwidth prev_bw = pSta->wifi_channel.get_bandwidth();
     pSta->wifi_channel.set_bandwidth(bw);
     LOG(INFO) << "updating station " << mac << " bandwidth from "
-              << beerocks::utils::convert_bandwidth_to_int(prev_bw) << "MHz to "
-              << beerocks::utils::convert_bandwidth_to_int(bw) << "MHz";
+              << beerocks::utils::convert_bandwidth_to_string(prev_bw) << "MHz to "
+              << beerocks::utils::convert_bandwidth_to_string(bw) << "MHz";
     return true;
 }
 

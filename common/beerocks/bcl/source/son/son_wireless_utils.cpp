@@ -24,7 +24,7 @@ using namespace son;
 #define OPERATING_CLASS_5GHZ_FIRST 115
 #define OPERATING_CLASS_5GHZ_LAST 130
 #define OPERATING_CLASS_6GHZ_FIRST 131
-#define OPERATING_CLASS_6GHZ_LAST 136
+#define OPERATING_CLASS_6GHZ_LAST 137
 
 //Based on hostapd global_op_class struct, file ieee802_11_common.c
 // clang-format off
@@ -66,7 +66,11 @@ const std::map<uint8_t, wireless_utils::sOperatingClass> wireless_utils::operati
     {134,       {{15, 47, 79, 111, 143, 175, 207},                             beerocks::BANDWIDTH_160}},
     {135,       {{7, 23, 39, 55, 71, 87, 103, 119, 135, 151,
                   167, 183, 199, 215},                                         beerocks::BANDWIDTH_80_80}},
-    {136,       {{2},                                                          beerocks::BANDWIDTH_20}}
+    {136,       {{2},                                                          beerocks::BANDWIDTH_20}},
+//  Operating class 137 includes overlapping 320 MHz center channels
+//  320 MHz channelization: (31, 95, 159 for 320 MHz-1) (63, 127, 191 for 320 MHz-2)
+//  https://en.wikipedia.org/wiki/List_of_WLAN_channels#6_GHz_(802.11ax_and_802.11be)
+    {137,       {{31, 63, 95, 127, 159, 191},                                  beerocks::BANDWIDTH_320}}
 };
 
 const std::map<uint8_t, std::map<uint8_t, uint8_t>> wireless_utils::channels_table_24g = 
@@ -600,11 +604,10 @@ wireless_utils::estimate_ul_params(int ul_rssi, uint16_t sta_phy_tx_rate_100kb,
     }
 
     LOG(DEBUG) << "UL RSSI:" << ul_rssi << " | sta_phy_tx_rate:" << sta_phy_tx_rate_100kb / 10
-               << " Mbps | AP BW:"
-               << beerocks::utils::convert_bandwidth_to_int((beerocks::eWiFiBandwidth)ap_bw)
+               << " Mbps | AP BW:" << beerocks::utils::convert_bandwidth_to_string(ap_bw)
                << " | is_5ghz:" << is_5ghz << " | ant_num:" << int(sta_capabilities->ant_num)
                << " | max_ant_mode:" << max_ant_mode << " | max MCS:" << max_mcs << " | max BW:"
-               << beerocks::utils::convert_bandwidth_to_int((beerocks::eWiFiBandwidth)max_bw);
+               << beerocks::utils::convert_bandwidth_to_string((beerocks::eWiFiBandwidth)max_bw);
 
     if (ul_rssi == beerocks::RSSI_INVALID) {
         LOG(DEBUG) << "Can not estimate UL parameters (invalid RSSI)";
@@ -805,7 +808,7 @@ double wireless_utils::estimate_ap_tx_phy_rate(
     }
 
     LOG(DEBUG) << "estimated DL RSSI:" << int(estimated_dl_rssi)
-               << " | AP BW:" << beerocks::utils::convert_bandwidth_to_int(ap_bw)
+               << " | AP BW:" << beerocks::utils::convert_bandwidth_to_string(ap_bw)
                << " | Return estimated PHY RATE:" << int(estimated_phy_rate / 1e+6) << " Mbps";
 
     return estimated_phy_rate;
@@ -876,7 +879,7 @@ bool wireless_utils::get_mcs_from_rate(const uint16_t rate, const beerocks::eWiF
         }
     }
 
-    LOG(DEBUG) << "rate:" << rate << " | BW:" << beerocks::utils::convert_bandwidth_to_int(bw)
+    LOG(DEBUG) << "rate:" << rate << " | BW:" << beerocks::utils::convert_bandwidth_to_string(bw)
                << " | ant_mode:" << ant_mode << " | Return MCS:" << mcs << " and GI:" << short_gi;
 
     return false;
@@ -970,6 +973,10 @@ int wireless_utils::channel_to_vht_center_freq(int channel, beerocks::eWiFiBandw
     case beerocks::eWiFiBandwidth::BANDWIDTH_160:
         vht_center_freq = freq + (channel_ext_above_secondary ? 70 : -70);
         break;
+    case beerocks::eWiFiBandwidth::BANDWIDTH_320_1:
+    case beerocks::eWiFiBandwidth::BANDWIDTH_320_2:
+        vht_center_freq = freq + (channel_ext_above_secondary ? 150 : -150);
+        break;
     default:
         LOG(ERROR) << "invalid bandwidth " << bandwidth;
         return -1;
@@ -1004,7 +1011,7 @@ int wireless_utils::channel_to_vht_center_freq(int channel, beerocks::eFreqType 
             }
         } else {
             LOG(ERROR) << "2.4ghz channel must be of either 20 or 40 bandwidth. can't be bandwidth "
-                       << beerocks::utils::convert_bandwidth_to_int(bandwidth);
+                       << beerocks::utils::convert_bandwidth_to_string(bandwidth);
             return 0;
         }
     } break;
@@ -1021,7 +1028,7 @@ int wireless_utils::channel_to_vht_center_freq(int channel, beerocks::eFreqType 
         auto center_channel_it = channel_it->second.find(bandwidth);
         if (center_channel_it == channel_it->second.end()) {
             LOG(ERROR) << "Failed find bandwidth "
-                       << beerocks::utils::convert_bandwidth_to_int(bandwidth) << " of channel "
+                       << beerocks::utils::convert_bandwidth_to_string(bandwidth) << " of channel "
                        << channel << " in channels table of 5ghz band";
             return 0;
         }
@@ -1036,7 +1043,7 @@ int wireless_utils::channel_to_vht_center_freq(int channel, beerocks::eFreqType 
         auto center_channel_it = channel_it->second.find(bandwidth);
         if (center_channel_it == channel_it->second.end()) {
             LOG(ERROR) << "Failed find bandwidth "
-                       << beerocks::utils::convert_bandwidth_to_int(bandwidth) << " of channel "
+                       << beerocks::utils::convert_bandwidth_to_string(bandwidth) << " of channel "
                        << channel << " in channels table of 6ghz band";
             return 0;
         }
@@ -1193,9 +1200,9 @@ wireless_utils::split_channel_to_20MHz(int channel, beerocks::eWiFiBandwidth bw,
         LOG(INFO) << "ret.push_back( {channel, beerocks::CH_PRIMARY} ); = "
                   << int(start_of_band_channel) << " last_channel  = " << int(last_channel);
 
+        // 40 = 20*2. 20 for number of channels, 2 for taking half to primary and half to secondary
         int iterations =
-            beerocks::utils::convert_bandwidth_to_int(bw) /
-            40; // 40 = 20*2. 20 for number of channels, 2 for taking half to primary and half to secondary
+            beerocks::utils::count_target_bandwidth(bw, beerocks::eWiFiBandwidth::BANDWIDTH_40);
         beerocks::eWifiChannelType earlyIterationsChannelType =
             channel_ext_above_secondary ? beerocks::CH_PRIMARY : beerocks::CH_SECONDARY;
         beerocks::eWifiChannelType lateIterationsChannelType =
@@ -1273,7 +1280,7 @@ wireless_utils::split_channel_to_20MHz(beerocks::WifiChannel &wifi_channel)
     auto channel_bw_it = channel_it->second.find(wifi_channel.get_bandwidth());
     if (channel_bw_it == channel_it->second.end()) {
         LOG(ERROR) << "Failed to find bandwidth "
-                   << beerocks::utils::convert_bandwidth_to_int(wifi_channel.get_bandwidth())
+                   << beerocks::utils::convert_bandwidth_to_string(wifi_channel.get_bandwidth())
                    << " of channel " << wifi_channel.get_channel() << " of "
                    << beerocks::utils::convert_frequency_type_to_string(
                           wifi_channel.get_freq_type())
@@ -1364,8 +1371,8 @@ std::vector<uint8_t> wireless_utils::calc_5g_20MHz_subband_channels(
     } else {
         channels = get_5g_20MHz_channels(prev_bw, prev_vht_center_frequency);
     }
-    LOG(DEBUG) << "prev_bw:" << beerocks::utils::convert_bandwidth_to_int(prev_bw)
-               << " | BW:" << beerocks::utils::convert_bandwidth_to_int(bw)
+    LOG(DEBUG) << "prev_bw:" << beerocks::utils::convert_bandwidth_to_string(prev_bw)
+               << " | BW:" << beerocks::utils::convert_bandwidth_to_string(bw)
                << " | channels empty:" << int(channels.empty());
 
     std::for_each(std::begin(channels), std::end(channels),
@@ -1413,6 +1420,12 @@ uint8_t wireless_utils::get_center_channel(uint8_t channel, beerocks::eFreqType 
         }
     } else if (freq_type == beerocks::eFreqType::FREQ_6G) {
         channels_table = channels_table_6g;
+        if ((channel <= BANDWIDTH_320_2_LOWER_CHANNEL_LIMIT &&
+             bandwidth == beerocks::eWiFiBandwidth::BANDWIDTH_320_2) ||
+            (channel >= BANDWIDTH_320_1_UPPER_CHANNEL_LIMIT &&
+             bandwidth == beerocks::eWiFiBandwidth::BANDWIDTH_320_1)) {
+            return 0;
+        }
     }
 
     auto channel_it = channels_table.find(channel);
@@ -1431,7 +1444,7 @@ uint8_t wireless_utils::get_center_channel(uint8_t channel, beerocks::eFreqType 
     auto bw_info_it = bw_info_map.find(bandwidth);
     if (bw_info_it == bw_info_map.end()) {
         LOG(ERROR) << "Failed find bandwidth "
-                   << beerocks::utils::convert_bandwidth_to_int(bandwidth) << " of channel "
+                   << beerocks::utils::convert_bandwidth_to_string(bandwidth) << " of channel "
                    << channel << " (freq type: "
                    << beerocks::utils::convert_frequency_type_to_string(freq_type)
                    << ") on channels table";
@@ -1562,8 +1575,8 @@ wireless_utils::get_operating_class_by_channel(const beerocks::message::sWifiCha
 
 uint8_t wireless_utils::get_operating_class_by_channel(const beerocks::WifiChannel &wifi_channel)
 {
-    auto ch       = wifi_channel.get_channel();
-    const auto bw = wifi_channel.get_bandwidth();
+    auto ch = wifi_channel.get_channel();
+    auto bw = wifi_channel.get_bandwidth();
     /*
     some of the operating classes have a center channel instead of a normal channel.
     thus, convert the channel to its center channel value.
@@ -1598,6 +1611,10 @@ uint8_t wireless_utils::get_operating_class_by_channel(const beerocks::WifiChann
                    << beerocks::utils::convert_frequency_type_to_string(freq_type)
                    << ", Possibly the given wifiChannel is empty";
         return 0;
+    }
+
+    if (is_320MHz_channelization(wifi_channel)) {
+        bw = beerocks::eWiFiBandwidth::BANDWIDTH_320;
     }
 
     for (auto &operating_class_it = first_operating_class_it;
@@ -1714,7 +1731,7 @@ std::list<uint8_t> wireless_utils::string_to_wsc_oper_class(const std::string &o
     std::list<uint8_t> radio_24g = {81, 82, 83, 84};
     std::list<uint8_t> radio_5g  = {115, 116, 117, 118, 119, 120, 121, 122,
                                    123, 124, 125, 126, 127, 128, 129, 130};
-    std::list<uint8_t> radio_6g  = {131, 132, 133, 134, 135, 136};
+    std::list<uint8_t> radio_6g  = {131, 132, 133, 134, 135, 136, 137};
 
     if (operating_class == "24g") {
         return radio_24g;
@@ -1852,7 +1869,7 @@ std::vector<uint8_t> wireless_utils::get_overlapping_5g_beacon_channels(uint8_t 
 
     auto bw_it = ch_it->second.find(bw);
     if (bw_it == ch_it->second.end()) {
-        LOG(ERROR) << "Failed find bw " << beerocks::utils::convert_bandwidth_to_int(bw)
+        LOG(ERROR) << "Failed find bw " << beerocks::utils::convert_bandwidth_to_string(bw)
                    << " on channel " << beacon_channel;
         return {};
     }
@@ -1903,7 +1920,7 @@ std::vector<uint8_t> wireless_utils::get_overlapping_beacon_channels(uint8_t bea
 
     auto bw_it = ch_it->second.find(bw);
     if (bw_it == ch_it->second.end()) {
-        LOG(ERROR) << "Failed find bw " << beerocks::utils::convert_bandwidth_to_int(bw)
+        LOG(ERROR) << "Failed find bw " << beerocks::utils::convert_bandwidth_to_string(bw)
                    << " of channel " << beacon_channel << " (freq type: "
                    << beerocks::utils::convert_frequency_type_to_string(freq_type)
                    << ") on channels table";
@@ -1955,8 +1972,13 @@ std::vector<uint8_t> wireless_utils::center_channel_to_beacon_channels(
         beacon_channel = center_channel - 14;
         beacon_channels.reserve(8);
         break;
+    case beerocks::BANDWIDTH_320_1:
+    case beerocks::BANDWIDTH_320_2:
+        beacon_channel = center_channel - 30;
+        beacon_channels.reserve(16);
+        break;
     default: {
-        LOG(DEBUG) << "Invalid BW: " << beerocks::utils::convert_bandwidth_to_int(bw)
+        LOG(DEBUG) << "Invalid BW: " << beerocks::utils::convert_bandwidth_to_string(bw)
                    << ", center_channel=" << center_channel;
         return {};
     }
@@ -1997,7 +2019,7 @@ wireless_utils::center_channel_5g_to_beacon_channels(uint8_t center_channel,
         beacon_channels.reserve(8);
         break;
     default: {
-        LOG(DEBUG) << "Invalid BW: " << beerocks::utils::convert_bandwidth_to_int(bw)
+        LOG(DEBUG) << "Invalid BW: " << beerocks::utils::convert_bandwidth_to_string(bw)
                    << ", center_channel=" << center_channel;
         return {};
     }
@@ -2068,7 +2090,7 @@ bool wireless_utils::get_subset_20MHz_channels(const uint8_t channel_number,
         // "channel_number" is an actual channel
         resulting_channels.insert(channel_number);
         return true;
-    } else if (116 <= operating_class && operating_class <= 136) {
+    } else if (116 <= operating_class && operating_class <= 137) {
         const std::map<uint8_t, std::map<beerocks::eWiFiBandwidth, wireless_utils::sChannel>>
             *channels_table = {};
         if (operating_class <= 130) {
@@ -2133,8 +2155,8 @@ void wireless_utils::print_station_capabilities(beerocks::message::sRadioCapabil
                << "ht_bw = "
                << ((sta_caps.ht_bw != beerocks::BANDWIDTH_UNKNOWN &&
                     sta_caps.ht_bw < beerocks::BANDWIDTH_MAX)
-                       ? std::to_string(beerocks::utils::convert_bandwidth_to_int(
-                             beerocks::eWiFiBandwidth(sta_caps.ht_bw)))
+                       ? beerocks::utils::convert_bandwidth_to_string(
+                             beerocks::eWiFiBandwidth(sta_caps.ht_bw))
                        : "n/a")
                << std::endl
                << "ht_sm_power_save = " << ([](uint8_t n) {
@@ -2162,8 +2184,8 @@ void wireless_utils::print_station_capabilities(beerocks::message::sRadioCapabil
                << "vht_bw = "
                << ((sta_caps.vht_bw != beerocks::BANDWIDTH_UNKNOWN &&
                     sta_caps.vht_bw < beerocks::BANDWIDTH_MAX)
-                       ? std::to_string(beerocks::utils::convert_bandwidth_to_int(
-                             beerocks::eWiFiBandwidth(sta_caps.vht_bw)))
+                       ? beerocks::utils::convert_bandwidth_to_string(
+                             beerocks::eWiFiBandwidth(sta_caps.vht_bw))
                        : "n/a");
     LOG(DEBUG) << "sta DEFAULT_CAPS:" << std::endl
                << "default_mcs = " << int(sta_caps.default_mcs) << std::endl
@@ -2184,8 +2206,8 @@ void wireless_utils::print_station_capabilities(beerocks::message::sRadioCapabil
                    << "he_bw = "
                    << ((sta_caps.he_bw != beerocks::BANDWIDTH_UNKNOWN &&
                         sta_caps.he_bw < beerocks::BANDWIDTH_MAX)
-                           ? std::to_string(beerocks::utils::convert_bandwidth_to_int(
-                                 beerocks::eWiFiBandwidth(sta_caps.he_bw)))
+                           ? beerocks::utils::convert_bandwidth_to_string(
+                                 beerocks::eWiFiBandwidth(sta_caps.he_bw))
                            : "n/a")
                    << std::endl
                    << "he_ss = " << ((int(sta_caps.he_ss)) ? std::to_string(sta_caps.he_ss) : "n/a")
@@ -2210,6 +2232,27 @@ uint16_t wireless_utils::get_vht_mcs_set(uint8_t vht_mcs, uint8_t vht_ss)
         vht_mcs_set &= ~(((10 - vht_mcs) & 0x03) << (i * 2));
     }
     return vht_mcs_set;
+}
+
+bool wireless_utils::is_320MHz_channelization(const beerocks::WifiChannel &wifi_channel)
+{
+    if (wifi_channel.get_freq_type() == beerocks::FREQ_6G &&
+        (wifi_channel.get_bandwidth() == beerocks::eWiFiBandwidth::BANDWIDTH_320_1 ||
+         wifi_channel.get_bandwidth() == beerocks::eWiFiBandwidth::BANDWIDTH_320_2)) {
+        return true;
+    }
+    return false;
+}
+
+bool wireless_utils::is_320MHz_channelization(beerocks::eFreqType freq_type,
+                                              beerocks::eWiFiBandwidth bandwidth)
+{
+    if (freq_type == beerocks::eFreqType::FREQ_6G &&
+        (bandwidth == beerocks::eWiFiBandwidth::BANDWIDTH_320_1 ||
+         bandwidth == beerocks::eWiFiBandwidth::BANDWIDTH_320_2)) {
+        return true;
+    }
+    return false;
 }
 
 const std::map<uint8_t, std::map<beerocks::eWiFiBandwidth, wireless_utils::sChannel>>
@@ -2279,6 +2322,29 @@ wireless_utils::initialize_channels_table_6g()
                                           {beerocks::BANDWIDTH_160, {15, {1, 29}}},
                                       }}};
 
+    /**
+     * This is used to add 320MHz-1 and 320MHz-2 channels to the 6GHz channels table.
+     * https://en.wikipedia.org/wiki/List_of_WLAN_channels#6_GHz_(802.11ax_and_802.11be)
+     */
+    const std::map<int, std::map<beerocks::eWiFiBandwidth, wireless_utils::sChannel>>
+        channels_table_320bw_pattern = {{0, {{beerocks::BANDWIDTH_320_1, {31, {1, 61}}}}},
+                                        {1,
+                                         {{beerocks::BANDWIDTH_320_1, {31, {1, 61}}},
+                                          {beerocks::BANDWIDTH_320_2, {63, {33, 93}}}}},
+                                        {2,
+                                         {{beerocks::BANDWIDTH_320_1, {95, {65, 125}}},
+                                          {beerocks::BANDWIDTH_320_2, {63, {33, 93}}}}},
+                                        {3,
+                                         {{beerocks::BANDWIDTH_320_1, {95, {65, 125}}},
+                                          {beerocks::BANDWIDTH_320_2, {127, {97, 157}}}}},
+                                        {4,
+                                         {{beerocks::BANDWIDTH_320_1, {159, {129, 189}}},
+                                          {beerocks::BANDWIDTH_320_2, {127, {97, 157}}}}},
+                                        {5,
+                                         {{beerocks::BANDWIDTH_320_1, {159, {129, 189}}},
+                                          {beerocks::BANDWIDTH_320_2, {191, {161, 221}}}}},
+                                        {6, {{beerocks::BANDWIDTH_320_2, {191, {161, 221}}}}}};
+
     std::map<uint8_t, std::map<beerocks::eWiFiBandwidth, wireless_utils::sChannel>> channels_table =
         {};
 
@@ -2288,6 +2354,9 @@ wireless_utils::initialize_channels_table_6g()
      * For example, the first chunk contains channels between 1 to 29.
      * The second chunk contains channel between 33 to 61.
      * and so on.
+     * Each chunk has 1 channel of 320MHz except the last chunk.
+     *  - 320MHz-1(center channels): 31, 95, 159
+     *  - 320MHz-2(center channels): 63, 127, 191
      * https://en.wikipedia.org/wiki/List_of_WLAN_channels#6_GHz_(802.11ax)
      */
     constexpr int num_of_6g_160mhz_chunks = 7;
@@ -2298,7 +2367,16 @@ wireless_utils::initialize_channels_table_6g()
         for (auto &entry : channels_table_6g_pattern) {
             pair = entry;
             pair.first += offset;
+
+            for (const auto &value : channels_table_320bw_pattern.at(i)) {
+                pair.second.insert(value);
+            }
+
             for (auto &bw_to_channels : pair.second) {
+                if (bw_to_channels.first == beerocks::BANDWIDTH_320_1 ||
+                    bw_to_channels.first == beerocks::BANDWIDTH_320_2) {
+                    continue;
+                }
                 bw_to_channels.second.center_channel += offset;
                 bw_to_channels.second.overlap_beacon_channels_range.first += offset;
                 bw_to_channels.second.overlap_beacon_channels_range.second += offset;

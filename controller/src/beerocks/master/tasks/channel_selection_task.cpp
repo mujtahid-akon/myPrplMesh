@@ -1333,8 +1333,9 @@ bool channel_selection_task::ccl_has_free_channels_5G(beerocks::eWiFiBandwidth b
     TASK_LOG(DEBUG) << "*****************ccl_has_free_channels_5G**************************** :";
     // check if there is a free channel in the list with at least "bw" value
     // channels in the list are in order
-    int target_free_20MHz_channels = beerocks::utils::convert_bandwidth_to_int(bw) / 20;
-    int free_20MHz_channels        = 0;
+    int target_free_20MHz_channels =
+        beerocks::utils::count_target_bandwidth(bw, beerocks::eWiFiBandwidth::BANDWIDTH_20);
+    int free_20MHz_channels = 0;
     //for ( auto it = ccl.begin(); it!= ccl.end(); ++it ){
     for (auto i = START_OF_LOW_BAND_NON_DFS; i <= END_OF_HIGH_BAND; i++) {
         auto it = ccl.find(i);
@@ -1364,9 +1365,10 @@ bool channel_selection_task::ccl_has_free_dfs_channels(beerocks::eWiFiBandwidth 
     TASK_LOG(DEBUG) << "*****************ccl_has_free_dfs_channels**************************** :";
     // check if there is a free dfs channel in the list with at least "bw" value
     // channels in the list are in order
-    int target_free_20MHz_channels = beerocks::utils::convert_bandwidth_to_int(bw) / 20;
-    int free_20MHz_channels        = 0;
-    int channel_alignment_counter  = 0;
+    int target_free_20MHz_channels =
+        beerocks::utils::count_target_bandwidth(bw, beerocks::eWiFiBandwidth::BANDWIDTH_20);
+    int free_20MHz_channels       = 0;
+    int channel_alignment_counter = 0;
     for (auto i = START_OF_LOW_DFS_SUBBAND; i <= END_OF_HIGH_DFS_SUBBAND; i++) {
         auto it = ccl.find(i);
         if (it == ccl.end()) {

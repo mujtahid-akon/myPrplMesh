@@ -232,9 +232,9 @@ public:
      *
      * @return true on success or false on error.
      */
-    virtual bool sta_unassoc_rssi_measurement(const std::string &mac, int chan, int bw,
-                                              int vht_center_frequency, int delay,
-                                              int window_size) = 0;
+    virtual bool sta_unassoc_rssi_measurement(const std::string &mac, int chan,
+                                              beerocks::eWiFiBandwidth bw, int vht_center_frequency,
+                                              int delay, int window_size) = 0;
 
     /**
      * @brief Add a station to softblock list

@@ -215,7 +215,7 @@ std::ostream &operator<<(std::ostream &out, const WifiChannel &wifi_channel)
 
     return (out << "*WifiChannel* Channel Number: " << int(wifi_channel.m_channel)
                 << ", Bandwidth: "
-                << beerocks::utils::convert_bandwidth_to_int(wifi_channel.m_bandwidth)
+                << beerocks::utils::convert_bandwidth_to_string(wifi_channel.m_bandwidth)
                 << "Mhz, Center Frequency: " << wifi_channel.m_center_frequency << center_freq_2_str
                 << ", Frequency Type: "
                 << beerocks::utils::convert_frequency_type_to_string(wifi_channel.m_freq_type)
@@ -272,6 +272,9 @@ bool WifiChannel::is_central_channel(uint8_t channel, eWiFiBandwidth bandwidth,
 {
     if ((freq_type == eFreqType::FREQ_5G && bandwidth >= eWiFiBandwidth::BANDWIDTH_80) ||
         (freq_type == eFreqType::FREQ_6G && bandwidth >= eWiFiBandwidth::BANDWIDTH_40)) {
+        if (son::wireless_utils::is_320MHz_channelization(freq_type, bandwidth)) {
+            bandwidth = BANDWIDTH_320;
+        }
         for (const auto &oper_class : son::wireless_utils::operating_classes_list) {
             if (oper_class.second.band == bandwidth &&
                 oper_class.second.channels.find(channel) != oper_class.second.channels.end()) {
@@ -290,7 +293,7 @@ bool WifiChannel::are_params_valid(uint8_t channel, eFreqType freq_type, uint16_
     if (bandwidth == eWiFiBandwidth::BANDWIDTH_UNKNOWN ||
         bandwidth == eWiFiBandwidth::BANDWIDTH_MAX) {
         LOG(ERROR) << "The bandwidth Failed be "
-                   << beerocks::utils::convert_bandwidth_to_int(bandwidth);
+                   << beerocks::utils::convert_bandwidth_to_string(bandwidth);
         return false;
     }
 
@@ -322,7 +325,7 @@ bool WifiChannel::are_params_valid(uint8_t channel, eFreqType freq_type, uint16_
                 return false;
             } else if (channel_it->second.find(bandwidth) == channel_it->second.end()) {
                 LOG(ERROR) << "Failed find bandwidth "
-                           << beerocks::utils::convert_bandwidth_to_int(bandwidth)
+                           << beerocks::utils::convert_bandwidth_to_string(bandwidth)
                            << "MHz of channel " << channel << " in 5ghz channels table.";
                 return false;
             }
@@ -336,7 +339,7 @@ bool WifiChannel::are_params_valid(uint8_t channel, eFreqType freq_type, uint16_
                 return false;
             } else if (channel_it->second.find(bandwidth) == channel_it->second.end()) {
                 LOG(ERROR) << "Failed find bandwidth "
-                           << beerocks::utils::convert_bandwidth_to_int(bandwidth)
+                           << beerocks::utils::convert_bandwidth_to_string(bandwidth)
                            << "MHz of channel " << channel << " in 6ghz channels table.";
                 return false;
             }

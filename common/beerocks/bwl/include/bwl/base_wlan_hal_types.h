@@ -162,7 +162,7 @@ struct RadioInfo {
     bool tx_enabled                    = false;
     bool is_5ghz                       = false;
     int channel                        = 0;
-    int bandwidth                      = 0;
+    beerocks::eWiFiBandwidth bandwidth = beerocks::eWiFiBandwidth::BANDWIDTH_UNKNOWN;
     int channel_ext_above              = 0;
     int vht_center_freq                = 0;
     bool is_dfs_channel                = false;

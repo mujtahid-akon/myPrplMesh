@@ -697,21 +697,21 @@ bool base_wlan_hal_nl80211::refresh_radio_info()
             // if vht_oper_chwidth is not set it defaults to 0
         case 0:
             if (secondary_channel == 0) {
-                m_radio_info.bandwidth = 20;
+                m_radio_info.bandwidth = beerocks::eWiFiBandwidth::BANDWIDTH_20;
             } else {
-                m_radio_info.bandwidth = 40;
+                m_radio_info.bandwidth = beerocks::eWiFiBandwidth::BANDWIDTH_40;
             }
             break;
         case 1:
-            m_radio_info.bandwidth = 80;
+            m_radio_info.bandwidth = beerocks::eWiFiBandwidth::BANDWIDTH_80;
             break;
         case 2:
-            m_radio_info.bandwidth = 160;
+            m_radio_info.bandwidth = beerocks::eWiFiBandwidth::BANDWIDTH_160;
             break;
         default:
             LOG(ERROR) << "Unknown vht_oper_chwidth " << vht_oper_chwidth
                        << ". Defaulting bandwidth to 160Mhz.";
-            m_radio_info.bandwidth = 160;
+            m_radio_info.bandwidth = beerocks::eWiFiBandwidth::BANDWIDTH_160;
         }
 
         //center freq = 5 GHz + (5 * index)
@@ -723,8 +723,8 @@ bool base_wlan_hal_nl80211::refresh_radio_info()
             }
         }
 
-        LOG(DEBUG) << "radio " << m_radio_info.iface_name
-                   << " bandwidth: " << m_radio_info.bandwidth;
+        LOG(DEBUG) << "radio " << m_radio_info.iface_name << " bandwidth: "
+                   << beerocks::utils::convert_bandwidth_to_string(m_radio_info.bandwidth);
 
         // State
         auto state = reply["state"];
@@ -748,8 +748,7 @@ bool base_wlan_hal_nl80211::refresh_radio_info()
                 m_radio_info.frequency_band = son::wireless_utils::which_freq_type(
                     beerocks::string_utils::stoi(iter->second));
                 m_radio_info.vht_center_freq = son::wireless_utils::channel_to_vht_center_freq(
-                    m_radio_info.channel, m_radio_info.frequency_band,
-                    beerocks::utils::convert_bandwidth_to_enum(m_radio_info.bandwidth),
+                    m_radio_info.channel, m_radio_info.frequency_band, m_radio_info.bandwidth,
                     m_radio_info.channel_ext_above);
             } else {
                 LOG(ERROR) << "Failed to find freq value in reply";

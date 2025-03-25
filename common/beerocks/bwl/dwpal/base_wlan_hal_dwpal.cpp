@@ -847,12 +847,13 @@ bool base_wlan_hal_dwpal::refresh_radio_info()
     }
 
     // update radio info struct
+    int radio_bandwidth_int       = 0;
     size_t replyLen               = strnlen(reply, HOSTAPD_TO_DWPAL_MSG_LENGTH);
     size_t numOfValidArgs[7]      = {0};
     FieldsToParse fieldsToParse[] = {
         {(void *)&m_radio_info.ant_num, &numOfValidArgs[0], DWPAL_INT_PARAM, "TxAntennas=", 0},
         {(void *)&m_radio_info.tx_power, &numOfValidArgs[1], DWPAL_INT_PARAM, "TxPower=", 0},
-        {(void *)&m_radio_info.bandwidth, &numOfValidArgs[2], DWPAL_INT_PARAM,
+        {(void *)&radio_bandwidth_int, &numOfValidArgs[2], DWPAL_INT_PARAM,
          "OperatingChannelBandwidt=", 0},
         {(void *)&m_radio_info.vht_center_freq, &numOfValidArgs[3], DWPAL_INT_PARAM, "Cf1=", 0},
         {(void *)&m_radio_info.wifi_ctrl_enabled, &numOfValidArgs[4], DWPAL_INT_PARAM,
@@ -882,6 +883,9 @@ bool base_wlan_hal_dwpal::refresh_radio_info()
             return false;
         }
     }
+
+    m_radio_info.bandwidth = beerocks::utils::convert_bandwidth_to_enum(radio_bandwidth_int);
+
     // If the VAPs map is empty, refresh it as well
     // TODO: update on every refresh?
 

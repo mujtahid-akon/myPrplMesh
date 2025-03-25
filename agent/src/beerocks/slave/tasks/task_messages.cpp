@@ -33,7 +33,7 @@ std::ostream &operator<<(std::ostream &os, const sSwitchChannelRequest &switch_c
        << beerocks::utils::convert_frequency_type_to_string(switch_channel_request.freq_type)
        << '\n'
        << "bandwidth: "
-       << beerocks::utils::convert_bandwidth_to_int(switch_channel_request.bandwidth) << '\n';
+       << beerocks::utils::convert_bandwidth_to_string(switch_channel_request.bandwidth) << '\n';
 
     return os;
 }

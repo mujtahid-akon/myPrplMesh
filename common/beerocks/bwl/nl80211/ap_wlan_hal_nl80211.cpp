@@ -1054,7 +1054,8 @@ bool ap_wlan_hal_nl80211::update_vap_credentials(
     return true;
 }
 
-bool ap_wlan_hal_nl80211::sta_unassoc_rssi_measurement(const std::string &mac, int chan, int bw,
+bool ap_wlan_hal_nl80211::sta_unassoc_rssi_measurement(const std::string &mac, int chan,
+                                                       beerocks::eWiFiBandwidth bw,
                                                        int vht_center_frequency, int delay,
                                                        int window_size)
 {
@@ -1139,8 +1140,9 @@ bool ap_wlan_hal_nl80211::switch_channel(int chan, beerocks::eWiFiBandwidth bw,
         }
     }
 
-    cmd += " bandwidth=" +
-           std::to_string(beerocks::utils::convert_bandwidth_to_int((beerocks::eWiFiBandwidth)bw));
+    std::string bw_str = beerocks::utils::convert_bandwidth_to_string(bw);
+    cmd += " bandwidth=" + bw_str.erase(bw_str.size() - 3);
+    // trim "MHz" from bw_str
 
     // Supported Standard n/ac
     if (freq_type == beerocks::FREQ_6G) {
@@ -1502,7 +1504,8 @@ bool ap_wlan_hal_nl80211::process_nl80211_event(parsed_obj_map_t &parsed_obj)
         }
         m_radio_info.channel =
             son::wireless_utils::freq_to_channel(beerocks::string_utils::stoi(parsed_obj["freq"]));
-        m_radio_info.bandwidth          = wpa_bw_to_beerocks_bw(bandwidth);
+        m_radio_info.bandwidth =
+            beerocks::utils::convert_bandwidth_to_enum(wpa_bw_to_beerocks_bw(bandwidth));
         m_radio_info.channel_ext_above  = beerocks::string_utils::stoi(parsed_obj["ch_offset"]);
         m_radio_info.vht_center_freq    = beerocks::string_utils::stoi(parsed_obj["cf1"]);
         m_radio_info.is_dfs_channel     = beerocks::string_utils::stoi(parsed_obj["dfs"]);

@@ -110,6 +110,28 @@ TEST(BeerocksWifiChannel, check_6ghz_getters_and_setters_are_valid)
     ASSERT_EQ(wc.get_bandwidth(), bw);
     ASSERT_EQ(wc.get_freq_type(), beerocks::eFreqType::FREQ_6G);
     ASSERT_EQ(wc.is_dfs_channel(), false);
+
+    /* check the channel and bandwidth are set properly */
+    channel     = 37;
+    center_freq = 6105;
+    bw          = beerocks::BANDWIDTH_320_1;
+    wc          = beerocks::WifiChannel(channel, beerocks::eFreqType::FREQ_6G, bw);
+    ASSERT_EQ(wc.get_channel(), channel);
+    ASSERT_EQ(wc.get_center_frequency(), center_freq);
+    ASSERT_EQ(wc.get_bandwidth(), bw);
+    ASSERT_EQ(wc.get_freq_type(), beerocks::eFreqType::FREQ_6G);
+    ASSERT_EQ(wc.is_dfs_channel(), false);
+
+    /* check the channel and bandwidth are set properly */
+    channel     = 53;
+    center_freq = 6265;
+    bw          = beerocks::BANDWIDTH_320_2;
+    wc          = beerocks::WifiChannel(channel, beerocks::eFreqType::FREQ_6G, bw);
+    ASSERT_EQ(wc.get_channel(), channel);
+    ASSERT_EQ(wc.get_center_frequency(), center_freq);
+    ASSERT_EQ(wc.get_bandwidth(), bw);
+    ASSERT_EQ(wc.get_freq_type(), beerocks::eFreqType::FREQ_6G);
+    ASSERT_EQ(wc.is_dfs_channel(), false);
 }
 
 } // namespace

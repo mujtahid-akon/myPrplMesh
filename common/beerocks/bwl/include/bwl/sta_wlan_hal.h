@@ -78,8 +78,9 @@ public:
     virtual bool set_4addr_mode(bool enable)  = 0;
     virtual bool set_3addr_mcast(bool enable) = 0;
 
-    virtual bool unassoc_rssi_measurement(const std::string &mac, int chan, int bw,
-                                          int vht_center_frequency, int delay, int window_size) = 0;
+    virtual bool unassoc_rssi_measurement(const std::string &mac, int chan,
+                                          beerocks::eWiFiBandwidth bw, int vht_center_frequency,
+                                          int delay, int window_size) = 0;
 
     virtual bool is_connected()  = 0;
     virtual int get_channel()    = 0;

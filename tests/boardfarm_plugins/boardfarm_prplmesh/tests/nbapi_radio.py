@@ -86,9 +86,9 @@ class NbapiRadio(PrplMeshBaseTest):
 
         op_classes = controller.nbapi_get_list_instances(
             radio.path + ".CurrentOperatingClasses")
+        found = False
         for op_class in op_classes:
             nbapi_class = controller.nbapi_get_parameter(op_class, "Class")
-            found = False
             for report in op_ch_reports:
                 op_ch_tlvs = self.check_cmdu_has_tlvs(report,
                                                       self.ieee1905['eTlvTypeMap']

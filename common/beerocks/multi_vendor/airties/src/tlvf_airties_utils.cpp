@@ -165,7 +165,7 @@ uint16_t set_supp_stats_val()
 
 static AmbiorixVariantSmartPtr get_eth_intf_object(const std::string &path)
 {
-    return (tlvf_air_utils.m_ambiorix_cl.get_object(path));
+    return (beerocks::bpl::m_ambiorix_cl.get_object(path));
 }
 
 /*
@@ -389,34 +389,34 @@ uint64_t tlvf_airties_utils::get_value_from_dm(std::string param, std::string cn
 template <typename T> void populate_cntrs_info(std::shared_ptr<T> &port_list, std::string cntr_path)
 {
     uint64_t value = 0;
-    value          = tlvf_air_utils.get_value_from_dm("BytesSent", cntr_path);
+    value          = tlvf_airties_utils::get_value_from_dm("BytesSent", cntr_path);
     port_list->set_bytes_sent(&value, COUNTERS_SIZE);
 
-    value = tlvf_air_utils.get_value_from_dm("BytesReceived", cntr_path);
+    value = tlvf_airties_utils::get_value_from_dm("BytesReceived", cntr_path);
     port_list->set_bytes_recvd(&value, COUNTERS_SIZE);
 
-    value = tlvf_air_utils.get_value_from_dm("PacketsSent", cntr_path);
+    value = tlvf_airties_utils::get_value_from_dm("PacketsSent", cntr_path);
     port_list->set_packets_sent(&value, COUNTERS_SIZE);
 
-    value = tlvf_air_utils.get_value_from_dm("PacketsReceived", cntr_path);
+    value = tlvf_airties_utils::get_value_from_dm("PacketsReceived", cntr_path);
     port_list->set_packets_recvd(&value, COUNTERS_SIZE);
 
-    value = tlvf_air_utils.get_value_from_dm("ErrorsSent", cntr_path);
+    value = tlvf_airties_utils::get_value_from_dm("ErrorsSent", cntr_path);
     port_list->set_tx_pkt_errors(&value, COUNTERS_SIZE);
 
-    value = tlvf_air_utils.get_value_from_dm("ErrorsReceived", cntr_path);
+    value = tlvf_airties_utils::get_value_from_dm("ErrorsReceived", cntr_path);
     port_list->set_rx_pkt_errors(&value, COUNTERS_SIZE);
 
-    value = tlvf_air_utils.get_value_from_dm("BroadcastPacketsSent", cntr_path);
+    value = tlvf_airties_utils::get_value_from_dm("BroadcastPacketsSent", cntr_path);
     port_list->set_bcast_pkts_sent(&value, COUNTERS_SIZE);
 
-    value = tlvf_air_utils.get_value_from_dm("BroadcastPacketsReceived", cntr_path);
+    value = tlvf_airties_utils::get_value_from_dm("BroadcastPacketsReceived", cntr_path);
     port_list->set_bcast_pkts_recvd(&value, COUNTERS_SIZE);
 
-    value = tlvf_air_utils.get_value_from_dm("MulticastPacketsSent", cntr_path);
+    value = tlvf_airties_utils::get_value_from_dm("MulticastPacketsSent", cntr_path);
     port_list->set_mcast_pkts_sent(&value, COUNTERS_SIZE);
 
-    value = tlvf_air_utils.get_value_from_dm("MulticastPacketsReceived", cntr_path);
+    value = tlvf_airties_utils::get_value_from_dm("MulticastPacketsReceived", cntr_path);
     port_list->set_mcast_pkts_recvd(&value, COUNTERS_SIZE);
 }
 
@@ -461,7 +461,7 @@ bool tlvf_airties_utils::get_all_counters_info(
 
         int_details_path = dm_path + intf_path + std::to_string(port_id) + ".";
 
-        auto eth_interface = tlvf_air_utils.m_ambiorix_cl.get_object(int_details_path);
+        auto eth_interface = beerocks::bpl::m_ambiorix_cl.get_object(int_details_path);
         if (!eth_interface) {
             LOG(ERROR) << "Failed to get the ambiorix object for path " << int_details_path;
             return false;
@@ -533,7 +533,7 @@ bool tlvf_airties_utils::get_counters_info(
 
     tlvEthStats->supported_extra_stats() = set_supp_stats_val();
 
-    auto eth_interf = tlvf_air_utils.m_ambiorix_cl.get_object(dm_path);
+    auto eth_interf = beerocks::bpl::m_ambiorix_cl.get_object(dm_path);
     if (!eth_interf) {
         LOG(ERROR) << "Failed to get the ambiorix object for path " << dm_path;
         return false;
@@ -553,7 +553,7 @@ bool tlvf_airties_utils::get_counters_info(
 
         int_details_path = dm_path + intf_path + std::to_string(port_id) + ".";
 
-        auto eth_interface = tlvf_air_utils.m_ambiorix_cl.get_object(int_details_path);
+        auto eth_interface = beerocks::bpl::m_ambiorix_cl.get_object(int_details_path);
         if (!eth_interface) {
             LOG(ERROR) << "Failed to get the ambiorix object for path " << int_details_path;
             return false;
@@ -775,7 +775,7 @@ void update_client_details(std::shared_ptr<airties::tlvAirtiesDeviceInfo> &tlvDe
     std::string client_secret = "";
     std::string dm_path       = "X_AIRTIES_Obj.CloudComm.";
 
-    auto cli_det = tlvf_air_utils.m_ambiorix_cl.get_object(dm_path);
+    auto cli_det = beerocks::bpl::m_ambiorix_cl.get_object(dm_path);
     if (!cli_det) {
         LOG(ERROR) << "Failed to get the ambiorix object for path,"
                       " Setting default values "
@@ -976,7 +976,7 @@ bool devicemetrics_get_radio_info(std::shared_ptr<airties::tlvAirtiesDeviceMetri
         //Radio ID
         rad_details_path = dm_path + std::to_string(radio_index) + ".";
 
-        auto dev = tlvf_air_utils.m_ambiorix_cl.get_object(rad_details_path);
+        auto dev = beerocks::bpl::m_ambiorix_cl.get_object(rad_details_path);
         if (!dev) {
             LOG(ERROR) << "Failed to get the ambiorix object for path " << rad_details_path;
             return false;
@@ -989,7 +989,7 @@ bool devicemetrics_get_radio_info(std::shared_ptr<airties::tlvAirtiesDeviceMetri
         //Temperature
         rad_details_path = dm_path + std::to_string(radio_index) + "." + stats_string;
 
-        auto temp_obj = tlvf_air_utils.m_ambiorix_cl.get_object(rad_details_path);
+        auto temp_obj = beerocks::bpl::m_ambiorix_cl.get_object(rad_details_path);
         if (!temp_obj) {
             LOG(ERROR) << "Failed to get the ambiorix object for path for temp "
                        << rad_details_path;

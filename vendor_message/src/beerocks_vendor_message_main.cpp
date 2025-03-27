@@ -196,6 +196,12 @@ bool createDaemon(beerocks::config_file::sConfigSlave &beerocks_vendor_message_s
         if (!vendor_message->is_running()) {
             break;
         }
+
+        // Run application event loop and break on error.
+        if (event_loop->run() < 0) {
+            LOG(ERROR) << "Event loop failure!";
+            break;
+        }
     }
     vendor_message->stop();
     LOG(DEBUG) << "Bye Bye!";

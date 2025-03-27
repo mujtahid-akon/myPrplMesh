@@ -16,7 +16,6 @@
 #include <errno.h>
 #include <limits.h>
 #include <linux/ethtool.h>
-#include <linux/if_bridge.h>
 #include <linux/if_ether.h>  // ETH_P_ARP = 0x0806
 #include <linux/if_packet.h> // struct sockaddr_ll (see man 7 packet)
 #include <linux/netlink.h>
@@ -41,6 +40,7 @@ using namespace beerocks::net;
 #define NL_BUFSIZE 8192
 #define MAC_ADDR_CHAR_SIZE 17
 #define IPV4_ADDR_CHAR_SIZE 15
+#define MAX_FDB_ENTRIES 128
 
 struct route_info {
     struct in_addr dstAddr;
@@ -1633,4 +1633,99 @@ sMacAddr network_utils::get_eth_sw_mac_from_bridge_mac(const sMacAddr &bridge_ma
     //then force the locally administrated mac address flag
     mac.oct[0] |= 0x2;
     return mac;
+}
+
+std::vector<std::string> network_utils::linux_get_bridges()
+{
+    std::vector<std::string> bridges;
+    std::string net_path = "/sys/class/net/";
+    DIR *dir             = opendir(net_path.c_str());
+    if (!dir) {
+        LOG(ERROR) << "opendir failed!";
+        return {};
+    }
+
+    struct dirent *entry;
+    while ((entry = readdir(dir)) != nullptr) {
+        if (entry->d_name[0] == '.') {
+            continue;
+        }
+
+        std::string bridge_path = std::string(net_path) + entry->d_name + "/bridge";
+        struct stat st;
+        if (stat(bridge_path.c_str(), &st) == 0 && S_ISDIR(st.st_mode)) {
+            bridges.push_back(entry->d_name);
+        }
+    }
+
+    closedir(dir);
+    return bridges;
+}
+
+std::string network_utils::linux_get_ifname_from_port(const std::string &br_ifname, int port_no)
+{
+    std::string brif_path = "/sys/class/net/" + br_ifname + "/brif/";
+    DIR *dir              = opendir(brif_path.c_str());
+    if (!dir) {
+        return "";
+    }
+
+    struct dirent *entry;
+    while ((entry = readdir(dir)) != nullptr) {
+        std::string if_name = entry->d_name;
+        if (if_name == "." || if_name == "..") {
+            continue;
+        }
+
+        std::string port_file = brif_path + if_name + "/port_no";
+        std::ifstream file(port_file);
+        if (file) {
+            int file_port = 0;
+            std::string content;
+            file >> content;
+            std::stringstream ss(content);
+            ss >> std::hex >> file_port;
+
+            if (file_port == port_no) {
+                closedir(dir);
+                return if_name;
+            }
+        }
+    }
+
+    closedir(dir);
+    return "";
+}
+
+std::vector<struct __fdb_entry>
+network_utils::linux_get_bridge_forwarding_table(const std::string &br_ifname, const sMacAddr &mac)
+{
+    std::vector<struct __fdb_entry> fdb_entries(MAX_FDB_ENTRIES);
+    std::string path = "/sys/class/net/" + br_ifname + "/brforward";
+
+    FILE *fd = fopen(path.c_str(), "r");
+    if (!fd) {
+        LOG(ERROR) << "Failed to open file " << path;
+        return {};
+    }
+
+    size_t n = fread(fdb_entries.data(), sizeof(struct __fdb_entry), MAX_FDB_ENTRIES, fd);
+    fclose(fd);
+
+    fdb_entries.resize(n);
+
+    if (mac != ZERO_MAC) {
+        std::vector<struct __fdb_entry> filtered_entries;
+
+        for (const auto &entry : fdb_entries) {
+            auto entry_mac = tlvf::mac_from_array(entry.mac_addr);
+            if (entry_mac == mac) {
+                filtered_entries.push_back(entry);
+            }
+        }
+
+        return filtered_entries;
+    }
+
+    return fdb_entries;
 }

@@ -1121,7 +1121,7 @@ bool send_ap_config_renew()
  * @brief Event handler for controller configuration change.
  *
  * event_configuration_changed is invoked when value of parameter
- * in Device.WiFi.DataElements.Configuration object changes with set command.
+ * in CONTROLLER_ROOT_DM.Configuration object changes with set command.
  */
 static void event_configuration_changed(const char *const sig_name, const amxc_var_t *const data,
                                         void *const priv)
@@ -1138,15 +1138,15 @@ static void event_configuration_changed(const char *const sig_name, const amxc_v
     nbapi_config.client_band_steering =
         amxd_object_get_bool(configuration, "BandSteeringEnabled", nullptr);
     nbapi_config.client_11k_roaming =
-        amxd_object_get_bool(configuration, "Client_11kRoaming", nullptr);
+        amxd_object_get_bool(configuration, "Client11kRoamingEnabled", nullptr);
     nbapi_config.client_optimal_path_roaming =
         amxd_object_get_bool(configuration, "ClientRoamingEnabled", nullptr);
     nbapi_config.roaming_hysteresis_percent_bonus =
         amxd_object_get_int32_t(configuration, "SteeringCurrentBonus", nullptr);
     nbapi_config.steering_disassoc_timer_msec = std::chrono::milliseconds{
-        amxd_object_get_int32_t(configuration, "SteeringDisassociationTimer", nullptr)};
+        amxd_object_get_int32_t(configuration, "SteeringDisassociationTimerMSec", nullptr)};
     nbapi_config.link_metrics_request_interval_seconds = std::chrono::seconds{
-        amxd_object_get_int32_t(configuration, "LinkMetricsRequestInterval", nullptr)};
+        amxd_object_get_int32_t(configuration, "LinkMetricsRequestIntervalSec", nullptr)};
 
     nbapi_config.channel_select_task =
         amxd_object_get_bool(configuration, "ChannelSelectionTaskEnabled", nullptr);
@@ -1172,7 +1172,8 @@ static void event_configuration_changed(const char *const sig_name, const amxc_v
     nbapi_config.diagnostics_measurements_polling_rate_sec =
         amxd_object_get_int32_t(configuration, "StatisticsPollingRateSec", nullptr);
 
-    nbapi_config.enable_dfs_reentry = amxd_object_get_bool(configuration, "DFSReentry", nullptr);
+    nbapi_config.enable_dfs_reentry =
+        amxd_object_get_bool(configuration, "DFSReentryEnabled", nullptr);
 
     nbapi_config.daisy_chaining_disabled =
         amxd_object_get_bool(configuration, "DaisyChainingDisabled", nullptr);
@@ -1267,33 +1268,33 @@ std::vector<beerocks::nbapi::sEvents> get_events_list(void)
 std::vector<beerocks::nbapi::sFunctions> get_func_list(void)
 {
     const std::vector<beerocks::nbapi::sFunctions> functions_list = {
-        {"access_point_commit", CONTROLLER_ROOT_DM ".Network.AccessPointCommit",
+        {"access_point_commit", DATAELEMENTS_ROOT_DM ".Network.AccessPointCommit",
          access_point_commit},
-        {"client_steering", CONTROLLER_ROOT_DM ".Network.ClientSteering", client_steering},
-        {"trigger_scan", CONTROLLER_ROOT_DM ".Network.Device.Radio.ScanTrigger", trigger_scan},
-        {"BTMRequest", CONTROLLER_ROOT_DM ".Network.Device.Radio.BSS.STA.MultiAPSTA.BTMRequest",
+        {"client_steering", DATAELEMENTS_ROOT_DM ".Network.ClientSteering", client_steering},
+        {"trigger_scan", DATAELEMENTS_ROOT_DM ".Network.Device.Radio.ScanTrigger", trigger_scan},
+        {"BTMRequest", DATAELEMENTS_ROOT_DM ".Network.Device.Radio.BSS.STA.MultiAPSTA.BTMRequest",
          btm_request},
-        {"trigger_set_spatial_reuse", CONTROLLER_ROOT_DM ".Network.Device.Radio.SetSpatialReuse",
+        {"trigger_set_spatial_reuse", DATAELEMENTS_ROOT_DM ".Network.Device.Radio.SetSpatialReuse",
          trigger_set_spatial_reuse},
-        {"update_vbss_capabilities", CONTROLLER_ROOT_DM ".Network.Device.UpdateVBSSCapabilities",
+        {"update_vbss_capabilities", DATAELEMENTS_ROOT_DM ".Network.Device.UpdateVBSSCapabilities",
          update_vbss_capabilities},
-        {"trigger_vbss_creation", CONTROLLER_ROOT_DM ".Network.Device.Radio.TriggerVBSSCreation",
+        {"trigger_vbss_creation", DATAELEMENTS_ROOT_DM ".Network.Device.Radio.TriggerVBSSCreation",
          trigger_vbss_creation},
         {"trigger_vbss_destruction",
-         CONTROLLER_ROOT_DM ".Network.Device.Radio.BSS.TriggerVBSSDestruction",
+         DATAELEMENTS_ROOT_DM ".Network.Device.Radio.BSS.TriggerVBSSDestruction",
          trigger_vbss_destruction},
-        {"trigger_vbss_move", CONTROLLER_ROOT_DM ".Network.Device.Radio.BSS.TriggerVBSSMove",
+        {"trigger_vbss_move", DATAELEMENTS_ROOT_DM ".Network.Device.Radio.BSS.TriggerVBSSMove",
          trigger_vbss_move},
-        {"trigger_prioritization", CONTROLLER_ROOT_DM ".Network.SetServicePrioritization",
+        {"trigger_prioritization", DATAELEMENTS_ROOT_DM ".Network.SetServicePrioritization",
          trigger_prioritization},
         {"add_unassociated_station",
-         CONTROLLER_ROOT_DM ".Network.Device.Radio.AddUnassociatedStation",
+         DATAELEMENTS_ROOT_DM ".Network.Device.Radio.AddUnassociatedStation",
          add_unassociated_station},
         {"remove_unassociated_station",
-         CONTROLLER_ROOT_DM ".Network.Device.Radio.RemoveUnassociatedStation",
+         DATAELEMENTS_ROOT_DM ".Network.Device.Radio.RemoveUnassociatedStation",
          remove_unassociated_station},
         {"update_unassociatedStations_stats",
-         CONTROLLER_ROOT_DM ".Network.UpdateUnassociatedStationsStats",
+         DATAELEMENTS_ROOT_DM ".Network.UpdateUnassociatedStationsStats",
          update_unassociatedStations_stats}};
     return functions_list;
 }

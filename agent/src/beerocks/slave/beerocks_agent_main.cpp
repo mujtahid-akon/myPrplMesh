@@ -49,7 +49,7 @@ static std::shared_ptr<beerocks::nbapi::Amxrt> guarantee = nullptr;
 #endif // AMBIORIX_BUS_URI
 
 #ifndef AGENT_DATAMODEL_PATH
-#define AGENT_DATAMODEL_PATH "config/odl/agent.odl"
+#define AGENT_DATAMODEL_PATH "config/odl/slave_config.odl"
 #endif // AGENT_DATAMODEL_PATH
 
 #endif
@@ -353,7 +353,6 @@ static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slav
             slave_ap_ifaces.insert(elm.second);
         }
     }
-
     // Create application event loop to wait for blocking I/O operations.
     auto event_loop = std::make_shared<beerocks::EventLoopImpl>();
     LOG_IF(!event_loop, FATAL) << "Unable to create event loop!";
@@ -400,6 +399,8 @@ static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slav
     auto amb_dm_obj = std::make_shared<beerocks::nbapi::AmbiorixDummy>();
 #endif //ENABLE_NBAPI
 
+    beerocks::bpl::set_ambiorix_impl_ptr(amb_dm_obj);
+
     {
         auto db           = beerocks::AgentDB::get();
         auto on_boot_scan = beerocks::string_utils::stoi(beerocks_slave_conf.on_boot_scan);
@@ -416,7 +417,6 @@ static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slav
     beerocks::PlatformManager platform_manager(beerocks_slave_conf, interfaces_map, *agent_logger,
                                                std::move(platform_manager_cmdu_server),
                                                timer_manager, event_loop);
-
     // Start platform manager
     LOG_IF(!platform_manager.start(), FATAL) << "Unable to start platform manager!";
 
@@ -476,7 +476,6 @@ static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slav
             break;
         }
     }
-
     agent->stop();
 
     LOG(DEBUG) << "backhaul_manager.stop()";
@@ -518,23 +517,6 @@ static void remove_residual_agent_files(const std::string &path, const std::stri
     }
 }
 
-/**
- * @brief Read management mode from BPL and updates agent database incase it is successfull
- *
- * @return management mode in agent database
- */
-static uint8_t read_management_mode()
-{
-    auto db              = beerocks::AgentDB::get();
-    auto management_mode = beerocks::bpl::cfg_get_management_mode();
-
-    if (management_mode >= 0) {
-        db->device_conf.management_mode = management_mode;
-    }
-
-    return db->device_conf.management_mode;
-}
-
 int main(int argc, char *argv[])
 {
     std::cout << "Beerocks Agent Process Start" << std::endl;
@@ -546,19 +528,16 @@ int main(int argc, char *argv[])
     if (beerocks::version::handle_version_query(argc, argv, module_description)) {
         return 0;
     }
-
     //get command line options
     if (!parse_arguments(argc, argv)) {
         std::cout << "Usage: " << argv[0] << std::endl;
         return 1;
     }
-
     // Initialize the BPL (Beerocks Platform Library)
     if (beerocks::bpl::bpl_init() < 0) {
         LOG(ERROR) << "Failed to initialize BPL!";
         return false;
     }
-
     // read slave config file
     std::string slave_config_file_path =
         CONF_FILES_WRITABLE_PATH + std::string(BEEROCKS_AGENT) +
@@ -575,7 +554,6 @@ int main(int argc, char *argv[])
             return 1;
         }
     }
-
     // beerocks system hang tester
     if (beerocks_slave_conf.enable_system_hang_test == "1") {
 
@@ -585,7 +563,6 @@ int main(int argc, char *argv[])
             return system_hang_test(beerocks_slave_conf, argc, argv);
         }
     }
-
     // Create unordered_map of interfaces.
     // This map contains all the radios that we expect to be there.
     // We don't go to operational until the slaves for these interfaces are operational.
@@ -593,41 +570,36 @@ int main(int argc, char *argv[])
 
     // Controller only mode does not take care of interfaces
     // TODO: MaxLinear DHCP monitoring may need to fill interfaces (PPM-1777)
-    if (read_management_mode() != BPL_MGMT_MODE_MULTIAP_CONTROLLER) {
-
-        beerocks::bpl::BPL_WLAN_IFACE interfaces[beerocks::MAX_RADIOS_PER_AGENT] = {0};
-        int num_of_interfaces = beerocks::MAX_RADIOS_PER_AGENT;
-        if (beerocks::bpl::cfg_get_all_prplmesh_wifi_interfaces(interfaces, &num_of_interfaces)) {
-            std::cout << "ERROR: Failed to read interfaces map" << std::endl;
-            return 1;
-        }
-
-        std::string mandatory_interfaces;
-        std::vector<std::string> mandatory_interfaces_vec;
-        // Read the mandatory interfaces list from config and parse it if not empty
-        if (beerocks::bpl::bpl_cfg_get_mandatory_interfaces(mandatory_interfaces)) {
-            if (!mandatory_interfaces.empty()) {
-                mandatory_interfaces_vec =
-                    beerocks::string_utils::str_split(mandatory_interfaces, ',');
-            }
-        }
-
-        for (int i = 0; i < num_of_interfaces; i++) {
-            // If interface is mandatory
-            if (std::find(mandatory_interfaces_vec.begin(), mandatory_interfaces_vec.end(),
-                          interfaces[i].ifname) != mandatory_interfaces_vec.end()) {
-                interfaces_map[interfaces[i].radio_num] = std::string(interfaces[i].ifname);
-            } else if (beerocks::net::network_utils::linux_iface_exists(interfaces[i].ifname)) {
-                // if interface is not mandatory and exists
-                interfaces_map[interfaces[i].radio_num] = std::string(interfaces[i].ifname);
-            }
-        }
-
-        if (interfaces_map.empty()) {
-            std::cout << "INFO: No radio interfaces are available" << std::endl;
-            return 0;
+    beerocks::bpl::BPL_WLAN_IFACE interfaces[beerocks::MAX_RADIOS_PER_AGENT] = {0};
+    int num_of_interfaces = beerocks::MAX_RADIOS_PER_AGENT;
+    if (beerocks::bpl::cfg_get_all_prplmesh_wifi_interfaces(interfaces, &num_of_interfaces)) {
+        std::cout << "ERROR: Failed to read interfaces map" << std::endl;
+        return 1;
+    }
+    std::string mandatory_interfaces;
+    std::vector<std::string> mandatory_interfaces_vec;
+    // Read the mandatory interfaces list from config and parse it if not empty
+    if (beerocks::bpl::bpl_cfg_get_mandatory_interfaces(mandatory_interfaces)) {
+        if (!mandatory_interfaces.empty()) {
+            mandatory_interfaces_vec = beerocks::string_utils::str_split(mandatory_interfaces, ',');
         }
     }
+    for (int i = 0; i < num_of_interfaces; i++) {
+        // If interface is mandatory
+        if (std::find(mandatory_interfaces_vec.begin(), mandatory_interfaces_vec.end(),
+                      interfaces[i].ifname) != mandatory_interfaces_vec.end()) {
+            interfaces_map[interfaces[i].radio_num] = std::string(interfaces[i].ifname);
+        } else if (beerocks::net::network_utils::linux_iface_exists(interfaces[i].ifname)) {
+            // if interface is not mandatory and exists
+            interfaces_map[interfaces[i].radio_num] = std::string(interfaces[i].ifname);
+        }
+    }
+
+    if (interfaces_map.empty()) {
+        std::cout << "INFO: No radio interfaces are available" << std::endl;
+        return 0;
+    }
+
     // killall running slave
     beerocks::os_utils::kill_pid(beerocks_slave_conf.temp_path + "pid/",
                                  std::string(BEEROCKS_AGENT));

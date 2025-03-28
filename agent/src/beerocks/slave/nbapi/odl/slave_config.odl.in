@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-2-Clause-Patent
  *
- * SPDX-FileCopyrightText: 2024 the prplMesh contributors (see AUTHORS.md)
+ * SPDX-FileCopyrightText: 2025 the prplMesh contributors (see AUTHORS.md)
  *
  * This code is subject to the terms of the BSD+Patent license.
  * See LICENSE file for more details.
@@ -9,46 +9,46 @@
 #!/usr/bin/amxrt
 
 %config {
-    name = "prplmesh";
-    prplmesh = {
-        mod-dir = "$@@{prefix}$@@{plugin-dir}/$@@{name}/modules",
+    name = "agent";
+    agent = {
+        mod-dir = "$@@{prefix}$@@{plugin-dir}/prplmesh/modules",
         external-mod-dir = "$@@{prefix}$@@{plugin-dir}/modules"
     };
     silent = false;
     import-dbg = true;
     dm-eventing-enabled = true;
-    storage-path = "/opt/$@@{name}/share";
+    storage-path = "/opt/prplmesh/share";
     storage-type = "odl";
     odl = {
         dm-load = true,
         dm-save = true,
         dm-save-on-changed = true,
         dm-save-delay = 1000,
-        dm-defaults = "defaults.d",
         directory = "$@@{storage-path}/odl"
     };
     cfg-dir = "/etc/amx";
     include-dirs = [
         ".",
-        "$@@{cfg-dir}/$@@{name}",
+        "$@@{cfg-dir}/prplmesh",
         "$@@{cfg-dir}/modules",
         "/opt/prplmesh/config/odl"
     ];
     import-dirs = [
         ".",
-        "$@@{prefix}$@@{plugin-dir}/$@@{name}",
+        "$@@{prefix}$@@{plugin-dir}/prplmesh",
         "$@@{prefix}$@@{plugin-dir}/modules",
-        "$@@{prefix}/usr/lib/amx/$@@{name}",
+        "$@@{prefix}/usr/lib/amx/prplmesh",
         "$@@{prefix}/usr/lib/amx/modules"
     ];
     //main files
-    definition_file = "controller.odl";
+    definition_file = "agent.odl";
 
     //persistent storage
     pcm_svc_config = {
-        "Objects" = "@CONTROLLER_ROOT_DM_Header@"
+        "Objects" = "@AGENT_ROOT_DM_Header@"
     };
 }
+
 include "$@@{definition_file}";
 #include "mod_pcm_svc.odl";
 import "mod-dmext.so";

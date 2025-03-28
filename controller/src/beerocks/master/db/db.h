@@ -9,8 +9,6 @@
 #ifndef _DB_H_
 #define _DB_H_
 
-#include "config.h"
-
 #include "agent.h"
 #include "station.h"
 #include "unassociatedStation.h"
@@ -118,7 +116,6 @@ public:
         int diagnostics_measurements_polling_rate_sec;
         int ire_rssi_report_rate_sec;
         bool load_dfs_reentry;
-        bool load_rdkb_extensions;
         bool load_client_band_steering;
         bool load_client_optimal_path_roaming;
         bool load_optimal_path_roaming_prefer_signal_strength;
@@ -218,8 +215,6 @@ public:
         bool health_check = true;
 
         bool service_fairness = false;
-
-        bool rdkb_extensions = false;
 
         bool channel_select_task         = true;
         bool dynamic_channel_select_task = true;
@@ -354,7 +349,6 @@ public:
         settings.monitor_on_vaps &= config_.load_monitor_on_vaps;
         settings.health_check &= config_.load_health_check;
         settings.service_fairness &= config_.load_service_fairness;
-        settings.rdkb_extensions &= config_.load_rdkb_extensions;
         settings.daisy_chaining_disabled &= config_.daisy_chaining_disabled;
     }
     ~db(){};
@@ -2767,11 +2761,6 @@ public:
         settings.service_fairness = en && config.load_service_fairness;
     }
     bool settings_service_fairness() { return settings.service_fairness; }
-    void settings_rdkb_extensions(bool en)
-    {
-        settings.rdkb_extensions = en && config.load_rdkb_extensions;
-    }
-    bool settings_rdkb_extensions() { return settings.rdkb_extensions; }
 
     // Params
     void setting_certification_mode(bool en) { config.certification_mode = en; }

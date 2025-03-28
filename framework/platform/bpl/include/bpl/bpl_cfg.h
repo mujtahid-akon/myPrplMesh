@@ -76,13 +76,6 @@ inline std::ostream &operator<<(std::ostream &out, eClientsMeasurementMode value
 #define BPL_RADIO_BAND_2G 2
 #define BPL_RADIO_BAND_6G 6
 
-/* Platform Operating Mode */
-#define BPL_OPER_MODE_GATEWAY 0
-#define BPL_OPER_MODE_GATEWAY_WISP 1
-#define BPL_OPER_MODE_WDS_EXTENDER 2
-#define BPL_OPER_MODE_WDS_REPEATER 3
-#define BPL_OPER_MODE_L2NAT_CLIENT 4
-
 /* Platform Management Mode */
 #define BPL_MGMT_MODE_MULTIAP_CONTROLLER_AGENT 0 /* EasyMesh controller and agent */
 #define BPL_MGMT_MODE_MULTIAP_CONTROLLER 1       /* EasyMesh controller */
@@ -116,11 +109,9 @@ inline std::ostream &operator<<(std::ostream &out, eClientsMeasurementMode value
 
 /* Gateway database */
 #define BPL_GW_DB_MANAGE_MODE_LEN (127 + 1) /* Maximal length of MANAGEMENT MODE string */
-#define BPL_GW_DB_OPER_MODE_LEN (127 + 1)   /* Maximal length of OPERATING MODE string */
 
 /* Default values */
 constexpr int DEFAULT_STOP_ON_FAILURE_ATTEMPTS            = 1;
-constexpr int DEFAULT_RDKB_EXTENSIONS                     = 0;
 constexpr int DEFAULT_DFS_REENTRY                         = 1;
 constexpr int DEFAULT_BAND_STEERING                       = 0;
 constexpr int DEFAULT_CLIENT_ROAMING                      = 0;
@@ -370,19 +361,6 @@ int cfg_is_enabled();
 int cfg_is_master();
 
 /**
- * Returns whether the current platform is configured as Gateway.
- *
- * @return valid possibilities:
- *   BPL_OPER_MODE_GATEWAY,
- *   BPL_OPER_MODE_GATEWAY_WISP,
- *   BPL_OPER_MODE_WDS_EXTENDER,
- *   BPL_OPER_MODE_WDS_REPEATER,
- *   BPL_OPER_MODE_L2NAT_CLIENT
- * @return -1 Error.
- */
-int cfg_get_operating_mode();
-
-/**
  * Returns the current management mode configuration.
  *
  * @return valid possibilities:
@@ -395,7 +373,7 @@ int cfg_get_operating_mode();
 int cfg_get_management_mode();
 
 /**
- * Returns the current management mode configuration
+ * @param reference to set the current management mode str
  * 
  * @returns <0 on error
  */
@@ -442,15 +420,6 @@ int cfg_get_stop_on_failure_attempts();
  * @return -1 Error.
  */
 int cfg_is_onboarding();
-
-/**
- * Checks the state of the RDKB Extensions feature.
- *
- * @return 1 Enabled.
- * @return 0 Disabled.
- * @return -1 Error.
- */
-int cfg_get_rdkb_extensions();
 
 /**
  * @brief Returns whether Band Steering feature is enabled or not.
@@ -1040,7 +1009,7 @@ bool cfg_get_steering_disassoc_timer_msec(std::chrono::milliseconds &steering_di
  * @param[in] steering_disassoc_timer_msec  steering disassociation timer in milliseconds.
  * @return true on success, otherwise false
  */
-bool cfg_set_steering_disassoc_timer_msec(std::chrono::milliseconds &steering_disassoc_timer_msec);
+bool cfg_set_steering_disassoc_timer_msec(std::chrono::milliseconds steering_disassoc_timer_msec);
 
 /**
  * @brief Reads Clients stats/measurements mode.

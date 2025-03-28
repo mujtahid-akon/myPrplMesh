@@ -137,7 +137,6 @@ public:
 
         bool local_gw;
         bool local_controller;
-        uint8_t operating_mode;
         uint8_t management_mode;
         bool certification_mode;
         uint8_t stop_on_failure_attempts;
@@ -154,7 +153,6 @@ public:
         bool client_11k_roaming_enabled;
         bool load_balancing_enabled;
         bool service_fairness_enabled;
-        bool rdkb_extensions_enabled;
         int zwdfs_flag;
         uint32_t best_channel_rank_threshold;
 

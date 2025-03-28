@@ -53,7 +53,7 @@ static std::shared_ptr<beerocks::nbapi::Amxrt> guarantee = nullptr;
 #endif // AMBIORIX_BUS_URI
 
 #ifndef CONTROLLER_DATAMODEL_PATH
-#define CONTROLLER_DATAMODEL_PATH "config/odl/prplmesh.odl"
+#define CONTROLLER_DATAMODEL_PATH "config/odl/master_config.odl"
 #endif
 
 #endif //#else // ENABLE_NBAPI
@@ -158,7 +158,6 @@ static void fill_master_config(son::db::sDbMasterConfig &master_conf,
     master_conf.ucc_listener_port =
         beerocks::string_utils::stoi(main_master_conf.ucc_listener_port);
     master_conf.load_service_fairness      = (main_master_conf.load_service_fairness == "1");
-    master_conf.load_rdkb_extensions       = (main_master_conf.load_rdkb_extensions == "1");
     master_conf.load_legacy_client_roaming = (main_master_conf.load_legacy_client_roaming == "1");
     master_conf.load_backhaul_measurements = (main_master_conf.load_backhaul_measurements == "1");
     master_conf.load_front_measurements    = (main_master_conf.load_front_measurements == "1");
@@ -612,6 +611,7 @@ int main(int argc, char *argv[])
                   << "amxrt_config_init returned : " << init << " shutting down!" << std::endl;
         return init;
     }
+
     guarantee = amxrt;
     (void)guarantee.use_count();
 
@@ -709,10 +709,6 @@ int main(int argc, char *argv[])
     std::string pid_file_path =
         beerocks_master_conf.temp_path + "pid/" + base_master_name; // for file touching
 
-    // fill master configuration
-    son::db::sDbMasterConfig master_conf;
-    fill_master_config(master_conf, beerocks_master_conf);
-
     // Create application event loop to wait for blocking I/O operations.
     auto event_loop = std::make_shared<beerocks::EventLoopImpl>();
     LOG_IF(!event_loop, FATAL) << "Unable to create event loop!";
@@ -757,15 +753,21 @@ int main(int argc, char *argv[])
     auto amb_dm_obj = std::make_shared<beerocks::nbapi::AmbiorixDummy>();
 #endif //ENABLE_NBAPI
 
+    beerocks::bpl::set_ambiorix_impl_ptr(amb_dm_obj);
+
+    // fill master configuration
+    son::db::sDbMasterConfig master_conf;
+    fill_master_config(master_conf, beerocks_master_conf);
+
     // Set Network.ID to the Data Model
-    if (!amb_dm_obj->set(CONTROLLER_ROOT_DM ".Network", "ID",
+    if (!amb_dm_obj->set(DATAELEMENTS_ROOT_DM ".Network", "ID",
                          tlvf::mac_to_string(tlvf::generate_ieee1905_al_mac(bridge_info.mac)))) {
         LOG(ERROR) << "Failed to add Network.ID, mac: "
                    << tlvf::mac_to_string(tlvf::generate_ieee1905_al_mac(bridge_info.mac));
         return false;
     }
 
-    if (!amb_dm_obj->set(CONTROLLER_ROOT_DM ".Network", "ControllerID",
+    if (!amb_dm_obj->set(DATAELEMENTS_ROOT_DM ".Network", "ControllerID",
                          tlvf::mac_to_string(tlvf::generate_ieee1905_al_mac(bridge_info.mac)))) {
         LOG(ERROR) << "Failed to add Network.ControllerID, mac: "
                    << tlvf::mac_to_string(tlvf::generate_ieee1905_al_mac(bridge_info.mac));
@@ -831,7 +833,7 @@ int main(int argc, char *argv[])
     son::Controller controller(master_db, std::move(broker_client_factory), std::move(ucc_server),
                                std::move(cmdu_server), timer_manager, event_loop);
 
-    if (!amb_dm_obj->set_current_time(CONTROLLER_ROOT_DM ".Network")) {
+    if (!amb_dm_obj->set_current_time(DATAELEMENTS_ROOT_DM ".Network")) {
         return false;
     };
 

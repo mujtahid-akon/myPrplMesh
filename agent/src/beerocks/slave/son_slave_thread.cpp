@@ -543,12 +543,6 @@ bool slave_thread::read_platform_configuration()
 
     int temp_int;
 
-    if ((temp_int = bpl::cfg_get_rdkb_extensions()) < 0) {
-        LOG(ERROR) << "Failed reading 'rdkb_extensions'";
-        return false;
-    }
-    db->device_conf.rdkb_extensions_enabled = static_cast<bool>(temp_int);
-
     if (!bpl::cfg_get_band_steering(db->device_conf.client_band_steering_enabled)) {
         LOG(DEBUG) << "Failed to read cfg_get_band_steering, setting to default value: "
                    << beerocks::bpl::DEFAULT_BAND_STEERING;
@@ -573,12 +567,6 @@ bool slave_thread::read_platform_configuration()
     std::string mgmt_mode;
     bpl::cfg_get_management_mode(mgmt_mode);
     db->dm_set_management_mode(mgmt_mode);
-
-    if ((temp_int = bpl::cfg_get_operating_mode()) < 0) {
-        LOG(ERROR) << "Failed reading 'operating_mode'";
-        return false;
-    }
-    db->device_conf.operating_mode = uint8_t(temp_int);
 
     if ((temp_int = bpl::cfg_get_certification_mode()) < 0) {
         LOG(ERROR) << "Failed reading 'certification_mode'";
@@ -668,8 +656,9 @@ bool slave_thread::read_platform_configuration()
     }
 
     // Set local_gw flag
-    db->device_conf.local_gw = (db->device_conf.operating_mode == BPL_OPER_MODE_GATEWAY ||
-                                db->device_conf.operating_mode == BPL_OPER_MODE_GATEWAY_WISP);
+    db->device_conf.local_gw =
+        (db->device_conf.management_mode == BPL_MGMT_MODE_MULTIAP_CONTROLLER_AGENT ||
+         db->device_conf.management_mode == BPL_MGMT_MODE_MULTIAP_CONTROLLER);
 
     db->device_conf.client_optimal_path_roaming_prefer_signal_strength_enabled =
         0; // TODO add platform DB flag
@@ -702,7 +691,6 @@ bool slave_thread::read_platform_configuration()
     LOG(DEBUG) << "local_controller: " << db->device_conf.local_controller;
     LOG(DEBUG) << "backhaul_preferred_radio_band: "
                << db->device_conf.back_radio.backhaul_preferred_radio_band;
-    LOG(DEBUG) << "rdkb_extensions: " << db->device_conf.rdkb_extensions_enabled;
     LOG(DEBUG) << beerocks::utils::get_zwdfs_string(db->device_conf.zwdfs_flag);
     LOG(DEBUG) << "best_channel_rank_threshold: " << db->device_conf.best_channel_rank_threshold;
     LOG(DEBUG) << "max_prioritization_rules: " << db->device_conf.max_prioritization_rules;

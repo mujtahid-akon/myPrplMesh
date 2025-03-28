@@ -101,9 +101,6 @@
     - |
       ssh "$TARGET_DEVICE_NAME" <<'EOF'
         uci set prplmesh.config.management_mode='Multi-AP-Controller-and-Agent'
-        uci set prplmesh.config.wired_backhaul=0
-        uci set prplmesh.config.master=1
-        uci set prplmesh.config.gateway=1
         uci commit prplmesh
       EOF
     - tests/openwrt/test_status.sh $TARGET_DEVICE_NAME

@@ -485,10 +485,6 @@ bool mon_wlan_hal_whm::channel_scan_dump_cached_results()
 
         results.signal_strength_dBm = std::stoi(map["RSSI"]);
 
-        if (map.find("Noise") != map.end()) {
-            results.noise_dBm = std::stoi(map["Noise"]);
-        }
-
         if (map.find("SecurityModeEnabled") != map.end()) {
             std::string security_mode_enabled(map["SecurityModeEnabled"]);
             results.security_mode_enabled =
@@ -520,6 +516,26 @@ bool mon_wlan_hal_whm::channel_scan_dump_cached_results()
 
         LOG(DEBUG) << "Processing results for BSSID:" << results.bssid
                    << " on Channel: " << results.channel;
+        event_queue_push(Event::Channel_Scan_Dump_Result, results_notif);
+    }
+
+    for (auto &map : m_spectrum_results) {
+        auto results_notif = std::make_shared<sCHANNEL_SCAN_RESULTS_NOTIFICATION>();
+        auto &results      = results_notif->channel_scan_results;
+
+        results.spectrum_info_present = 1;
+
+        int32_t bandwidth                   = std::stoi(map["Bandwidth"]);
+        results.operating_channel_bandwidth = utils_wlan_hal_whm::get_bandwidth_from_int(bandwidth);
+
+        results.channel = std::stoul(map["Channel"]);
+
+        results.noise_dBm = std::stoi(map["Noiselevel"]);
+
+        uint32_t availability = std::stoul(map["Availability"]);
+        results.utilization   = (((100 - availability) * 255) / 100);
+
+        LOG(DEBUG) << "Processing spectrum results for channel:" << results.channel;
         event_queue_push(Event::Channel_Scan_Dump_Result, results_notif);
     }
 
@@ -950,28 +966,39 @@ bool mon_wlan_hal_whm::get_scan_results_from_pwhm()
 {
     AmbiorixVariant result;
     AmbiorixVariant args(AMXC_VAR_ID_HTABLE);
-    if (!m_ambiorix_cl.call(m_radio_path, "getScanResults", args, result)) {
+    if (!m_ambiorix_cl.call(m_radio_path, "getScanCombinedData", args, result)) {
         LOG(ERROR) << " remote function call getScanResults Failed!";
         return false;
     }
-    AmbiorixVariantListSmartPtr scan_results_list =
-        result.read_children<AmbiorixVariantListSmartPtr>();
-    if (!scan_results_list) {
+    AmbiorixVariantListSmartPtr results_list = result.read_children<AmbiorixVariantListSmartPtr>();
+    if (!results_list) {
         LOG(ERROR) << "failed reading scan_results!";
         return false;
     }
 
-    if (scan_results_list->empty()) {
+    if (results_list->empty()) {
         LOG(ERROR) << "scan_results are empty";
         return false;
     }
 
     m_scan_results.clear();
+    m_spectrum_results.clear();
 
-    auto results_as_wrapped_list = scan_results_list->front();
+    auto results_as_wrapped_list =
+        results_list->front().read_children<AmbiorixVariantMapSmartPtr>();
+
+    if (results_as_wrapped_list->empty()) {
+        LOG(ERROR) << "results_as_wrapped_list are empty";
+        return false;
+    }
 
     auto ssid_results_as_list =
-        results_as_wrapped_list.read_children<AmbiorixVariantListSmartPtr>();
+        (*results_as_wrapped_list)["BSS"].read_children<AmbiorixVariantListSmartPtr>();
+
+    if (ssid_results_as_list->empty()) {
+        LOG(ERROR) << "ssid_results_as_list are empty";
+        return false;
+    }
 
     for (auto &ssid_results_map : *ssid_results_as_list) {
         auto data_map = ssid_results_map.read_children<AmbiorixVariantMapSmartPtr>();
@@ -1032,12 +1059,6 @@ bool mon_wlan_hal_whm::get_scan_results_from_pwhm()
             continue;
         }
 
-        if (map.find("Noise") != map.end()) {
-            std::string noise;
-            map["Noise"].get(noise);
-            map_cach_bssid["Noise"] = noise;
-        }
-
         if (map.find("SecurityModeEnabled") != map.end()) {
             std::string security_mode_enabled;
             map["SecurityModeEnabled"].get(security_mode_enabled);
@@ -1070,6 +1091,60 @@ bool mon_wlan_hal_whm::get_scan_results_from_pwhm()
 
         m_scan_results.push_back(map_cach_bssid);
     }
+
+    auto spectrum_results_as_list =
+        (*results_as_wrapped_list)["Spectrum"].read_children<AmbiorixVariantListSmartPtr>();
+
+    if (spectrum_results_as_list->empty()) {
+        LOG(ERROR) << "spectrum_results_as_list are empty";
+        return false;
+    }
+
+    for (auto &spectrum_results_map : *spectrum_results_as_list) {
+        auto data_map = spectrum_results_map.read_children<AmbiorixVariantMapSmartPtr>();
+        auto &map     = *data_map;
+
+        std::unordered_map<std::string, std::string> map_cach_spectrum;
+
+        if (map.find("bandwidth") != map.end()) {
+            std::string bandwidth;
+            map["bandwidth"].get(bandwidth);
+            map_cach_spectrum["Bandwidth"] = bandwidth;
+        } else {
+            LOG(DEBUG) << "Bandwidth is missing,skipping";
+            continue;
+        }
+
+        if (map.find("channel") != map.end()) {
+            std::string channel;
+            map["channel"].get(channel);
+            map_cach_spectrum["Channel"] = channel;
+        } else {
+            LOG(DEBUG) << "Channel is missing,skipping";
+            continue;
+        }
+
+        if (map.find("noiselevel") != map.end()) {
+            std::string noise_level;
+            map["noiselevel"].get(noise_level);
+            map_cach_spectrum["Noiselevel"] = noise_level;
+        } else {
+            LOG(DEBUG) << "Noiselevel is missing,skipping";
+            continue;
+        }
+
+        if (map.find("availability") != map.end()) {
+            std::string availability;
+            map["availability"].get(availability);
+            map_cach_spectrum["Availability"] = availability;
+        } else {
+            LOG(DEBUG) << "Availability is missing,skipping";
+            continue;
+        }
+
+        m_spectrum_results.push_back(map_cach_spectrum);
+    }
+
     return true;
 }
 

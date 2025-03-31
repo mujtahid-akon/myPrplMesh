@@ -73,7 +73,7 @@ if (TARGET_PLATFORM STREQUAL "openwrt")
             ${MODULE_PATH}/service_prioritization/osp_mxl/service_prio_utils_osp_mxl.cpp
         )
 
-        if(KEEP_UCI_GENERAL_OPTIONS)
+        if(KEEP_UCI_GENERAL_OPTIONS) 
             file(GLOB_RECURSE bpl_cfg_uci_sources
                 ${MODULE_PATH}/cfg/uci/*.c*
             )
@@ -83,7 +83,7 @@ if (TARGET_PLATFORM STREQUAL "openwrt")
                 ${MODULE_PATH}/cfg/uci/bpl_cfg_wifi.cpp
             )
 
-            list(APPEND bpl_platform_sources_base ${bpl_cfg_uci_sources})
+            list(APPEND bpl_platform_sources ${bpl_cfg_uci_sources})
         endif()
 
         # UGW specific libraries
@@ -91,7 +91,7 @@ if (TARGET_PLATFORM STREQUAL "openwrt")
         find_package(safec REQUIRED)
 
         link_directories(${PLATFORM_STAGING_DIR}/usr/lib)
-        list(APPEND BPL_LIBS ubus nl-3 nl-route-3 ${bridge-ugw} dl ubox safec)
+        list(APPEND BPL_LIBS ubus nl-3 nl-route-3 ${bridge-ugw} dl ubox uci safec)
 
         # Signal libsafec that we support the C99 standard
         add_definitions(-DHAVE_C99)

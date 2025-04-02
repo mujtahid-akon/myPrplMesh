@@ -735,17 +735,6 @@ bool cfg_set_unsuccessful_assoc_max_reporting_rate(int unsuccessful_assoc_max_re
     return cfg_set_prplmesh_config(option, value);
 }
 
-bool bpl_get_lan_interfaces(std::vector<std::string> &lan_iface_list)
-{
-    std::string iface_names;
-    if (cfg_uci_get_lan_interfaces("lan", iface_names) != RETURN_OK) {
-        LOG(ERROR) << "Read network lan interfaces names from UCI failed.";
-    }
-
-    lan_iface_list = beerocks::string_utils::str_split(iface_names, ' ');
-    return true;
-}
-
 bool bpl_cfg_get_backhaul_wire_iface(std::string &iface)
 {
     char ifname[BPL_IFNAME_LEN + 1] = {0};

@@ -67,11 +67,10 @@ AmbiorixVariantSmartPtr AmbiorixConnection::get_object(const std::string &object
                                                        const int32_t depth, bool only_first)
 {
     std::string path(object_path);
-    //proxied objs under root "Device." are not available through direct usp socket
-    //so access them directly by skipping the "Device." prefix
+    // if direct usp socket is used add "Device." prefix if not present before getting object
     std::string prefix("Device.");
-    if ((m_bus_uri.rfind("usp:", 0) == 0) && (path.rfind(prefix, 0) == 0)) {
-        path.erase(0, prefix.length());
+    if ((m_bus_uri.rfind("usp:", 0) == 0) && (path.rfind(prefix, 0) != 0)) {
+        path.insert(0, prefix);
     }
     std::lock_guard<std::recursive_mutex> lock(m_mutex);
     AmbiorixVariant result;

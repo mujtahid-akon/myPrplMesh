@@ -40,13 +40,18 @@ sta_wlan_hal_whm::sta_wlan_hal_whm(const std::string &iface_name, hal_event_cb_t
 
     m_ambiorix_cl.resolve_path(wbapi_utils::search_path_ep_by_iface(iface_name), m_ep_path);
 
+    // get radio path from m_ep_path
     std::string radRef;
-    if (m_ambiorix_cl.get_param(radRef, m_ep_path, "RadioReference")) {
-        m_ambiorix_cl.resolve_path(radRef + ".", m_radio_path);
-    }
+    auto obj = m_ambiorix_cl.get_object(m_ep_path);
+    if (obj) {
+        radRef = wbapi_utils::get_path_radio_reference(*obj);
+        m_ambiorix_cl.resolve_path(radRef, m_radio_path);
 
-    if (!m_ambiorix_cl.get_param(m_radio_info.iface_name, m_radio_path, "Name")) {
-        LOG(ERROR) << "Failed to update m_radio_info interface name";
+        if (!m_ambiorix_cl.get_param(m_radio_info.iface_name, m_radio_path, "Name")) {
+            LOG(ERROR) << "Failed to update m_radio_info interface name";
+        }
+    } else {
+        LOG(ERROR) << "Failed to get object from " << m_ep_path;
     }
 
     if (!m_ep_path.empty() && hal_conf.is_repeater) {

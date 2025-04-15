@@ -42,6 +42,12 @@ bool AmbiorixConnection::init()
     }
     amxc_var_new(&m_config);
     amxc_var_set_type(m_config, AMXC_VAR_ID_HTABLE);
+
+    // set requires-device-prefix configuration even the option is already set to true by default
+    // The purpose is to workaround events issue (PPW-498)
+    amxc_var_t *usp_section = amxc_var_add_key(amxc_htable_t, m_config, "usp", NULL);
+    amxc_var_add_key(bool, usp_section, "requires-device-prefix", true);
+
     int ret = 0;
     // Load the backend .so file
     ret = amxb_be_load(m_amxb_backend.c_str());

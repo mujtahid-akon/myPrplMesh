@@ -386,13 +386,6 @@ bool cfg_set_unsuccessful_assoc_max_reporting_rate(int unsuccessful_assoc_max_re
                                        unsuccessful_assoc_max_reporting_rate);
 }
 
-bool bpl_get_lan_interfaces(std::vector<std::string> &lan_iface_list)
-{
-    lan_iface_list =
-        beerocks::string_utils::str_split(std::string(DEFAULT_DM_LAN_INTERFACE_NAMES), ' ');
-    return true;
-}
-
 bool cfg_get_roaming_hysteresis_percent_bonus(int &roaming_hysteresis_percent_bonus)
 {
     return read_controller_config_param("RoamingHysteresisPercentBonus",

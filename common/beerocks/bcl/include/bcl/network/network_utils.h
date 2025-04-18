@@ -335,6 +335,22 @@ public:
      */
     static std::vector<struct __fdb_entry>
     linux_get_bridge_forwarding_table(const std::string &br_ifname, const sMacAddr &mac = ZERO_MAC);
+
+    /**
+     * @brief To check whether the interface is a physical interface.
+     *
+     * @param iface Interface name to be checked.
+     *
+     * @return Returns true if the interface is physical, false otherwise.
+     */
+    static bool linux_iface_is_physical(const std::string &iface);
+
+    /**
+     * @brief Retrieves the list of lan interfaces on the linux device.
+     *
+     * @return A vector of strings containing the names of the lan interfaces.
+     */
+    static std::vector<std::string> linux_get_lan_interfaces();
 };
 } // namespace net
 } // namespace beerocks

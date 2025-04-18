@@ -938,14 +938,6 @@ bool cfg_get_unsuccessful_assoc_max_reporting_rate(unsigned int &max_reporting_r
 bool cfg_set_unsuccessful_assoc_max_reporting_rate(int &max_reporting_rate);
 
 /**
- * @brief Reads lan interfaces names from bridge configuration.
- *
- * @param [out] lan_iface_list lan interfaces name list
- * @return true on success, otherwise false
- */
-bool bpl_get_lan_interfaces(std::vector<std::string> &lan_iface_list);
-
-/**
  * @brief Writes wireless network configuration for the given interface.
  *
  * @param [in] iface Interface name.

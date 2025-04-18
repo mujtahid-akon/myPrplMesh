@@ -604,17 +604,20 @@ public:
 
     /**
      * Internal structure to keep MLO configuration configured
-     * Vector index corresponds to the MLDUnit they are linked to
      */
+
+    // Worst possible case is one MLD by BSSID (max_mlds <= max_bssids)
+    const uint8_t max_mlds = eBeeRocksIfaceIds::IFACE_TOTAL_VAPS;
+
     typedef struct {
-        std::string ssid;
-        sMacAddr mac;
+        std::string mld_ssid = "";
+        sMacAddr mld_mac     = net::network_utils::ZERO_MAC;
+        int8_t mld_unit      = -1;
+        enum mode { NONE = 0, STR = 1 << 0, NSTR = 1 << 1, EMLSR = 1 << 2, EMLMR = 1 << 3 };
+        mode mld_mode;
+    } sMLDConfiguration;
 
-        bool str;
-        bool nstr;
-        bool emlsr;
-        bool emlmr;
-
+    typedef struct {
         typedef struct {
             std::string alias;
             sMacAddr ruid;
@@ -622,9 +625,23 @@ public:
             int8_t link_id;
         } sAffiliatedAP;
 
+        sMLDConfiguration mld_config;
         std::vector<sAffiliatedAP> affiliated_aps;
-    } sMLDConfiguration;
-    std::vector<sMLDConfiguration> mld_configurations;
+    } sAPMLDConfiguration;
+
+    typedef struct {
+        typedef struct {
+            sMacAddr ruid;
+            sMacAddr bssid;
+        } sAffiliatedBSta;
+        sMLDConfiguration mld_config;
+        std::vector<sAffiliatedBSta> affiliated_bstas;
+        sMacAddr ap_mld_mac;
+    } sBStaMLDConfiguration;
+
+    std::vector<sAPMLDConfiguration> ap_mld_configurations;
+    std::unique_ptr<sBStaMLDConfiguration> bsta_mld_configuration;
+
     std::string em_handle_third_party;
     bool em_ap_controller_found = false;
 

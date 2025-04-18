@@ -34,6 +34,8 @@ static std::shared_ptr<beerocks::nbapi::Amxrt> guarantee = nullptr;
 #include <bcl/network/network_utils.h>
 #include <mapf/common/utils.h>
 
+#include <bpl/bpl_amx.h>
+
 #include <easylogging++.h>
 
 #ifdef ENABLE_NBAPI
@@ -49,7 +51,7 @@ static std::shared_ptr<beerocks::nbapi::Amxrt> guarantee = nullptr;
 #endif // AMBIORIX_BUS_URI
 
 #ifndef AGENT_DATAMODEL_PATH
-#define AGENT_DATAMODEL_PATH "config/odl/slave_config.odl"
+#define AGENT_DATAMODEL_PATH "config/agent/odl/slave_config.odl"
 #endif // AGENT_DATAMODEL_PATH
 
 #endif
@@ -90,7 +92,14 @@ static void handle_signal()
         }
         break;
     }
-
+#ifdef ENABLE_NBAPI
+    // Handle SIGALRM signal indicating that one of amxp's timers is expired.
+    case SIGALRM:
+        LOG(INFO) << "LOG amxp Tik tak!";
+        amxp_timers_calculate();
+        amxp_timers_check();
+        break;
+#endif //ENABLE_NBAPI
     default:
         LOG(WARNING) << "Unhandled Signal: '" << strsignal(s_signal) << "' Ignoring...";
         break;
@@ -121,6 +130,14 @@ static void init_signals()
     sigemptyset(&sigusr1_action.sa_mask);
     sigusr1_action.sa_flags = 0;
     sigaction(SIGUSR1, &sigusr1_action, NULL);
+
+#ifdef ENABLE_NBAPI
+    struct sigaction sigalrm_action;
+    sigalrm_action.sa_handler = signal_handler;
+    sigemptyset(&sigalrm_action.sa_mask);
+    sigalrm_action.sa_flags = 0;
+    sigaction(SIGALRM, &sigalrm_action, NULL);
+#endif //ENABLE_NBAPI
 }
 
 static bool parse_arguments(int argc, char *argv[])
@@ -406,6 +423,15 @@ static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slav
         auto on_boot_scan = beerocks::string_utils::stoi(beerocks_slave_conf.on_boot_scan);
         db->device_conf.on_boot_scan = on_boot_scan;
         db->init_data_model(amb_dm_obj);
+
+        auto management_mode = beerocks::bpl::cfg_get_management_mode();
+
+        if (management_mode >= 0) {
+            db->device_conf.management_mode = management_mode;
+        } else {
+            LOG(ERROR) << "Failed reading 'management_mode'";
+            return false;
+        }
 
         if (!beerocks::bpl::bpl_cfg_get_backhaul_wire_iface(db->ethernet.wan.iface_name)) {
             LOG(ERROR) << "Failed reading 'backhaul_wire_iface'";

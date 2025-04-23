@@ -28,6 +28,17 @@ using namespace mapf;
 using namespace beerocks;
 using namespace wbapi;
 
+namespace {
+eFreqType string_to_freq_type(const std::string &freq_str)
+{
+    static const std::unordered_map<std::string, eFreqType> freq_map = {
+        {"2.4GHz", FREQ_24G}, {"5GHz", FREQ_5G}, {"6GHz", FREQ_6G}};
+
+    auto it = freq_map.find(freq_str);
+    return it != freq_map.end() ? it->second : FREQ_UNKNOWN;
+}
+} // namespace
+
 namespace beerocks {
 namespace bpl {
 
@@ -70,19 +81,35 @@ int cfg_get_all_prplmesh_wifi_interfaces(BPL_WLAN_IFACE *interfaces, int *num_of
 
     int interfaces_count = 0;
 
-    // pwhm dm path: WiFi.Radio.*.Name?
+    // pwhm dm path: WiFi.Radio.*
     auto radios = m_ambiorix_cl.get_object_multi<AmbiorixVariantMapSmartPtr>(
-        wbapi_utils::search_path_radio_iface());
+        wbapi_utils::search_path_radio());
     if (radios) {
         for (auto const &it : *radios) {
             auto &radio = it.second;
+
+            // Getting ifname
             auto ifname = wbapi_utils::get_radio_iface(radio);
             if (ifname.empty()) {
+                MAPF_ERR(
+                    "cfg_get_all_prplmesh_wifi_interfaces: failed to get radio iface for radio " +
+                    std::to_string(interfaces_count));
                 continue;
             }
             mapf::utils::copy_string(interfaces[interfaces_count].ifname, ifname.c_str(),
                                      BPL_IFNAME_LEN);
             interfaces[interfaces_count].radio_num = interfaces_count;
+
+            // Getting freq band
+            auto freq_band_str = wbapi_utils::get_radio_op_freq_band(radio);
+            if (freq_band_str.empty()) {
+                MAPF_ERR(
+                    "cfg_get_all_prplmesh_wifi_interfaces: failed to get freq band for radio " +
+                    std::to_string(interfaces_count));
+                continue;
+            }
+            interfaces->freq_type = string_to_freq_type(freq_band_str);
+
             interfaces_count++;
         }
     }

@@ -80,8 +80,6 @@ int cfg_get_stop_on_failure_attempts()
     return stop_on_failure_attempts;
 }
 
-int cfg_is_enabled() { return 1; }
-
 int cfg_set_onboarding(int enable) { return 0; }
 int cfg_is_onboarding() { return 0; }
 
@@ -213,6 +211,33 @@ bool cfg_get_clients_measurement_mode(eClientsMeasurementMode &clients_measureme
 
     clients_measurement_mode = static_cast<eClientsMeasurementMode>(mode_value);
     return true;
+}
+
+bool cfg_get_radio_stats_enable(bool &radio_stats_enable)
+{
+    return read_agent_config_param("RadioStatsEnable", radio_stats_enable);
+}
+
+int cfg_get_beerocks_credentials(const int radio_dir, char ssid[BPL_SSID_LEN],
+                                 char pass[BPL_PASS_LEN], char sec[BPL_SEC_LEN])
+{
+    bool result = 0;
+    std::string tmp{};
+
+    result |= read_agent_config_param("SSID", tmp);
+    snprintf(ssid, BPL_SSID_LEN, "%s", tmp.c_str());
+
+    result |= read_agent_config_param("Security", tmp);
+    snprintf(sec, BPL_SEC_LEN, "%s", tmp.c_str());
+
+    if (tmp == "WEP-64" || tmp == "WEP-128") {
+        result |= read_agent_config_param("WEPKey", tmp);
+    } else {
+        result |= read_agent_config_param("Passphrase", tmp);
+    }
+    snprintf(pass, BPL_PASS_LEN, "%s", tmp.c_str());
+
+    return result ? RETURN_OK : RETURN_ERR;
 }
 
 /* ============================================================
@@ -415,11 +440,6 @@ bool cfg_get_steering_disassoc_timer_msec(std::chrono::milliseconds &steering_di
     return true;
 }
 
-bool cfg_get_radio_stats_enable(bool &radio_stats_enable)
-{
-    return read_agent_config_param("RadioStatsEnable", radio_stats_enable);
-}
-
 bool cfg_get_rssi_measurements_timeout(int &rssi_measurements_timeout_msec)
 {
     return read_controller_config_param("RSSIMeasurementsTimeout", rssi_measurements_timeout_msec);
@@ -433,28 +453,28 @@ bool cfg_get_beacon_measurements_timeout(int &beacon_measurements_timeout_msec)
 
 bool cfg_get_sta_reporting_rcpi_threshold(unsigned int &sta_reporting_rcpi_threshold)
 {
-    return read_agent_config_param("STAReportingRCPIThreshold", sta_reporting_rcpi_threshold);
+    return read_controller_config_param("STAReportingRCPIThreshold", sta_reporting_rcpi_threshold);
 }
 
 bool cfg_get_sta_reporting_rcpi_hyst_margin_override_threshold(
     unsigned int &sta_reporting_rcpi_hyst_margin_override_threshold)
 {
-    return read_agent_config_param("STAReportingRCPIHystMarginOverrideThreshold",
-                                   sta_reporting_rcpi_hyst_margin_override_threshold);
+    return read_controller_config_param("STAReportingRCPIHystMarginOverrideThreshold",
+                                        sta_reporting_rcpi_hyst_margin_override_threshold);
 }
 
 bool cfg_get_ap_reporting_channel_utilization_threshold(
     unsigned int &ap_reporting_channel_utilization_threshold)
 {
-    return read_agent_config_param("APReportingChannelUtilizationThreshold",
-                                   ap_reporting_channel_utilization_threshold);
+    return read_controller_config_param("APReportingChannelUtilizationThreshold",
+                                        ap_reporting_channel_utilization_threshold);
 }
 
 bool cfg_get_assoc_sta_traffic_stats_inclusion_policy(
     bool &assoc_sta_traffic_stats_inclusion_policy)
 {
-    return read_agent_config_param("AssocSTATrafficStatsInclusionPolicy",
-                                   assoc_sta_traffic_stats_inclusion_policy);
+    return read_controller_config_param("AssocSTATrafficStatsInclusionPolicy",
+                                        assoc_sta_traffic_stats_inclusion_policy);
 }
 
 bool cfg_get_assoc_sta_link_metrics_inclusion_policy(bool &assoc_sta_link_metrics_inclusion_policy)
@@ -523,31 +543,31 @@ bool cfg_get_clients_unicast_measurements(bool &client_unicast_measurements)
     return true;
 }
 
-int cfg_get_dcs_channel_pool(int radio_num, char channel_pool[BPL_DCS_CHANNEL_POOL_LEN])
+int cfg_get_dcs_channel_pool(const BPL_WLAN_IFACE &iface,
+                             char channel_pool[BPL_DCS_CHANNEL_POOL_LEN])
 {
-    return 0;
-}
+    static const std::unordered_map<int, std::string> radio_to_param = {
+        {eFreqType::FREQ_24G, "DCSChannelPool_24GHz"},
+        {eFreqType::FREQ_5G, "DCSChannelPool_5GHz"},
+        {eFreqType::FREQ_6G, "DCSChannelPool_6GHz"},
+    };
 
-int cfg_get_beerocks_credentials(const int radio_dir, char ssid[BPL_SSID_LEN],
-                                 char pass[BPL_PASS_LEN], char sec[BPL_SEC_LEN])
-{
-    bool result = 0;
-    std::string tmp{};
-
-    result |= read_agent_config_param("SSID", tmp);
-    strncpy(ssid, tmp.c_str(), BPL_SSID_LEN);
-
-    result |= read_agent_config_param("Security", tmp);
-    strncpy(sec, tmp.c_str(), BPL_SEC_LEN);
-
-    if (tmp == "WEP-64" || tmp == "WEP-128") {
-        result |= read_agent_config_param("WEPKey", tmp);
-    } else {
-        result |= read_agent_config_param("Passphrase", tmp);
+    auto it = radio_to_param.find(iface.freq_type);
+    if (it == radio_to_param.end()) {
+        MAPF_ERR("cfg_get_dcs_channel_pool: Unknown freq_type");
+        return RETURN_ERR;
     }
-    strncpy(pass, tmp.c_str(), BPL_PASS_LEN);
 
-    return result ? RETURN_OK : RETURN_ERR;
+    std::string config_value = DEFAULT_DCS_CHANNEL_POOL;
+    if (!read_controller_config_param(it->second, config_value)) {
+        MAPF_ERR("cfg_get_dcs_channel_pool: Failed to read config parameter '" + it->second + "'");
+        return RETURN_ERR;
+    }
+
+    snprintf(channel_pool, BPL_DCS_CHANNEL_POOL_LEN, "%s", config_value.c_str());
+    channel_pool[BPL_DCS_CHANNEL_POOL_LEN - 1] = '\0';
+
+    return RETURN_OK;
 }
 
 int cfg_get_hostap_iface_steer_vaps(int32_t radio_num,

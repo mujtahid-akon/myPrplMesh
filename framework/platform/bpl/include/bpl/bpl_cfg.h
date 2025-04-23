@@ -336,20 +336,12 @@ struct BPL_WLAN_PARAMS {
 struct BPL_WLAN_IFACE {
     int radio_num;
     char ifname[BPL_IFNAME_LEN];
+    eFreqType freq_type;
 };
 
 /****************************************************************************/
 /******************************** Functions *********************************/
 /****************************************************************************/
-
-/**
- * Returns the beerocks state.
- *
- * @return 1 if enabled.
- * @return 0 if disabled.
- * @return -1 Error.
- */
-int cfg_is_enabled();
 
 /**
  * Returns whether the current platform is configured as Master.
@@ -403,7 +395,9 @@ int cfg_get_load_steer_on_vaps(int num_of_interfaces,
 /**
  *
  */
-int cfg_get_dcs_channel_pool(int radio_num, char channel_pool[BPL_DCS_CHANNEL_POOL_LEN]);
+int cfg_get_dcs_channel_pool(const BPL_WLAN_IFACE &iface,
+                             char channel_pool[BPL_DCS_CHANNEL_POOL_LEN]);
+
 /**
  * Returns the maximum number of failures allowed on agent before stopping its execution.
  *

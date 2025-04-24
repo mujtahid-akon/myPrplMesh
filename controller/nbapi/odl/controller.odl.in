@@ -237,13 +237,13 @@
                     /* Used by channel selection task; currently (03.2024) does nothing 
                     as the task never goes to the state where this flag is checked */
                     %persistent bool DFSReentryEnabled {
-                        default false;
+                        default true;
                     }
 
                     /* Used by channel selection task; currently (03.2024) does nothing 
                     as the task never goes to the state where this flag is checked */
                     %persistent bool DFSTaskEnabled {
-                        default false;
+                        default true;
                     }
 
                     /* Used by handle_cmdu_1905_autoconfiguration_WSC; don`t send credentials to extenders if enabled */

@@ -182,14 +182,31 @@ std::string AgentDB::dm_create_fronthaul_object(const std::string &iface)
         AGENT_ROOT_DM ".Info.Fronthaul.[Iface == '%s']", iface);
 
     if (idx) {
-        m_ambiorix_datamodel->remove_instance(AGENT_ROOT_DM ".Info.Fronthaul", idx);
+        if (!m_ambiorix_datamodel->remove_instance(AGENT_ROOT_DM ".Info.Fronthaul", idx)) {
+            LOG(ERROR) << "Failed to remove fronthaul instance for " << iface;
+            return "";
+        }
     }
 #ifndef ENABLE_NBAPI
     return "";
 #else
     auto inst = m_ambiorix_datamodel->add_instance(AGENT_ROOT_DM ".Info.Fronthaul");
-    LOG_IF(!inst.size(), FATAL) << "Could not create " AGENT_ROOT_DM ".Info.Fronthaul instance for "
-                                << iface;
+    // If this fails due to a race condition, schedule one retry. See PPM-3286.
+    if (!inst.size()) {
+        LOG(ERROR) << "Could not create " AGENT_ROOT_DM ".Info.Fronthaul instance for '" << iface
+                   << "', scheduling one retry in 100 ms";
+
+        // wait some time before second try
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+        inst = m_ambiorix_datamodel->add_instance(AGENT_ROOT_DM ".Info.Fronthaul");
+        if (!inst.size()) {
+            LOG(ERROR) << "Could not create " AGENT_ROOT_DM ".Info.Fronthaul instance for '"
+                       << iface << " on retry";
+            return "";
+        }
+        LOG(INFO) << "Successfully created Fronthaul instance for '" << iface << "' on retry";
+    }
 
     m_ambiorix_datamodel->set(inst, "Iface", iface);
     m_ambiorix_datamodel->set(inst, "CurrentState", std::string("INIT (0)"));
@@ -202,6 +219,10 @@ std::string AgentDB::dm_create_fronthaul_object(const std::string &iface)
 void AgentDB::dm_set_fronthaul_state(const std::string &path, const std::string &cur,
                                      const std::string &max)
 {
+    if (path.empty()) {
+        LOG(ERROR) << "dm_set_fronthaul_state called with empty path, skipping update";
+        return;
+    }
     m_ambiorix_datamodel->set(path, "CurrentState", cur);
     m_ambiorix_datamodel->set(path, "BestState", max);
 }

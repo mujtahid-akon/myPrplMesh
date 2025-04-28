@@ -488,8 +488,13 @@ void ApAutoConfigurationTask::configuration_complete_wait_action(const std::stri
 bool ApAutoConfigurationTask::send_ap_autoconfiguration_search_message(
     const std::string &radio_iface)
 {
+    auto db = AgentDB::get();
+
     auto numberOfSupportedService = 2;
-    auto db                       = AgentDB::get();
+    if (db->device_conf.certification_mode) {
+        // The R4 QCA WFA controller won't answer Autoconfig Searches that specify EM_AP_AGENT as a supported service. See PPM-3287.
+        numberOfSupportedService = 1;
+    }
 
     ieee1905_1::tlvAutoconfigFreqBand::eValue freq_band =
         ieee1905_1::tlvAutoconfigFreqBand::IEEE_802_11_2_4_GHZ;

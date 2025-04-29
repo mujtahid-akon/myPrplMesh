@@ -213,31 +213,49 @@ bool cfg_get_clients_measurement_mode(eClientsMeasurementMode &clients_measureme
     return true;
 }
 
-bool cfg_get_radio_stats_enable(bool &radio_stats_enable)
-{
-    return read_agent_config_param("RadioStatsEnable", radio_stats_enable);
-}
-
 int cfg_get_beerocks_credentials(const int radio_dir, char ssid[BPL_SSID_LEN],
                                  char pass[BPL_PASS_LEN], char sec[BPL_SEC_LEN])
 {
-    bool result = 0;
-    std::string tmp{};
+    auto safe_copy = [](const std::string &in, char *out, size_t max_len) {
+        size_t copy_len = std::min(in.size(), max_len - 1);
+        std::memcpy(out, in.data(), copy_len);
+        out[copy_len] = '\0';
+    };
 
-    result |= read_agent_config_param("SSID", tmp);
-    snprintf(ssid, BPL_SSID_LEN, "%s", tmp.c_str());
+    bool success = true;
+    std::string tmp;
 
-    result |= read_agent_config_param("Security", tmp);
-    snprintf(sec, BPL_SEC_LEN, "%s", tmp.c_str());
-
-    if (tmp == "WEP-64" || tmp == "WEP-128") {
-        result |= read_agent_config_param("WEPKey", tmp);
+    // SSID
+    if (!read_agent_config_param("SSID", tmp)) {
+        LOG(WARNING) << "cfg: missing SSID";
+        success = false;
     } else {
-        result |= read_agent_config_param("Passphrase", tmp);
+        safe_copy(tmp, ssid, BPL_SSID_LEN);
     }
-    snprintf(pass, BPL_PASS_LEN, "%s", tmp.c_str());
 
-    return result ? RETURN_OK : RETURN_ERR;
+    // Security
+    if (!read_agent_config_param("Security", tmp)) {
+        LOG(WARNING) << "cfg: missing Security";
+        success = false;
+    } else {
+        safe_copy(tmp, sec, BPL_SEC_LEN);
+    }
+
+    // Passphrase or WEPKey depending on security
+    if (tmp == "WEP-64" || tmp == "WEP-128") {
+        if (!read_agent_config_param("WEPKey", tmp)) {
+            LOG(WARNING) << "cfg: missing WEPKey";
+            success = false;
+        }
+    } else {
+        if (!read_agent_config_param("Passphrase", tmp)) {
+            LOG(WARNING) << "cfg: missing Passphrase";
+            success = false;
+        }
+    }
+    safe_copy(tmp, pass, BPL_PASS_LEN);
+
+    return success ? RETURN_OK : RETURN_ERR;
 }
 
 /* ============================================================

@@ -173,8 +173,6 @@ bool CmduServerImpl::remove_connection(int fd, bool remove_handlers)
 
 void CmduServerImpl::handle_connect(int fd)
 {
-    // LOG(DEBUG) << "Accepting connection, fd = " << fd;
-
     beerocks::net::UdsAddress address;
     auto connection = m_server_socket->accept(address);
 
@@ -184,7 +182,6 @@ void CmduServerImpl::handle_connect(int fd)
     }
 
     int connected_socket = connection->socket()->fd();
-    LOG(INFO) << "Client connected, fd = " << connected_socket;
 
     beerocks::EventLoop::EventHandlers handlers;
     handlers.on_read = [&](int fd, beerocks::EventLoop &loop) {

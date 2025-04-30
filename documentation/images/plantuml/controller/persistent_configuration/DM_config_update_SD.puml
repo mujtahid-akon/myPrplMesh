@@ -1,0 +1,18 @@
+@startuml
+
+title DM update of persistent configuration
+
+participant "NBAPI" as NBAPI
+participant "DB" as DB
+participant "BPL" as BPL
+participant "UCI" as UCI
+
+NBAPI -> DB: event_configuration_changed()
+DB -> DB: Update master configuration
+DB -> BPL: cfg_set_* (e.g., band_steering, channel_select_task, etc.)
+DB -> BPL: cfg_commit_changes()
+
+BPL -> UCI: uci_commit_changes("prplmesh")
+UCI -> UCI: Commit changes to config file
+
+@enduml

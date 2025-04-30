@@ -16,77 +16,90 @@ When a platform-specific configuration file specifies a value for a option, it o
 
 The tables in the sections below outlines all the existing options, across all platforms.
 
-### Global configuration options
+### UCI Configuration Parameters
 
-In the following table, "default" means default value used within prplMesh if it's not provided by the platform.
+Currently, only general configuration parameters that are common for both the Controller and Agent are kept in UCI.
 
-| Option                                       | Type    | Required | Default         | Description                                                                                                                                           |
-|----------------------------------------------|---------|----------|-----------------|-------------------------------------------------------------------------------------------------------------------------------------------------------|
-| management_mode                              | string  | yes      | *none*          | Multi-AP mode (Agent, Controller, Controller+Agent).                                                                                                  |
-| onboarding                                   | bool    | no       | *none*          | The current prplMesh onboarding state. prplMesh doesn't currently set it.                                                                             |
-| band_steering                                | bool    | no       | 0               | If set to 1, enable client band steering (used by the optimal path feature).                                                                          |
-| client_roaming                               | bool    | no       | 0               | If set to 1, enable client roaming (used by the optimal path feature).                                                                                |
-| roaming_hysteresis_percent_bonus             | integer | no       | 10              | Roaming hysteresis bonus percentage (see optimal path feature).                                                                                       |
-| dfs_reentry                                  | bool    | no       | 1               | If set to 1, enable DFS re-entry (see channel selection task).                                                                                        |
-| best_channel_rank_th                         | integer | no       | 0               | Threshold for the best channel rank (see channel selection task).                                                                                     |
-| mem_only_psk                                 | bool    | yes      | *none*          | If set to 1, prevents storing the PSK in config file (see hostapd's 'mem_only_psk' option).                                                                           |
-| backhaul_band                                | bool    | yes      | *none*          | The preferred band for wireless backhaul. Supported values: '2.4GHz', '5GHz', 'auto'.                                                                 |
-| backhaul_wire_iface                          | string  | yes      | *none*          | The network interface to use for wired backhaul.                                                                                                      |
-| certification_mode                           | bool    | yes      | *none*          | If set to 1, enable certification-specific features or behavior (e.g. enable UCC listener).                                                           |
-| stop_on_failure_attempts                     | bool    | no       | 1               | If a problem occurs, the number of times to retry before the agent is stopped completely. Set to 0 to disable.                                        |
-| persistent_db                                | bool    | no       | 0               | If set to 1, enable the persistent database (stores clients in a database). Requires a platform that supports it.                                     |
-| clients_persistent_db_max_size               | integer | no       | 256             | Maximum number of clients to store in the persistent DB.                                                                                              |
-| max_timelife_delay_minutes                   | integer | no       | 525600 (1 year) | Maximum lifetime (in minutes) of clients in the persistent DB.                                                                                        |
-| unfriendly_device_max_timelife_delay_minutes | integer | no       | 1440 (1 day)    | Maximum lifetime (in minutes) of "unfriendly" clients in the persistent DB.                                                                           |
-| persistent_db_aging_interval_sec             | integer | no       | 3600 (1 hour)   | Interval (in seconds) to run the persistent DB aging mechanism.                                                                                       |
-| zwdfs_flag                                   | integer | no       | 0               | BITWIZE of On-Radar, On-Selection, Pre-CAC which affect the the "zero wait" DFS feature.                                                              |
-| steering_disassoc_timer_msec                 | integer | no       | 200             | Client steering disassociation timer.                                                                                                                 |
-| link_metrics_request_interval_sec            | integer | no       | 60              | Interval for periodic link metrics requests from all agents (set to 0 to disable).                                                                    |
-| clients_measurement_mode                     | integer | no       | 1               | Client measurements mode. `0` disables, `1` enables the measurements for all clients.`2` enables measurements only for clients selected for steering. |
-| mandatory_interfaces                         | string  | no       | *empty*         | Comma-separated list of wireless interfaces that prplMesh should use. If empty, try to use all of them.                                               |
-| unsuccessful_assoc_report_policy             | bool    | no       | 1               | If set to 1, enable reporting for unsuccessful associations.                                                                                          |
-| unsuccessful_assoc_max_reporting_rate        | int     | no       | 30              | Maximum rate for reporting unsuccessful association in attempts per minute.                                                                           |
-| rssi_measurements_timeout                    | int     | no       | 10000           | rssi measurements timeout in msec, used by the optimal path task                                                                                      |
-| beacon_measurements_timeout                  | int     | no       | 6000            | 11k beacon measurements timeout in msec, used by the optimal path task                                                                                |
-| optimal_path_prefer_signal_strength          | bool    | no       | false           | used by optimal_path_task; chooses best BSS based on `rssi` if prefer_signal_strength is TRUE, `phy_rate` otherwise                                   |
-| client_11k_roaming                           | bool    | no       | true            | used by optimal_path_task; used to compute new BSS for the STA based on 11k measurements by STA                                                       |
-| load_balancing                               | bool    | no       | false           | used by load_balancer_task (exit early if false); load_balancer_task will use (currently TODO) client_steering_task to move a STA between agents      |
-| health_check_enabled                         | bool    | no       | false           | used by controller to start / stop the health_check_task                                                                                              |
-| diagnostics_measurements                     | bool    | no       | true            | used by controller to start / stop statistics_polling_task                                                                                            |
-| diagnostics_measurements_polling_rate_sec    | int     | no       | 10              | used by statistics_polling_task as interval for sending beerocks_message::cACTION_CONTROL_HOSTAP_STATS_MEASUREMENT_REQUEST to known agents            |
-| channel_select_task_enabled                  | bool    | no       | true            | used by controller to start / stop channel_select_task                                                                                                |
-| dfs_task_enabled                             | bool    | no       | true            | used by controller to start / stop dynamic_channel_selection_task_r2                                                                                  |
-| exclude_hostap_iface                         | bool     | yes     | 0               | If set to 1, exclude dummy radio interfaces for credentials propagation in the controller. The dummy radio interfaces are those marked as hostap_iface parameter under wifi settings.|
+| Option               | Type   | Default Value    | Description                                                   |
+| -------------------- | ------ | ---------------- | ------------------------------------------------------------- |
+| `management_mode`    | string | Controller+Agent | Multi-AP mode (`Agent`, `Controller`, `Controller+Agent`).    |
+| `certification_mode` | int    | 1                | Enables certification-specific features (e.g., UCC listener). |
 
-### NBAPI control options for controller tasks
+---
 
-NBAPI exposes a subset of these options that are related to the execution of controller tasks.
+### DataModel Configuration Parameters
 
-These options are loaded from UCI; the default values are set by the controller if UCI does not hold these options.
-They are warm-applicable, meaning new values set through the NBAPI are taken into account by the controller without a restart; because of the inter-dependencies betweeen these options though, care is advised when changing them.
+There are configuration parameters that are specific for the Controller or Agent.
 
-BPL is used to persistently store changes to these options.
+---
 
+#### Controller Configuration
 
-The following table presents these options, see also [Configuration via NBAPI](https://gitlab.com/prpl-foundation/prplmesh/prplMesh/-/wikis/prplMesh-Northbound-API#configuration-via-nbapi).
+All Controller config options are located in path:  
+`X_PRPLWARE-COM_Controller.Configuration`
 
-| Option                                    | NBAPI Name                         | Type | Default | Used by                                                                                                                                      |
-|-------------------------------------------|------------------------------------|------|---------|----------------------------------------------------------------------------------------------------------------------------------------------|
-| dfs_reentry                               | DFSReentry                         | bool | true    | channel_selection_task; currently does nothing as the task never goes to the state where this flag is checked                                |
-| roaming_hysteresis_percent_bonus          | SteeringCurrentBonus               | int  | 10      | optimal_path_task; applies bonus to current BSS {phy_rate or rssi}; choice of parameter is based on prefer_signal_strength flag              |
-| optimal_path_prefer_signal_strength       | OptimalPathPreferSignalStrenght    | bool | false   | optimal_path_task; chooses best BSS based on `rssi` if prefer_signal_strength is TRUE, `phy_rate` otherwise                                  |
-| steering_disassoc_timer_msec              | SteeringDisassociationTimer        | int  | 200     | client_steering_task; used to format the 1905 Client Steering Request packet sent to the steering source agent                               |
-| link_metrics_request_interval_sec         | LinkMetricsRequestInterval         | int  | 60      | agent_monitoring_task: interval for AP Metrics; AND link_metrics_task: period of 1905 Link Metric Query                                      |
-| band_steering                             | BandSteeringEnabled                | bool | false   | channel_selection_task and optimal_path_task;                                                                                                |
-| client_roaming                            | ClientRoamingEnabled               | bool | false   | optimal_path_task                                                                                                                            |
-| client_11k_roaming                        | Client_11kRoaming                  | bool | true    | optimal_path_task; used to compute new BSS for the STA based on 11k measurements by STA                                                      |
-| load_balancing                            | LoadBalancingEnabled               | bool | false   | load_balancer_task (exit early if false); load_balancer_task will use (TODO) client_steering_task to move a STA to a less busy agent         |
-| health_check_enabled                      | HealthCheckTask                    | bool | false   | controller to start / stop the health_check_task                                                                                             |
-| diagnostics_measurements                  | StatisticsPollingTask              | bool | true    | controller to start / stop statistics_polling_task                                                                                           |
-| diagnostics_measurements_polling_rate_sec | StatisticsPollingRateSec           | int  | 10      | statistics_polling_task as interval for sending beerocks_message::cACTION_CONTROL_HOSTAP_STATS_MEASUREMENT_REQUEST to known agents           |
-| channel_select_task_enabled               | ChannelSelectionTaskEnabled        | bool | true    | controller to start / stop channel_select_task                                                                                               |
-| dfs_task_enabled                          | DynamicChannelSelectionTaskEnabled | bool | true    | controller to start / stop dynamic_channel_selection_task_r2                                                                                 |
-| daisy_chaining_disabled                   | DaisyChainingDisabled              | bool | false   | handle_cmdu_1905_autoconfiguration_WSC; don`t send credentials to extenders if enabled                                                       |
+| Option                                        | Type   | Default Value | Description                                                                 |
+| --------------------------------------------- | ------ | ------------- | --------------------------------------------------------------------------- |
+| `PersistentDatabaseEnabled`                   | bool   | false         | Enables persistent database for storing clients. Requires platform support. |
+| `ClientsPersistentDatabaseMaxSize`            | uint32 | 256           | Maximum number of clients in persistent database.                           |
+| `MaxTimeLifeDelayMinutes`                     | uint32 | 525600        | Maximum lifetime (in minutes) of clients in persistent database.            |
+| `UnfriendlyDeviceMaxTimeLifeDelayMinutes`     | uint32 | 1440          | Maximum lifetime (in minutes) of 'unfriendly' clients.                      |
+| `PersistentDatabaseAgingIntervalSec`          | uint32 | 3600          | Aging interval for the persistent database in seconds.                      |
+| `BandSteeringEnabled`                         | bool   | false         | Enables band steering to optimize STA connection.                           |
+| `IRERoamingEnabled`                           | bool   | true          | Enables IRE roaming in the optimal path task.                               |
+| `ClientRoamingEnabled`                        | bool   | false         | Enables client roaming in the optimal path task.                            |
+| `Client11kRoamingEnabled`                     | bool   | true          | Uses 11k measurements for roaming decisions in the optimal path task.       |
+| `SteeringCurrentBonus`                        | uint32 | N/A           | Bonus applied to current BSS selection (`phy_rate` or `rssi`).              |
+| `SteeringDisassociationTimerMSec`             | uint32 | 200           | Disassociation timer used in client steering task.                          |
+| `LinkMetricsRequestIntervalSec`               | uint32 | 60            | Link metric request interval in seconds.                                    |
+| `ChannelSelectionTaskEnabled`                 | bool   | false         | Enables channel selection task.                                             |
+| `DynamicChannelSelectionTaskEnabled`          | bool   | false         | Enables dynamic channel selection task.                                     |
+| `BackhaulOptimizationEnabled`                 | bool   | false         | Enables IRE network optimization task.                                      |
+| `LoadBalancingTaskEnabled`                    | bool   | false         | Enables load balancing via client steering between agents.                  |
+| `OptimalPathPreferSignalStrength`             | bool   | false         | Prefer signal strength (`rssi`) over `phy_rate` for optimal path decisions. |
+| `HealthCheckTaskEnabled`                      | bool   | false         | Enables health check task.                                                  |
+| `StatisticsPollingTaskEnabled`                | bool   | false         | Enables statistics polling task.                                            |
+| `StatisticsPollingRateSec`                    | uint32 | 1             | Polling interval (seconds) for statistics collection.                       |
+| `DFSReentryEnabled`                           | bool   | false         | Currently not used; placeholder for DFS reentry.                            |
+| `DFSTaskEnabled`                              | bool   | false         | Currently not used; placeholder for DFS task.                               |
+| `DaisyChainingDisabled`                       | bool   | false         | Prevents sending credentials to extenders if enabled.                       |
+| `DiagnosticsMeasurements`                     | bool   | true          | Enables diagnostics measurement via statistics polling.                     |
+| `DiagnosticsMeasurementsRate`                 | uint32 | 10            | Measurement request interval (seconds) to known agents.                     |
+| `UnsuccessfulAssocReportPolicy`               | bool   | true          | Enables reporting for unsuccessful STA associations.                        |
+| `UnsuccessfulAssocMaxReportingRate`           | uint32 | 30            | Max reporting rate for unsuccessful associations (attempts per minute).     |
+| `RoamingHysteresisPercentBonus`               | uint32 | 10            | Roaming hysteresis bonus in percent for optimal path decisions.             |
+| `RSSIMeasurementsTimeout`                     | uint32 | 10000         | Timeout for RSSI measurement responses (milliseconds).                      |
+| `BeaconMeasurementsTimeout`                   | uint32 | 6000          | Timeout for beacon measurement responses (milliseconds).                    |
+| `STAReportingRCPIThreshold`                   | uint32 | 0             | RCPI threshold (dB) for STA metrics report triggering.                      |
+| `STAReportingRCPIHystMarginOverrideThreshold` | uint32 | 0             | Override for RCPI hysteresis margin (dB).                                   |
+| `APReportingChannelUtilizationThreshold`      | uint32 | 0             | Channel utilization threshold (%) for AP metrics reports.                   |
+| `SteeringPolicy`                              | uint32 | 0             | Steering policy type.                                                       |
+| `AssocSTALinkMetricsInclusionPolicy`          | bool   | false         | Include Associated STA Link Metrics TLV in reports.                         |
+| `AssocSTATrafficStatsInclusionPolicy`         | bool   | false         | Include Associated STA Traffic Stats TLV in reports.                        |
+| `AssocWiFi6STAStatusReportInclusionPolicy`    | bool   | false         | Include Wi-Fi 6 STA Status Report TLV in reports.                           |
+
+---
+
+#### Agent Configuration
+
+All Agent config options are located in path:  
+`X_PRPLWARE-COM_Agent.Configuration`
+
+| Option                     | Type   | Default Value | Description                                                                 |
+| -------------------------- | ------ | ------------- | --------------------------------------------------------------------------- |
+| `BestChannelRankThreshold` | uint32 | 0             | Threshold for best channel rank in channel selection task.                  |
+| `BackhaulBand`             | string | auto          | Preferred band for wireless backhaul (`2.4GHz`, `5GHz`, `auto`).            |
+| `BackhaulWireInterface`    | string | wan           | Network interface used for wired backhaul.                                  |
+| `StopOnFailureAttempts`    | uint32 | 1             | Retry attempts before stopping agent due to failures. 0 disables retries.   |
+| `ZeroWaitDFSFlag`          | uint32 | 0             | Bitwise flags controlling Zero Wait DFS features.                           |
+| `ClientsMeasurementMode`   | uint32 | 1             | Client measurement mode: 0-disabled, 1-enabled for all, 2-selected clients. |
+| `MandatoryInterfaces`      | string |               | Comma-separated list of wireless interfaces (empty = use all).              |
+| `ExcludeHostapInterface`   | bool   | false         | Excludes dummy interfaces from credential propagation.                      |
+| `SSID`                     | string | test_ssid     | SSID for network credentials.                                               |
+| `Security`                 | string | WPA2-Personal | Security type for network credentials.                                      |
+| `Passphrase`               | string | 123456789a    | Passphrase for network credentials.                                         |
+| `WEPKey`                   | string | 123456789a    | WEP key for network credentials.                                            |
+
 
 ### A short overview of controller tasks
 
@@ -196,20 +209,6 @@ Every `diagnostics_measurements_polling_rate_sec` seconds sends a beerocks_messa
 Periodic
 Launched by the controller. Handles the 1905 topology notification and pushes STA_CONNECTED event for DHCP task, client steering task, and btm request task.
 Starts the association handling task.
-
-
-### Radio-specific configuration options (UCI only).
-
-In addition to the global configuration options, prplMesh needs to have one configuration section per radio.
-The available options of the radio sections are described in the table that follows.
-
-Again, "default" means default value used within prplMesh if it's not provided by the platform.
-
-| Option                  | Type   | Required | Default | Description                                                                                                                        |
-| ----------------------- | ------ | -------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| hostap_iface            | string | yes      | *none*  | One of the (AP) interface name of the radio. For MaxLinear devices, this must be the "radio interface" (i.e. the dummy interface). |
-| sta_iface               | string | yes      | *none*  | The station interface to use for this radio.                                                                                       |
-| hostap_iface_steer_vaps | string | yes      | *none*  | The interfaces (VAP) that the client can be steered to. If empty, clients can be steered to any VAP (see optimal path task).       |
 
 ## Platform-specific files
 

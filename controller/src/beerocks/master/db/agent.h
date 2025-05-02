@@ -554,6 +554,34 @@ public:
     };
     beerocks::mac_map<sEthSwitch> eth_switches;
 
+    /**
+     * Structures to store MLD Information
+     */
+
+    typedef struct {
+        std::string mld_ssid = "";
+        sMacAddr mld_mac     = beerocks::net::network_utils::ZERO_MAC;
+        enum mode { NONE = 0, STR = 1 << 0, NSTR = 1 << 1, EMLSR = 1 << 2, EMLMR = 1 << 3 };
+        mode mld_mode;
+    } sMLDInfo;
+
+    typedef struct {
+        typedef struct {
+            std::string dm_path; // AffiliatedAP data model path
+            sMacAddr ruid;
+            sMacAddr bssid;
+            int8_t link_id;
+        } sAffiliatedAP;
+
+        std::string dm_path; // ApMld data model path
+        sMLDInfo mld_info;
+        // Key: RUID
+        std::unordered_map<sMacAddr, sAffiliatedAP> affiliated_aps;
+    } sAPMLD;
+
+    // Key: SSID
+    std::unordered_map<std::string, sAPMLD> ap_mlds;
+
     uint8_t ap_maximum_links   = 0;
     uint8_t bsta_maximum_links = 0;
 

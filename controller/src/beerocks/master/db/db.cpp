@@ -1874,6 +1874,151 @@ bool db::set_eht_operations(wfa_map::tlvEHTOperations &eht_ops_tlv, const sMacAd
     return ret_val;
 }
 
+Agent::sAPMLD *db::get_or_allocate_ap_mld(const sMacAddr &al_mac, std::string &ssid)
+{
+    auto agent = m_agents.get(al_mac);
+
+    // Check SSID match
+    auto ap_mld = agent->ap_mlds.find(ssid);
+
+    if (ap_mld != agent->ap_mlds.end()) {
+        // Return ApMld of matched SSID
+        LOG(DEBUG) << "AP MLD with SSID: " << ssid << " found.";
+        return &(ap_mld->second);
+    } else {
+        agent->ap_mlds[ssid] = Agent::sAPMLD();
+        // Return new AP MLD
+        LOG(DEBUG) << "AP MLD with SSID: " << ssid << " not found. Creating new AP MLD entry.";
+        return &(agent->ap_mlds[ssid]);
+    }
+}
+
+Agent::sAPMLD::sAffiliatedAP *db::get_or_allocate_affiliated_ap(Agent::sAPMLD &ap_mld,
+                                                                sMacAddr &ruid)
+{
+    // Check RUID match
+    auto affiliated_ap = ap_mld.affiliated_aps.find(ruid);
+
+    if (affiliated_ap != ap_mld.affiliated_aps.end()) {
+        // Return Affiliated AP of matched RUID
+        LOG(DEBUG) << "Affiliated AP with RUID: " << ruid << " found.";
+        return &(affiliated_ap->second);
+    } else {
+        ap_mld.affiliated_aps[ruid] = Agent::sAPMLD::sAffiliatedAP();
+        // Return new Affiliated AP
+        LOG(DEBUG) << "Affiliated AP with RUID: " << ruid
+                   << " not found. Creating new Affiliated AP entry.";
+        return &(ap_mld.affiliated_aps[ruid]);
+    }
+}
+
+bool db::dm_add_ap_mld(const sMacAddr &al_mac, Agent::sAPMLD &ap_mld)
+{
+    auto agent = m_agents.get(al_mac);
+
+    if (!agent) {
+        LOG(ERROR) << "Failed to get agent with AL MAC: " << al_mac;
+        return false;
+    }
+
+    // Data Model path for APMLD
+    if (ap_mld.dm_path.empty()) {
+        ap_mld.dm_path = m_ambiorix_datamodel->add_instance(agent->dm_path + ".APMLD");
+        if (ap_mld.dm_path.empty()) {
+            LOG(ERROR) << "Failed to add APMLD on Agent: " << al_mac;
+            return false;
+        }
+    }
+
+    // Update Data Model
+    // APMLD MAC
+    m_ambiorix_datamodel->set(ap_mld.dm_path, "MLDMACAddress", ap_mld.mld_info.mld_mac);
+
+    // APMLD Config - str, nstr, emlsr, emlmr
+    auto ap_mld_config_dm_path = ap_mld.dm_path + ".APMLDConfig";
+    m_ambiorix_datamodel->set(ap_mld_config_dm_path, "STREnabled",
+                              ap_mld.mld_info.mld_mode | Agent::sMLDInfo::mode::STR);
+    m_ambiorix_datamodel->set(ap_mld_config_dm_path, "NSTREnabled",
+                              ap_mld.mld_info.mld_mode | Agent::sMLDInfo::mode::NSTR);
+    m_ambiorix_datamodel->set(ap_mld_config_dm_path, "EMLSREnabled",
+                              ap_mld.mld_info.mld_mode | Agent::sMLDInfo::mode::EMLSR);
+    m_ambiorix_datamodel->set(ap_mld_config_dm_path, "EMLMREnabled",
+                              ap_mld.mld_info.mld_mode | Agent::sMLDInfo::mode::EMLMR);
+
+    for (auto &affl_ap_it : ap_mld.affiliated_aps) {
+
+        auto &affiliated_ap = affl_ap_it.second;
+        // Data Model path for AffiliatedAP
+        if (affiliated_ap.dm_path.empty()) {
+            // Add Affiliated AP entry in DM
+            affiliated_ap.dm_path =
+                m_ambiorix_datamodel->add_instance(ap_mld.dm_path + ".AffiliatedAP");
+            if (affiliated_ap.dm_path.empty()) {
+                LOG(ERROR) << "Failed to add Affiliated AP on AP MLD with ssid: "
+                           << ap_mld.mld_info.mld_ssid;
+                return false;
+            }
+        }
+
+        // Update Data Model
+        // RUID, BSSID, LinkID
+        m_ambiorix_datamodel->set(affiliated_ap.dm_path, "RUID", affiliated_ap.ruid);
+        m_ambiorix_datamodel->set(affiliated_ap.dm_path, "BSSID", affiliated_ap.bssid);
+        m_ambiorix_datamodel->set(affiliated_ap.dm_path, "LinkID", affiliated_ap.link_id);
+    }
+    return true;
+}
+
+bool db::dm_remove_ap_mld(const sMacAddr &al_mac, const std::string &ssid)
+{
+    auto agent = m_agents.get(al_mac);
+
+    // Check SSID match
+    auto ap_mld = agent->ap_mlds.find(ssid);
+
+    // Remove ApMld of matched SSID
+    if (ap_mld != agent->ap_mlds.end()) {
+        auto apmld = ap_mld->second;
+        // Remove Data Model
+        auto ap_mld_dm_path = get_dm_index_from_path(apmld.dm_path);
+        if (!m_ambiorix_datamodel->remove_instance(ap_mld_dm_path.first, ap_mld_dm_path.second)) {
+            LOG(ERROR) << "Failed to remove " << apmld.dm_path;
+            return false;
+        }
+    }
+    return true;
+}
+
+bool db::dm_remove_affiliated_ap(const sMacAddr &al_mac, const std::string &ssid,
+                                 const sMacAddr &ruid)
+{
+    auto agent = m_agents.get(al_mac);
+
+    // Check SSID match
+    auto ap_mld = agent->ap_mlds.find(ssid);
+
+    if (ap_mld != agent->ap_mlds.end()) {
+        auto apmld = ap_mld->second;
+
+        // Check RUID match
+        auto affl_ap = apmld.affiliated_aps.find(ruid);
+
+        // Remove Affiliated AP of matched RUID
+        if (affl_ap != apmld.affiliated_aps.end()) {
+            auto affiliated_ap = affl_ap->second;
+
+            // Remove Data Model
+            auto affl_ap_dm_path = get_dm_index_from_path(affiliated_ap.dm_path);
+            if (!m_ambiorix_datamodel->remove_instance(affl_ap_dm_path.first,
+                                                       affl_ap_dm_path.second)) {
+                LOG(ERROR) << "Failed to remove " << affiliated_ap.dm_path;
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
 bool db::dm_set_sta_ht_capabilities(const std::string &path_to_sta,
                                     const beerocks::message::sRadioCapabilities &sta_cap)
 {

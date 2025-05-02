@@ -2233,6 +2233,25 @@ public:
     std::string calculate_dpp_bootstrapping_str();
 
     /**
+     * @brief Gets or Allocates ApMld from Agent Database.
+     *
+     * @param al_mac AL MAC of the Agent.
+     * @param ssid SSID of ApMld to be matched
+     * @return ApMld ptr if SSID matched, else NULL.
+     */
+    Agent::sAPMLD *get_or_allocate_ap_mld(const sMacAddr &al_mac, std::string &ssid);
+
+    /**
+     * @brief Gets or Allocates Affiliated AP from ApMld.
+     *
+     * @param ap_mld AP MLD of the Affiliated AP.
+     * @param ruid RUID of Affiliated AP to be matched
+     * @return Affiliated AP ptr if RUID matched, else NULL.
+     */
+    Agent::sAPMLD::sAffiliatedAP *get_or_allocate_affiliated_ap(Agent::sAPMLD &ap_mld,
+                                                                sMacAddr &ruid);
+
+    /**
      * @brief Clears CAC Status Report data model.
      *
      * Remove all indexes (reports) in CACStatus object for given agent.
@@ -2634,6 +2653,37 @@ public:
      * @return true on success, otherwise false.
      */
     bool dm_set_device_ap_capabilities(const Agent &agent);
+
+    /**
+     * @brief Add or update instance of "APMLD" data element, set values for its parameters.
+     *
+     * Example: "Device.WiFi.DataElements.Network.Device.1.APMLD.1"
+     *
+     * @param al_mac AL MAC of the Agent on which AP MLD has to be added.
+     * @param ap_mld_config AP MLD Configuration to be added
+     * @return true on success, false otherwise.
+     */
+    bool dm_add_ap_mld(const sMacAddr &al_mac, Agent::sAPMLD &apmld);
+
+    /**
+     * @brief Remove instance of "APMLD" data element.
+     *
+     * @param al_mac AL MAC of the Agent on which AP MLD has to be removed.
+     * @param ssid SSID of AP MLD which has to be removed.
+     * @return true on success, false otherwise.
+     */
+    bool dm_remove_ap_mld(const sMacAddr &al_mac, const std::string &ssid);
+
+    /**
+     * @brief Remove instance of "AffiliatedAP" data element.
+     *
+     * @param al_mac AL MAC of the Agent on which Affiliated AP has to be removed.
+     * @param ssid SSID of AP MLD containing Affiliated AP which has to be removed.
+     * @param ruid RUID of Affiliated AP which has to be removed.
+     * @return true on success, false otherwise.
+     */
+    bool dm_remove_affiliated_ap(const sMacAddr &al_mac, const std::string &ssid,
+                                 const sMacAddr &ruid);
 
     //
     // tasks

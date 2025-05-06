@@ -735,6 +735,14 @@ bool sta_wlan_hal_whm::enable_profile(int profile_id)
         LOG(DEBUG) << "Resolved profile path: " << profile_path
                    << " -> profile_ref: " << profile_ref;
     }
+
+    // We only need the DM path under “WiFi.”, strip leading “Device.” if present
+    constexpr const char *device_prefix = "Device.";
+    if (profile_ref.rfind(device_prefix, 0) == 0) {
+        profile_ref.erase(0, strlen(device_prefix));
+        LOG(DEBUG) << "Stripped Device prefix, new profile_ref: " << profile_ref;
+    }
+
     params.set_type(AMXC_VAR_ID_HTABLE);
     ret = params.add_child("ProfileReference", profile_ref);
     if (!ret) {

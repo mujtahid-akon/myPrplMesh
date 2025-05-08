@@ -32,6 +32,49 @@ using namespace beerocks;
 using namespace beerocks::net;
 using namespace beerocks::transport;
 
+static bool g_running = true;
+static int s_signal   = 0;
+
+static void handle_signal()
+{
+    if (!s_signal)
+        return;
+
+    switch (s_signal) {
+
+    // Terminate
+    case SIGTERM:
+    case SIGINT:
+        LOG(INFO) << "Caught signal '" << strsignal(s_signal) << "' Exiting...";
+        g_running = false;
+        break;
+
+    default:
+        LOG(WARNING) << "Unhandled Signal: '" << strsignal(s_signal) << "' Ignoring...";
+        break;
+    }
+
+    s_signal = 0;
+}
+
+static void init_signals()
+{
+    // Signal handler function
+    auto signal_handler = [](int signum) { s_signal = signum; };
+
+    struct sigaction sigterm_action;
+    sigterm_action.sa_handler = signal_handler;
+    sigemptyset(&sigterm_action.sa_mask);
+    sigterm_action.sa_flags = 0;
+    sigaction(SIGTERM, &sigterm_action, NULL);
+
+    struct sigaction sigint_action;
+    sigint_action.sa_handler = signal_handler;
+    sigemptyset(&sigint_action.sa_mask);
+    sigint_action.sa_flags = 0;
+    sigaction(SIGINT, &sigint_action, NULL);
+}
+
 static std::shared_ptr<EventLoop> create_event_loop()
 {
     // Create application event loop to wait for blocking I/O operations.
@@ -119,6 +162,8 @@ int main(int argc, char *argv[])
     breakpad_ExceptionHandler();
 #endif
 
+    init_signals();
+
     mapf::Logger::Instance().LoggerInit("transport");
 
     /**
@@ -159,11 +204,16 @@ int main(int argc, char *argv[])
      * Run the application event loop
      */
     MAPF_INFO("starting main loop...");
-    int exit_code = 0;
-    while (0 == exit_code) {
+    while (g_running) {
+        // Handle signals
+        if (s_signal) {
+            handle_signal();
+            continue;
+        }
+
         if (event_loop->run() < 0) {
             LOG(ERROR) << "Broker event loop failure!";
-            exit_code = -1;
+            break;
         }
     }
     MAPF_INFO("done");
@@ -174,5 +224,5 @@ int main(int argc, char *argv[])
     ieee1905_transport.stop();
     broker->stop();
 
-    return exit_code;
+    return 0;
 }

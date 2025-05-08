@@ -961,6 +961,11 @@ void ApAutoConfigurationTask::handle_ap_autoconfiguration_response(
     ieee1905_1::CmduMessageRx &cmdu_rx, const sMacAddr &src_mac)
 {
     auto db = AgentDB::get();
+    if (db->device_conf.local_controller && src_mac != db->bridge.mac) {
+        LOG(INFO) << "This agent has a local controller with mac=" << db->bridge.mac
+                  << " but response came from src_mac=" << src_mac << ", ignoring";
+        return;
+    }
     if (db->controller_info.bridge_mac != network_utils::ZERO_MAC &&
         src_mac != db->controller_info.bridge_mac) {
         LOG(INFO) << "current controller_bridge_mac=" << db->controller_info.bridge_mac

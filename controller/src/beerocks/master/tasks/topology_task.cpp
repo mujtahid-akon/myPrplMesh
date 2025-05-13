@@ -76,7 +76,9 @@ bool topology_task::handle_topology_response(const sMacAddr &src_mac,
         return false;
     }
 
-    auto tlvSupportedService = cmdu_rx.getClass<wfa_map::tlvSupportedService>();
+    const auto &al_mac                = tlvDeviceInformation->mac();
+    bool supported_controller_service = false;
+    auto tlvSupportedService          = cmdu_rx.getClass<wfa_map::tlvSupportedService>();
     if (tlvSupportedService) {
         auto num_service = tlvSupportedService->supported_service_list_length();
         for (decltype(num_service) i = 0; i < num_service; i++) {
@@ -88,12 +90,16 @@ bool topology_task::handle_topology_response(const sMacAddr &src_mac,
                 break;
             if (val == wfa_map::tlvSupportedService::eSupportedService::MULTI_AP_CONTROLLER ||
                 val == wfa_map::tlvSupportedService::eSupportedService::EM_AP_CONTROLLER) {
-                LOG(ERROR) << "Dectected existence of another controller in the network";
+                supported_controller_service = true;
+                break;
             }
         }
     }
-
-    const auto &al_mac = tlvDeviceInformation->mac();
+    if (supported_controller_service && al_mac != database.get_local_bridge_mac()) {
+        LOG(ERROR) << "[Multiple Controllers Detected] Received TOPOLOGY_RESPONSE_MESSAGE from "
+                      "another Controller: "
+                   << al_mac;
+    }
 
     auto agent = database.m_agents.get(al_mac);
     if (!agent) {

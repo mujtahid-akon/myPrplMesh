@@ -1287,8 +1287,8 @@ bool ChannelScanTask::handle_on_boot_scan_request(ieee1905_1::CmduMessageRx &cmd
         }
     }
 
-    sRequestInfo request_info;
-    request_info.src_mac = src_mac;
+    sRequestInfo request_info = {};
+    request_info.src_mac      = src_mac;
 
     new_request->request_info         = std::make_shared<sRequestInfo>(request_info);
     new_request->scan_start_timestamp = std::chrono::system_clock::now();
@@ -1443,7 +1443,7 @@ bool ChannelScanTask::send_channel_scan_report_to_controller(
     auto add_scan_results_tlv_to_report =
         [this, &set_neighbor_in_scan_results_tlv](
             sMacAddr ruid, uint8_t operating_class, uint8_t channel, eScanStatus status,
-            std::chrono::system_clock::time_point timestamp,
+            std::chrono::system_clock::time_point timestamp, uint8_t utilization, uint8_t noise,
             std::vector<beerocks_message::sChannelScanResults> results) -> bool {
         LOG(DEBUG) << "Adding new Scan Results TLV";
         auto results_tlv = m_cmdu_tx.addClass<wfa_map::tlvProfile2ChannelScanResult>();
@@ -1476,9 +1476,6 @@ bool ChannelScanTask::send_channel_scan_report_to_controller(
         }
 
         // Set stored scan results in Results TLV neighbor list
-        // Total values will be used to calculate averages
-        int total_noise       = 0;
-        int total_utilization = 0;
         for (const auto &stored_neighbor : results) {
             auto tlv_neighbor_ptr = results_tlv->create_neighbors_list();
             if (!tlv_neighbor_ptr) {
@@ -1495,15 +1492,9 @@ bool ChannelScanTask::send_channel_scan_report_to_controller(
                 LOG(ERROR) << "Failed to add neighbor to TLV";
                 return false;
             }
-
-            total_noise       = total_noise + stored_neighbor.noise_dBm;
-            total_utilization = total_utilization + stored_neighbor.channel_utilization;
         }
-        auto neighbors_list_length = results_tlv->neighbors_list_length();
-        results_tlv->noise() =
-            neighbors_list_length == 0 ? 0 : (total_noise / neighbors_list_length);
-        results_tlv->utilization() =
-            neighbors_list_length == 0 ? 0 : (total_utilization / neighbors_list_length);
+        results_tlv->noise()       = noise;
+        results_tlv->utilization() = utilization;
 
         // WFA R2 test script has a bug that checks utilization for non zero value.
         // Setting the utilization to a non zero value is a W/A that needs to be
@@ -1654,7 +1645,8 @@ bool ChannelScanTask::send_channel_scan_report_to_controller(
         const auto results_tlv = add_scan_results_tlv_to_report(
             stored_scan_results_iter->ruid, stored_scan_results_iter->operating_class,
             stored_scan_results_iter->channel, stored_scan_results_iter->status,
-            stored_scan_results_iter->timestamp, results_fragment);
+            stored_scan_results_iter->timestamp, stored_scan_results_iter->utilization,
+            stored_scan_results_iter->noise, results_fragment);
         if (!results_tlv) {
             LOG(ERROR) << "Failed to add Scan Result TLV to Channel Scan Report Message";
             return false;
@@ -1701,15 +1693,28 @@ ChannelScanTask::get_scan_results_for_request(const std::shared_ptr<sScanRequest
                          const std::chrono::system_clock::time_point &request_timestamp,
                          const std::chrono::system_clock::time_point &results_timestamp =
                              std::chrono::system_clock::time_point::min(),
-                         const std::vector<beerocks_message::sChannelScanResults> &results =
+                         std::vector<beerocks_message::sChannelScanResults> results =
                              std::vector<beerocks_message::sChannelScanResults>()) {
             // If a fresh scan was requested, return only "fresh" results.
             // Otherwise all results need to be returned
             if (!fresh_scan_requested ||
                 (results_timestamp == request_timestamp ||
                  results_timestamp == std::chrono::system_clock::time_point::min())) {
+                //extract the utilization and noise values ​​of the channel from sChannelScanResults and then delete
+                //only neighbor results should be kept
+                auto it             = std::find_if(results.begin(), results.end(),
+                                       [](const beerocks_message::sChannelScanResults &results) {
+                                           return results.spectrum_info_present;
+                                       });
+                uint8_t utilization = 0;
+                uint8_t noise       = 0;
+                if (it != results.end()) {
+                    utilization = it->utilization;
+                    noise       = (it->noise_dBm < 0) ? ((it->noise_dBm + 110) * 2) : 220;
+                    results.erase(it);
+                }
                 final_results->emplace_back(ruid, operating_class, channel, status,
-                                            results_timestamp, results);
+                                            results_timestamp, utilization, noise, results);
             }
         };
 

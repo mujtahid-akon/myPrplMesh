@@ -9,19 +9,59 @@ if(NOT DEFINED TARGET_PLATFORM)
     set(TARGET_PLATFORM "linux")
 endif()
 
-## PrplMesh Controller datamodel root path
-if (NOT DEFINED CONTROLLER_ROOT_DM)
-    set(CONTROLLER_ROOT_DM "Device.WiFi.DataElements")
+option(KEEP_UCI_GENERAL_OPTIONS "Use UCI for management and certification mode" ON)
+if (KEEP_UCI_GENERAL_OPTIONS)
+    add_definitions(-DKEEP_UCI_GENERAL_OPTIONS)
 endif()
 
-string(REPLACE "." "\\." CONTROLLER_ROOT_DM_literal ${CONTROLLER_ROOT_DM})
-set(CONTROLLER_ROOT_DM_Header "")
-set(CONTROLLER_ROOT_DM_Footer "")
-string(REPLACE "." ";" CONTROLLER_ROOT_DM_SPLIT ${CONTROLLER_ROOT_DM})
-foreach(object IN LISTS CONTROLLER_ROOT_DM_SPLIT)
-    set(CONTROLLER_ROOT_DM_Header "${CONTROLLER_ROOT_DM_Header}object ${object} {   ")
-    set(CONTROLLER_ROOT_DM_Footer "${CONTROLLER_ROOT_DM_Footer}} ")
-endforeach()
+## Function to generate defines for ODLs
+function(process_root_dm ROOT_DM_VAR ROOT_DM_LITERAL_VAR ROOT_DM_HEADER_VAR ROOT_DM_FOOTER_VAR)
+    string(REPLACE "." "\\." ${ROOT_DM_LITERAL_VAR} ${${ROOT_DM_VAR}})
+    set(${ROOT_DM_HEADER_VAR} "")
+    set(${ROOT_DM_FOOTER_VAR} "")
+
+    string(REPLACE "." ";" ROOT_DM_SPLIT ${${ROOT_DM_VAR}})
+    
+    set(indent "")
+    set(header "")
+    set(footer "")
+
+    foreach(object IN LISTS ROOT_DM_SPLIT)
+        set(header "${header}${indent}%persistent object ${object} {\n")
+        set(footer "}\n${footer}")
+        set(indent "    ${indent}")
+    endforeach()
+
+    set(${ROOT_DM_HEADER_VAR} "${header}" PARENT_SCOPE)
+    set(${ROOT_DM_FOOTER_VAR} "${footer}" PARENT_SCOPE)
+endfunction()
+
+## Device.WiFi.DataElements
+if (NOT DEFINED DATAELEMENTS_ROOT_DM)
+    set(DATAELEMENTS_ROOT_DM "Device.WiFi.DataElements")
+endif()
+
+## PrplMesh Controller datamodel root path
+if (NOT DEFINED CONTROLLER_ROOT_DM)
+    set(CONTROLLER_ROOT_DM "X_PRPLWARE-COM_Controller")
+endif()
+
+## PrplMesh Agent datamodel root path
+if (NOT DEFINED AGENT_ROOT_DM)
+    set(AGENT_ROOT_DM "X_PRPLWARE-COM_Agent")
+endif()
+
+add_definitions(-DDATAELEMENTS_ROOT_DM="${DATAELEMENTS_ROOT_DM}")
+add_definitions(-DCONTROLLER_ROOT_DM="${CONTROLLER_ROOT_DM}")
+add_definitions(-DAGENT_ROOT_DM="${AGENT_ROOT_DM}")
+
+
+process_root_dm(DATAELEMENTS_ROOT_DM DATAELEMENTS_ROOT_DM_literal DATAELEMENTS_ROOT_DM_Header DATAELEMENTS_ROOT_DM_Footer)
+process_root_dm(CONTROLLER_ROOT_DM CONTROLLER_ROOT_DM_literal CONTROLLER_ROOT_DM_Header CONTROLLER_ROOT_DM_Footer)
+process_root_dm(AGENT_ROOT_DM AGENT_ROOT_DM_literal AGENT_ROOT_DM_Header AGENT_ROOT_DM_Footer)
+
+
+## Build options
 
 option (BUILD_AGENT "Build EasyMesh agent" ON)
 option (BUILD_CONTROLLER "Build EasyMesh controller" ON)
@@ -126,9 +166,15 @@ if (TARGET_PLATFORM STREQUAL "openwrt")
         add_definitions(-DBEEROCKS_UGW)
         list(APPEND FEATURES "FEATURE_PRE_ASSOCIATION_STEERING")
         add_definitions(-DFEATURE_PRE_ASSOCIATION_STEERING)
+        set(BEEROCKS_BH_WIRE_IFACE "eth0_1" CACHE STRING "Backhaul wire iface")
         set(BEEROCKS_REPEATER_MODE 1)
         set(BEEROCKS_MONITOR_POLLING_RATE_MSEC 1000)
+    elseif (TARGET_PLATFORM_TYPE STREQUAL "freedom")
+        set(BEEROCKS_BH_WIRE_IFACE "wan" CACHE STRING "Backhaul wire iface")
+        set(BEEROCKS_WLAN2_IFACE "wlan1")
+        set(BEEROCKS_WLAN2_STEERING_VAPS "wlan1.0")
     else()
+        set(BEEROCKS_BH_WIRE_IFACE "wan" CACHE STRING "Backhaul wire iface")
         set(BEEROCKS_WLAN2_IFACE "wlan1")
         set(BEEROCKS_WLAN2_STEERING_VAPS "wlan1.0")
     endif()
@@ -205,12 +251,17 @@ else()
     message(STATUS "Coverage support is not enabled")
 endif()
 
+add_definitions(-DBEEROCKS_VERSION="${prplmesh_VERSION}")
+add_definitions(-DBEEROCKS_BUILD_DATE="${BUILD_DATE}")
+add_definitions(-DBEEROCKS_REVISION="${PRPLMESH_REVISION}")
+
 ## Components
 
 add_subdirectory(framework)
 add_subdirectory(common)
 if (BUILD_AGENT)
     add_subdirectory(agent)
+    add_subdirectory(vendor_message)
 endif()
 if (BUILD_CONTROLLER)
     add_subdirectory(controller)

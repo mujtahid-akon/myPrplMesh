@@ -45,6 +45,18 @@ struct SRadioStats {
     // uint8_t  channel_load_tot_is_above_hi_th;
 };
 
+struct sMloStats {
+    uint32_t tx_packets_cnt     = 0;
+    uint32_t rx_packets_cnt     = 0;
+    uint32_t tx_packets_err_cnt = 0;
+    uint32_t tx_ucast_bytes     = 0;
+    uint32_t rx_ucast_bytes     = 0;
+    uint32_t tx_mcast_bytes     = 0;
+    uint32_t rx_mcast_bytes     = 0;
+    uint32_t tx_bcast_bytes     = 0;
+    uint32_t rx_bcast_bytes     = 0;
+};
+
 struct SVapStats {
     uint64_t tx_bytes_cnt;
     uint64_t tx_packets_cnt;
@@ -70,6 +82,7 @@ struct SVapStats {
     uint64_t rx_mcast_bytes;
     uint64_t tx_bcast_bytes;
     uint64_t rx_bcast_bytes;
+    sMloStats mlo_stats;
 };
 
 struct SStaStats {
@@ -363,6 +376,9 @@ typedef struct sChannelScanResults {
     //The current radio channel used by the neighboring WiFi radio.
     uint32_t channel = 0;
 
+    //The channel utilization measured by the AP.
+    uint32_t utilization = 0;
+
     //An indicator of radio signal strength (RSSI) of the neighboring WiFi radio measured in dBm, as an average of the last 100 packets received.
     int32_t signal_strength_dBm = 0;
 
@@ -409,6 +425,9 @@ typedef struct sChannelScanResults {
 
     //LOAD BSS IE is present or absence in scanned BSS. If scanned BSS does not have LOAD BSS IE present then this field will be 0.
     uint32_t load_bss_ie_present = 0;
+
+    //This indicates whether the results contain spectrum information.
+    uint8_t spectrum_info_present = 0;
 } sChannelScanResults;
 
 typedef struct {

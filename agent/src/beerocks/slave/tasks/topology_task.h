@@ -102,7 +102,14 @@ private:
     bool add_device_information_tlv();
 
     /**
-     * @brief Add and fill 1905_neighbor_device tlv for each know neighbor.
+     * @brief Add and fill non-1905 neighbor device TLVs for all known non-1905 neighbors.
+     *
+     * @return true on success, otherwise false.
+     */
+    bool add_non_1905_neighbor_device_tlv();
+
+    /**
+     * @brief Add and fill 1905 neighbor device TLVs for all known 1905 neighbors.
      * 
      * @return true on success, otherwise false.
      */

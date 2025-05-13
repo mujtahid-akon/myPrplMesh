@@ -11,6 +11,7 @@
 
 #include <mapf/common/logger.h>
 
+#include "bpl_amb_ptr.h"
 #include "bpl_cfg_pwhm.h"
 
 //////////////////////////////////////////////////////////////////////////////
@@ -35,7 +36,9 @@ int bpl_init()
 
 void bpl_close()
 {
-    // Do nothing
+    if (amb_ptr) {
+        amb_ptr.reset();
+    }
 }
 
 } // namespace bpl

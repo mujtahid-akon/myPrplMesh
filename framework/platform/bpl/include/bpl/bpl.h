@@ -10,6 +10,7 @@
 #define _BPL_H_
 
 namespace beerocks {
+
 namespace bpl {
 
 /**

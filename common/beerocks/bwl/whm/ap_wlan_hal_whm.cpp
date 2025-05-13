@@ -67,6 +67,7 @@ static uint8_t wpaCtrl_bw_to_beerocks_bw(const uint8_t width)
         {3 /*CHAN_WIDTH_80     */, beerocks::BANDWIDTH_80},
         {4 /*CHAN_WIDTH_80P80  */, beerocks::BANDWIDTH_80_80},
         {5 /*CHAN_WIDTH_160    */, beerocks::BANDWIDTH_160},
+        {6 /*CHAN_WIDTH_320    */, beerocks::BANDWIDTH_320},
     };
 
     auto it = bandwidths.find(width);
@@ -668,7 +669,8 @@ bool ap_wlan_hal_whm::update_vap_credentials(
     return true;
 }
 
-bool ap_wlan_hal_whm::sta_unassoc_rssi_measurement(const std::string &mac, int chan, int bw,
+bool ap_wlan_hal_whm::sta_unassoc_rssi_measurement(const std::string &mac, int chan,
+                                                   beerocks::eWiFiBandwidth bw,
                                                    int vht_center_frequency, int delay,
                                                    int window_size)
 {

@@ -48,16 +48,22 @@ ba-cli IP.Interface.wan.IPv4Enable=1
 # Set the LAN bridge IP:
 ba-cli "IP.Interface.[Name == \"br-lan\"].IPv4Address.lan.IPAddress=192.165.100.130"
 
-# Wired backhaul interface:
-uci set prplmesh.config.backhaul_wire_iface='lan3'
-uci commit
+# Set the wired backhaul interface:
+if ba-cli "X_PRPLWARE-COM_Agent.Configuration.?" | grep -Eq "No data found|ERROR"; then
+  # Prplmesh agent is not running. Data model isn't up.
+  echo "Prplmesh agent is not running"
+else
+  # Prplmesh agent is running, configure it over the bus
+  echo "Setting prplMesh BackhaulWireInterface over DM"
+  ba-cli X_PRPLWARE-COM_Agent.Configuration.BackhaulWireInterface="lan3"
+fi
 
 # all pwhm default configuration can be found in /etc/amx/wld/wld_defaults.odl.uc
 
 ba-cli WiFi.Radio.*.RegulatoryDomain="US"
 
 # Enable when hostapd on this target supports it
-ubus-cli "WiFi.AccessPoint.*.MBOEnable=1"
+# ubus-cli "WiFi.AccessPoint.*.MBOEnable=1"
 
 # Make sure specific channels are configured. If channel is set to 0,
 # ACS will be configured. If ACS is configured hostapd will refuse to

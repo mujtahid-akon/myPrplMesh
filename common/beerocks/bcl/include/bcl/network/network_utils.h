@@ -20,6 +20,8 @@
 
 #include <netinet/ether.h>
 
+#include <linux/if_bridge.h>
+
 #define ETH_HDRLEN 14 // Ethernet header length
 #define IP4_HDRLEN 20 // IPv4 header length
 #define ARP_HDRLEN 28 // ARP header length
@@ -300,6 +302,39 @@ public:
      * @return generated mac address value.
      */
     static sMacAddr get_eth_sw_mac_from_bridge_mac(const sMacAddr &bridge_mac);
+
+    /**
+     * @brief Retrieves the list of bridge interfaces on the linux device.
+     *
+     * @return A vector of strings containing the names of the bridge interfaces.
+     */
+    static std::vector<std::string> linux_get_bridges();
+
+    /**
+     * @brief Retrieves the interface name associated with a given port number on a bridge.
+     *
+     * @param[in] br_ifname The name of the bridge interface where the port is located.
+     * @param[in] port_no The port number associated with the interface to retrieve.
+     *
+     * @return The interface name corresponding to the given port number.
+     */
+    static std::string linux_get_ifname_from_port(const std::string &br_ifname, int port_no);
+
+    /**
+     * @brief Retrieves the forwarding table entries for a specified bridge interface.
+     *
+     * This function returns a vector of forwarding table entries(FDB entries) for a given bridge
+     * interface. If a specific MAC address is provided, only the entries associated with that
+     * MAC address are returned. Otherwise, all entries for the bridge are returned.
+     *
+     * @param[in] br_ifname The bridge interface name for retrieving the forwarding table.
+     * @param[in] mac An optional MAC address. If provided, only entries for that MAC are
+     * returned, otherwise, entries for all MACs are returned.
+     *
+     * @return A vector of forwarding table entries.
+     */
+    static std::vector<struct __fdb_entry>
+    linux_get_bridge_forwarding_table(const std::string &br_ifname, const sMacAddr &mac = ZERO_MAC);
 };
 } // namespace net
 } // namespace beerocks

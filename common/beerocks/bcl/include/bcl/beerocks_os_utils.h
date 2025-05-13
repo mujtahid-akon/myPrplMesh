@@ -22,31 +22,18 @@
 #elif __posix
 #else
 ////
-#ifndef IS_WINDOWS
-#define IS_WINDOWS
 #endif
 ////
-#endif
-////
-#ifndef IS_WINDOWS
 #ifndef IS_LINUX
 #define IS_LINUX
 #endif
-#endif
 ////
 #endif
 
-#ifdef IS_WINDOWS
-#ifndef snprintf
-#define snprintf _snprintf
-#endif
-#define UTILS_SLEEP_MSEC(msec) Sleep(msec)
-#else // Linux
-#include <unistd.h>
 #define UTILS_SLEEP_MSEC(msec) usleep(msec * 1000)
-#endif
 
 #include <string>
+#include <unistd.h>
 
 namespace beerocks {
 #define SYSTEM_CALL os_utils::system_call

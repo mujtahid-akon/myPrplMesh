@@ -291,8 +291,6 @@ bool BackhaulManager::thread_init()
             ieee1905_1::eMessageType::CHANNEL_PREFERENCE_QUERY_MESSAGE,
             ieee1905_1::eMessageType::CHANNEL_SCAN_REQUEST_MESSAGE,
             ieee1905_1::eMessageType::CHANNEL_SELECTION_REQUEST_MESSAGE,
-            ieee1905_1::eMessageType::CLIENT_ASSOCIATION_CONTROL_REQUEST_MESSAGE,
-            ieee1905_1::eMessageType::CLIENT_STEERING_REQUEST_MESSAGE,
             ieee1905_1::eMessageType::HIGHER_LAYER_DATA_MESSAGE,
             ieee1905_1::eMessageType::TOPOLOGY_DISCOVERY_MESSAGE,
             ieee1905_1::eMessageType::TOPOLOGY_QUERY_MESSAGE,
@@ -1026,7 +1024,7 @@ bool BackhaulManager::backhaul_fsm_wireless(bool &skip_select)
                     return false;
                 }
 
-                if (beerocks::bpl::cfg_get_operating_mode() == BPL_OPER_MODE_WDS_REPEATER) {
+                if (beerocks::bpl::cfg_get_management_mode() == BPL_MGMT_MODE_MULTIAP_AGENT) {
                     hal_conf.is_repeater = true;
                 }
 
@@ -1697,10 +1695,9 @@ bool BackhaulManager::handle_slave_backhaul_message(int fd, ieee1905_1::CmduMess
             send_cmdu(m_agent_fd, cmdu_tx);
             LOG(DEBUG) << "send ACTION_BACKHAUL_CLIENT_RX_RSSI_MEASUREMENT_CMD_RESPONSE, sta_mac = "
                        << sta_mac;
-            int bandwidth = beerocks::utils::convert_bandwidth_to_int(
-                (beerocks::eWiFiBandwidth)request->params().bandwidth);
             if (get_wireless_hal()->unassoc_rssi_measurement(
-                    sta_mac, request->params().channel, bandwidth,
+                    sta_mac, request->params().channel,
+                    (beerocks::eWiFiBandwidth)request->params().bandwidth,
                     request->params().vht_center_frequency, request->params().measurement_delay,
                     request->params().mon_ping_burst_pkt_num)) {
             } else {
@@ -1711,7 +1708,7 @@ bool BackhaulManager::handle_slave_backhaul_message(int fd, ieee1905_1::CmduMess
             unassociated_rssi_measurement_header_id = beerocks_header->id();
             LOG(DEBUG) << "CLIENT_RX_RSSI_MEASUREMENT_REQUEST, mac = " << sta_mac
                        << " channel = " << int(request->params().channel) << " bandwidth="
-                       << beerocks::utils::convert_bandwidth_to_int(
+                       << beerocks::utils::convert_bandwidth_to_string(
                               (beerocks::eWiFiBandwidth)request->params().bandwidth);
         } else {
             ap_busy = true;

@@ -91,7 +91,6 @@ typedef struct sPlatformSettings {
     uint8_t client_11k_roaming_enabled;
     uint8_t load_balancing_enabled;
     uint8_t service_fairness_enabled;
-    uint8_t rdkb_extensions_enabled;
     void struct_swap(){
     }
     void struct_init(){
@@ -1312,6 +1311,8 @@ typedef struct sChannelScanResults {
     eChannelScanResultMode mode;
     //The current radio channel used by the neighboring WiFi radio.
     uint32_t channel;
+    //The channel utilization measured by the AP.
+    uint32_t utilization;
     //An indicator of radio signal strength (RSSI) of the neighboring WiFi radio measured in dBm, as an average of the last 100 packets received.
     int32_t signal_strength_dBm;
     //The type of encryption the neighboring WiFi SSID advertises. Enumerate List.
@@ -1342,9 +1343,12 @@ typedef struct sChannelScanResults {
     uint16_t station_count;
     //This indicates that scanned BSS has BSS LOAD IE present or not.
     uint32_t load_bss_ie_present;
+    //This indicates whether the results contain spectrum information.
+    uint8_t spectrum_info_present;
     void struct_swap(){
         bssid.struct_swap();
         tlvf_swap(32, reinterpret_cast<uint8_t*>(&channel));
+        tlvf_swap(32, reinterpret_cast<uint8_t*>(&utilization));
         tlvf_swap(32, reinterpret_cast<uint8_t*>(&signal_strength_dBm));
         tlvf_swap(32, reinterpret_cast<uint8_t*>(&beacon_period_ms));
         tlvf_swap(32, reinterpret_cast<uint8_t*>(&noise_dBm));
@@ -1361,6 +1365,7 @@ typedef struct sChannelScanResults {
     }
     void struct_init(){
         load_bss_ie_present = 0x0;
+        spectrum_info_present = 0x0;
     }
 } __attribute__((packed)) sChannelScanResults;
 

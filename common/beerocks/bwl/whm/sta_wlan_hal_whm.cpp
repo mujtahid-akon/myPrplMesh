@@ -527,7 +527,8 @@ bool sta_wlan_hal_whm::set_4addr_mode(bool enable)
 
 bool sta_wlan_hal_whm::set_3addr_mcast(bool enable) { return true; }
 
-bool sta_wlan_hal_whm::unassoc_rssi_measurement(const std::string &mac, int chan, int bw,
+bool sta_wlan_hal_whm::unassoc_rssi_measurement(const std::string &mac, int chan,
+                                                beerocks::eWiFiBandwidth bw,
                                                 int vht_center_frequency, int delay,
                                                 int window_size)
 {
@@ -812,6 +813,10 @@ bool sta_wlan_hal_whm::process_ep_event(const std::string &interface, const std:
                 return false;
             }
             update_status(endpoint);
+            if (m_active_bssid == beerocks::net::network_utils::ZERO_MAC_STRING) {
+                LOG(ERROR) << "Got zero BSSID after status update";
+                return false;
+            }
             LOG(DEBUG) << get_iface_name() << " - Connected: bssid = " << m_active_bssid
                        << ", channel = " << m_active_channel;
             auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sACTION_BACKHAUL_CONNECTED_NOTIFICATION));

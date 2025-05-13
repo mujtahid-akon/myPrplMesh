@@ -18,6 +18,7 @@ constexpr char BEEROCKS_AGENT[]      = "beerocks_agent";
 constexpr char BEEROCKS_BACKHAUL[]   = "beerocks_backhaul";
 constexpr char BEEROCKS_FRONTHAUL[]  = "beerocks_fronthaul";
 constexpr char BEEROCKS_AP_MANAGER[] = "beerocks_ap_manager";
+constexpr char BEEROCKS_V_MESSAGE[]  = "beerocks_vendor_message";
 constexpr char BEEROCKS_MONITOR[]    = "beerocks_monitor";
 constexpr char BEEROCKS_CLI[]        = "beerocks_cli";
 
@@ -150,14 +151,13 @@ enum eBeeRocksMessageDirection : uint8_t {
     BEEROCKS_DIRECTION_AGENT      = 1,
 };
 
-enum eOperatingMode : int8_t {
+enum eManagementMode : int8_t {
     // same as on bpl_cfg.h
-    OPER_MODE_UNDEFINED    = -1,
-    OPER_MODE_GATEWAY      = 0,
-    OPER_MODE_GATEWAY_WISP = 1,
-    OPER_MODE_WDS_EXTENDER = 2,
-    OPER_MODE_WDS_REPEATER = 3,
-    OPER_MODE_L2NAT_CLIENT = 4,
+    MGMT_MODE_UNDEFINED                = -1,
+    MGMT_MODE_MULTIAP_CONTROLLER_AGENT = 0,
+    MGMT_MODE_MULTIAP_CONTROLLER       = 1,
+    MGMT_MODE_MULTIAP_AGENT            = 2,
+    MGMT_MODE_NOT_MULTIAP              = 3,
 };
 
 enum eProtocolPorts {
@@ -175,6 +175,8 @@ enum eWiFiBandwidth : uint8_t {
     BANDWIDTH_80,
     BANDWIDTH_80_80,
     BANDWIDTH_160,
+    BANDWIDTH_320_1,
+    BANDWIDTH_320_2,
     BANDWIDTH_320,
     BANDWIDTH_MAX,
 };

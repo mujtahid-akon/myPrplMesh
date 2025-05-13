@@ -1568,13 +1568,14 @@ bool ap_wlan_hal_dwpal::sta_unassoc_rssi_measurement(const std::string &mac, int
                                                      int window_size)
 {
     // Convert values to strings
-    std::string chanBandwidth     = std::to_string(bw);
+    std::string bw_str            = std::to_string(bw);
     std::string centerFreq        = std::to_string(son::wireless_utils::channel_to_freq(chan));
     std::string waveVhtCenterFreq = std::to_string(vht_center_frequency);
 
     // Build command string
     std::string cmd = "UNCONNECTED_STA_RSSI " + mac + " " + centerFreq +
-                      " center_freq1=" + waveVhtCenterFreq + " bandwidth=" + chanBandwidth;
+                      " center_freq1=" + waveVhtCenterFreq +
+                      " bandwidth=" + bw_str.erase(bw_str.size() - 3);
 
     // Delay the first measurement...
     UTILS_SLEEP_MSEC(delay);
@@ -1684,8 +1685,8 @@ bool ap_wlan_hal_dwpal::switch_channel(int chan, beerocks::eWiFiBandwidth bw,
             }
         }
 
-        cmd += " bandwidth=" + std::to_string(beerocks::utils::convert_bandwidth_to_int(
-                                   static_cast<beerocks::eWiFiBandwidth>(bw)));
+        std::string bw_str = beerocks::utils::convert_bandwidth_to_string(bw);
+        cmd += " bandwidth=" + bw_str.erase(bw_str.size() - 3);
 
         if (freq_type == beerocks::FREQ_6G) {
             cmd += " he";
@@ -1780,7 +1781,8 @@ bool ap_wlan_hal_dwpal::failsafe_channel_set(int chan, int bw, int vht_center_fr
         LOG(DEBUG) << "chan_str = " << chan_str << " bw_str = " << bw_str
                    << " vht_freq_str = " << freq_str;
 
-        cmd += chan_str + " center_freq1=" + freq_str + " bandwidth=" + bw_str;
+        cmd += chan_str + " center_freq1=" + freq_str +
+               " bandwidth=" + bw_str.erase(bw_str.size() - 3);
     } else {
         cmd += "0";
     }
@@ -2379,6 +2381,7 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
             }
         }
 
+        int radio_bandwidth_int       = 0;
         char reason[32]               = {0};
         char VAP[SSID_MAX_SIZE]       = {0};
         std::string channelStr        = (event == Event::CSA_Finished) ? "Channel=" : "channel=";
@@ -2388,7 +2391,7 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
             {(void *)VAP, &numOfValidArgs[1], DWPAL_STR_PARAM, NULL, sizeof(VAP)},
             {(void *)&m_radio_info.channel, &numOfValidArgs[2], DWPAL_INT_PARAM, channelStr.c_str(),
              0},
-            {(void *)&m_radio_info.bandwidth, &numOfValidArgs[3], DWPAL_INT_PARAM,
+            {(void *)&radio_bandwidth_int, &numOfValidArgs[3], DWPAL_INT_PARAM,
              "OperatingChannelBandwidt=", 0},
             {(void *)&m_radio_info.channel_ext_above, &numOfValidArgs[4], DWPAL_INT_PARAM,
              "ExtensionChannel=", 0},
@@ -2426,6 +2429,8 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
                 return false;
             }
         }
+
+        m_radio_info.bandwidth = beerocks::utils::convert_bandwidth_to_enum(radio_bandwidth_int);
 
         if (beerocks::utils::get_ids_from_iface_string(VAP).vap_id != beerocks::IFACE_RADIO_ID) {
             LOG(INFO) << "Ignoring ACS/CSA events on non Radio interface";

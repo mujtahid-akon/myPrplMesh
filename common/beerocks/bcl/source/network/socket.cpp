@@ -9,10 +9,6 @@
 #include <bcl/network/socket.h>
 
 #include <errno.h>
-
-#ifdef IS_WINDOWS
-typedef int socklen_t;
-#else
 #include <fcntl.h>
 #include <linux/sockios.h>
 #include <stdio.h>
@@ -25,7 +21,6 @@ typedef int socklen_t;
 
 #define closesocket close
 #define ioctlsocket ioctl
-#endif
 
 #include <easylogging++.h>
 
@@ -33,29 +28,6 @@ int Socket::m_ref = 0;
 
 Socket::Socket(const std::string &uds_path, long readTimeout)
 {
-#ifdef IS_WINDOWS
-    if (!uds_path.empty()) {
-        m_error = std::string("unix socket not supported");
-        return;
-    }
-
-    //
-    if (m_ref == 0) {
-        WSADATA info;
-        if (WSAStartup(MAKEWORD(2, 0), &info)) {
-            m_error = std::string("WSAStartup() failed");
-            return;
-        }
-    }
-    m_ref++;
-    //
-
-    m_socket = socket(AF_INET, SOCK_STREAM, 0);
-    if (m_socket == INVALID_SOCKET) {
-        m_error = std::string("socket() failed");
-    }
-
-#else // Linux
     if (!uds_path.empty()) {
         m_uds_path = uds_path;
         m_socket   = socket(AF_UNIX, SOCK_STREAM, 0);
@@ -65,8 +37,6 @@ Socket::Socket(const std::string &uds_path, long readTimeout)
     if (m_socket == INVALID_SOCKET) {
         m_error = uds_path + " -> socket() failed";
     }
-#endif
-
     if (readTimeout != 0)
         setReadTimeout(readTimeout);
 }
@@ -98,12 +68,6 @@ Socket::~Socket()
     if (m_is_server && (!m_uds_path.empty())) {
         remove(m_uds_path.c_str());
     }
-#ifdef IS_WINDOWS
-    if (m_ref > 0)
-        m_ref--;
-    if (m_ref == 0)
-        WSACleanup();
-#endif
 }
 
 bool Socket::setWriteTimeout(long msec)
@@ -126,12 +90,6 @@ bool Socket::setReadTimeout(long msec)
         return false;
     }
 
-#ifdef IS_WINDOWS
-    DWORD timeout = msec * 1000 * 1000;
-    if (setsockopt(socket, SOL_SOCKET, SO_RCVTIMEO, (const char *)&timeout, sizeof timeout) < 0) {
-        return false;
-    }
-#else
     long sec  = 0;
     long usec = 0;
     if (msec == 0) {
@@ -145,7 +103,6 @@ bool Socket::setReadTimeout(long msec)
     if (setsockopt(m_socket, SOL_SOCKET, SO_RCVTIMEO, (const char *)&tv, sizeof tv) < 0) {
         return false;
     }
-#endif
 
     return true;
 }
@@ -216,13 +173,7 @@ ssize_t Socket::writeBytes(const uint8_t *buf, size_t buf_len, int port, struct 
         return sendto(m_socket, (const char *)buf, (int)buf_len, 0, (struct sockaddr *)&addr_in,
                       sizeof(addr_in));
     } else {
-
-#ifdef IS_WINDOWS
-        int flags = 0;
-#else
         int flags = MSG_NOSIGNAL;
-#endif
-
         return send(m_socket, (const char *)buf, (int)buf_len, flags);
     }
 }
@@ -230,12 +181,6 @@ ssize_t Socket::writeBytes(const uint8_t *buf, size_t buf_len, int port, struct 
 SocketServer::SocketServer(const std::string &uds_path, int connections, SocketMode mode)
     : Socket(uds_path)
 {
-#ifdef IS_WINDOWS
-    if (!uds_path.empty()) {
-        m_error = std::string("unix socket not supported");
-    }
-#else // Linux
-
     if (m_socket == INVALID_SOCKET) {
         return;
     }
@@ -265,8 +210,6 @@ SocketServer::SocketServer(const std::string &uds_path, int connections, SocketM
         return;
     }
     listen(m_socket, connections);
-
-#endif
 }
 
 SocketServer::SocketServer(int port, int connections, SocketMode mode)
@@ -318,13 +261,7 @@ Socket *SocketServer::acceptConnections()
 
     s = accept(m_socket, (struct sockaddr *)&addr, &addrsize);
     if (s == INVALID_SOCKET) {
-#ifdef IS_WINDOWS
-        if (WSAGetLastError() != WSAEWOULDBLOCK) {
-            m_error = std::string("accept() failed: ") + strerror(errno);
-        }
-#else
         m_error = std::string("accept() failed: ") + strerror(errno);
-#endif
     } else {
         socket_ret = new Socket(s, std::string(inet_ntoa(addr.sin_addr)), int(addr.sin_port));
         socket_ret->m_accepted_socket = true;
@@ -338,9 +275,6 @@ Socket *SocketServer::acceptConnections()
 SocketClient::SocketClient(const std::string &uds_path, long readTimeout)
     : Socket(uds_path, readTimeout)
 {
-#ifdef IS_WINDOWS
-    m_error = std::string("unix socket not supported");
-#else
     if (m_socket == INVALID_SOCKET) {
         m_error = "socket != INVALID_SOCKET";
         return;
@@ -356,7 +290,6 @@ SocketClient::SocketClient(const std::string &uds_path, long readTimeout)
     if (::connect(m_socket, (sockaddr *)&addr, sizeof(addr))) {
         m_error = "connect() to " + uds_path + " failed: " + strerror(errno);
     }
-#endif
 }
 
 SocketClient::SocketClient(const std::string &host, int port, int connect_timeout_msec,
@@ -375,14 +308,6 @@ SocketClient::SocketClient(const std::string &host, int port, int connect_timeou
     addr.sin_port        = htons(port);
     memset(&(addr.sin_zero), 0, 8);
 
-#ifdef IS_WINDOWS
-    hostent *he;
-    if ((he = gethostbyname(host.c_str())) == 0) {
-        m_error = "no such host:" + host;
-        return;
-    }
-    addr.sin_addr = *((in_addr *)he->h_addr);
-#else
     // get host address
     if (inet_pton(AF_INET, host.c_str(), &(addr.sin_addr)) != 1) {
         // check if can resolve name //
@@ -393,7 +318,6 @@ SocketClient::SocketClient(const std::string &host, int port, int connect_timeou
         }
         addr.sin_addr = ((struct sockaddr_in *)&addr_)->sin_addr;
     }
-#endif
 
     m_peer_ip   = host;
     m_peer_port = port;
@@ -407,15 +331,6 @@ SocketClient::SocketClient(const std::string &host, int port, int connect_timeou
         return;
     }
 
-#ifdef IS_WINDOWS
-    unsigned long flags = 1;
-    if (ioctlsocket(m_socket, FIONBIO, &flags) != NO_ERROR) {
-        m_error = "can't set socket flags";
-        closesocket(m_socket);
-        m_socket = INVALID_SOCKET;
-        return;
-    }
-#else
     // check connection for none block connect //
     int flags = fcntl(m_socket, F_GETFL, 0);
     if (flags < 0) {
@@ -431,7 +346,6 @@ SocketClient::SocketClient(const std::string &host, int port, int connect_timeou
         m_socket = INVALID_SOCKET;
         return;
     }
-#endif
 
     ::connect(m_socket, (sockaddr *)&addr, sizeof(sockaddr));
 
@@ -450,12 +364,8 @@ SocketClient::SocketClient(const std::string &host, int port, int connect_timeou
         return;
     }
 
-#ifdef IS_WINDOWS
-    ioctlsocket(m_socket, FIONBIO, &flags);
-#else
     flags = (flags & ~O_NONBLOCK);
     fcntl(m_socket, F_SETFL, flags);
-#endif
 }
 
 SocketSelect::SocketSelect()
@@ -577,14 +487,3 @@ bool SocketSelect::readReady(size_t idx)
         return false;
     }
 }
-
-#ifndef IS_WINDOWS
-size_t Socket::getBytesWritePending()
-{
-    int pending = 0;
-    if (m_socket != INVALID_SOCKET) {
-        ioctl(m_socket, SIOCOUTQ, &pending);
-    }
-    return (size_t)pending;
-}
-#endif

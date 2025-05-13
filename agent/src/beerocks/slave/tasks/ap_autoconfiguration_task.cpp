@@ -820,8 +820,6 @@ bool ApAutoConfigurationTask::send_ap_autoconfiguration_wsc_m1_message(
         db->device_conf.load_balancing_enabled;
     notification->platform_settings().service_fairness_enabled =
         db->device_conf.service_fairness_enabled;
-    notification->platform_settings().rdkb_extensions_enabled =
-        db->device_conf.rdkb_extensions_enabled;
 
     notification->platform_settings().local_master = db->device_conf.local_controller;
 
@@ -963,6 +961,11 @@ void ApAutoConfigurationTask::handle_ap_autoconfiguration_response(
     ieee1905_1::CmduMessageRx &cmdu_rx, const sMacAddr &src_mac)
 {
     auto db = AgentDB::get();
+    if (db->device_conf.local_controller && src_mac != db->bridge.mac) {
+        LOG(INFO) << "This agent has a local controller with mac=" << db->bridge.mac
+                  << " but response came from src_mac=" << src_mac << ", ignoring";
+        return;
+    }
     if (db->controller_info.bridge_mac != network_utils::ZERO_MAC &&
         src_mac != db->controller_info.bridge_mac) {
         LOG(INFO) << "current controller_bridge_mac=" << db->controller_info.bridge_mac
@@ -1391,7 +1394,19 @@ void ApAutoConfigurationTask::handle_multi_ap_policy_config_request(
     /** Steering Policy **/
     auto steering_policy_tlv = cmdu_rx.getClass<wfa_map::tlvSteeringPolicy>();
     if (steering_policy_tlv) {
-        // For the time being, agent doesn't do steering so steering policy is ignored.
+        //BTM Steering Disallowed list
+        std::unordered_set<sMacAddr> new_disallowed_stas;
+        for (size_t i = 0; i < steering_policy_tlv->btm_steering_disallowed_sta_list_length();
+             i++) {
+            auto tuple = steering_policy_tlv->btm_steering_disallowed_sta_list(i);
+            if (!std::get<0>(tuple)) {
+                LOG(ERROR) << "Failed to get btm_steering_disallowed_sta[" << i
+                           << "] from TLV_STEERING_POLICY";
+                return;
+            }
+            new_disallowed_stas.insert(std::get<1>(tuple));
+        }
+        db->steering_policy.btm_steering_disallowed = std::move(new_disallowed_stas);
     }
 
     /** Link Metrics Policy **/
@@ -1790,6 +1805,7 @@ bool ApAutoConfigurationTask::handle_agent_ap_mld_configuration_tlv(
     ieee1905_1::CmduMessageRx &cmdu_rx, std::vector<WSC::configData::config> &configs)
 {
     auto db(AgentDB::get());
+    db->ap_mld_configurations.clear();
 
     auto agent_ap_mld_configuration(cmdu_rx.getClass<wfa_map::tlvAgentApMldConfiguration>());
     if (!agent_ap_mld_configuration) {
@@ -1813,27 +1829,62 @@ bool ApAutoConfigurationTask::handle_agent_ap_mld_configuration_tlv(
             return false;
         }
 
-        int mld_id(-1);
-        for (size_t mld_confs_it = 0; mld_confs_it != db->mld_configurations.size();
-             ++mld_confs_it) {
-            if (ssid == db->mld_configurations[mld_confs_it].ssid) {
-                mld_id = mld_confs_it;
+        // Find existing MLD Config
+        AgentDB::sAPMLDConfiguration *current_ap_mld_conf = nullptr;
+        for (auto &ap_mld_conf : db->ap_mld_configurations) {
+            if (ssid == ap_mld_conf.mld_config.mld_ssid) {
+                LOG(DEBUG) << "AP MLD configuration already exists for SSID " << ssid;
+                current_ap_mld_conf = &ap_mld_conf;
                 break;
             }
         }
-        if (mld_id == -1) {
-            mld_id = db->mld_configurations.size();
-            db->mld_configurations.push_back(AgentDB::sMLDConfiguration());
-            db->mld_configurations[mld_id].ssid = ssid;
+        // Insert new MLD Config
+        if (!current_ap_mld_conf) {
+            db->ap_mld_configurations.push_back(AgentDB::sAPMLDConfiguration());
+            current_ap_mld_conf                      = &(db->ap_mld_configurations.back());
+            current_ap_mld_conf->mld_config.mld_ssid = ssid;
+        }
+        // Find new MLD Unit
+        if (current_ap_mld_conf->mld_config.mld_unit == -1) {
+            std::unordered_set<int8_t> used_mld_units;
+            if (db->bsta_mld_configuration) {
+                used_mld_units.insert(db->bsta_mld_configuration->mld_config.mld_unit);
+            }
+            for (auto ap_mld_conf : db->ap_mld_configurations) {
+                used_mld_units.insert(ap_mld_conf.mld_config.mld_unit);
+            }
+            for (int8_t mld_unit = 0; mld_unit < db->max_mlds; ++mld_unit) {
+                if (used_mld_units.find(mld_unit) == used_mld_units.end()) {
+                    current_ap_mld_conf->mld_config.mld_unit = mld_unit;
+                    LOG(DEBUG) << "MLD Unit " << mld_unit << " has been assigned to AP MLD "
+                               << ssid;
+                    break;
+                }
+            }
         }
 
-        AgentDB::sMLDConfiguration &mld_conf(db->mld_configurations[mld_id]);
-        mld_conf.str   = ap_mld.modes().str;
-        mld_conf.nstr  = ap_mld.modes().nstr;
-        mld_conf.emlsr = ap_mld.modes().emlsr;
-        mld_conf.emlmr = ap_mld.modes().emlmr;
-        mld_conf.affiliated_aps.clear();
+        if (ap_mld.modes().str) {
+            current_ap_mld_conf->mld_config.mld_mode = AgentDB::sMLDConfiguration::mode(
+                current_ap_mld_conf->mld_config.mld_mode | AgentDB::sMLDConfiguration::mode::STR);
+        }
+        if (ap_mld.modes().nstr) {
+            current_ap_mld_conf->mld_config.mld_mode = AgentDB::sMLDConfiguration::mode(
+                current_ap_mld_conf->mld_config.mld_mode | AgentDB::sMLDConfiguration::mode::NSTR);
+        }
+        if (ap_mld.modes().emlsr) {
+            current_ap_mld_conf->mld_config.mld_mode = AgentDB::sMLDConfiguration::mode(
+                current_ap_mld_conf->mld_config.mld_mode | AgentDB::sMLDConfiguration::mode::EMLSR);
+        }
+        if (ap_mld.modes().emlmr) {
+            current_ap_mld_conf->mld_config.mld_mode = AgentDB::sMLDConfiguration::mode(
+                current_ap_mld_conf->mld_config.mld_mode | AgentDB::sMLDConfiguration::mode::EMLMR);
+        }
 
+        LOG(DEBUG) << "Storing MLD configuration for BSta MLD " << ssid
+                   << ": [MLD_Unit=" << current_ap_mld_conf->mld_config.mld_unit
+                   << ", MLD_Mode=" << std::hex << current_ap_mld_conf->mld_config.mld_mode << "]";
+
+        current_ap_mld_conf->affiliated_aps.clear();
         for (uint8_t affiliated_ap_it = 0; affiliated_ap_it < ap_mld.num_affiliated_ap();
              ++affiliated_ap_it) {
             std::tuple<bool, wfa_map::cAffiliatedAp &> affiliated_ap_tuple(
@@ -1843,14 +1894,14 @@ bool ApAutoConfigurationTask::handle_agent_ap_mld_configuration_tlv(
                 return false;
             }
 
-            AgentDB::sMLDConfiguration::sAffiliatedAP affiliated_conf;
+            AgentDB::sAPMLDConfiguration::sAffiliatedAP affiliated_conf = {};
             affiliated_conf.ruid = std::get<1>(affiliated_ap_tuple).ruid();
-            mld_conf.affiliated_aps.push_back(affiliated_conf);
+            current_ap_mld_conf->affiliated_aps.push_back(affiliated_conf);
         }
 
         for (auto &config : configs) {
             if (config.ssid == ssid) {
-                config.mld_id = mld_id;
+                config.mld_id = current_ap_mld_conf->mld_config.mld_unit;
             }
         }
     }

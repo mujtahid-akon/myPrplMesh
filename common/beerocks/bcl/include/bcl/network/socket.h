@@ -12,31 +12,21 @@
 #if __linux
 #elif __unix
 #elif __posix
-#else
-#ifndef IS_WINDOWS
-#define IS_WINDOWS
-#endif
 #endif
 
-#ifdef IS_WINDOWS
-#include <WinSock2.h>
-#include <windows.h>
-typedef unsigned __int64 ssize_t;
-#else
-#include <arpa/inet.h>
-#include <netdb.h>
-#include <netinet/in.h>
-#include <string.h>
-#include <sys/select.h>
-#include <sys/socket.h>
-#include <unistd.h>
 #define SOCKET int
 #define INVALID_SOCKET -1
 #define SOCKET_ERROR -1
-#endif
 
+#include <arpa/inet.h>
 #include <cstdint>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <string.h>
 #include <string>
+#include <sys/select.h>
+#include <sys/socket.h>
+#include <unistd.h>
 #include <vector>
 
 class Socket {
@@ -71,10 +61,6 @@ public:
 
     bool isAcceptedSocket() { return m_accepted_socket; }
     void setIsServer() { m_is_server = true; }
-
-#ifndef IS_WINDOWS
-    size_t getBytesWritePending();
-#endif
 
 protected:
     friend class SocketServer;

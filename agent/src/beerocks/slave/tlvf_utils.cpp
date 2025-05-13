@@ -80,7 +80,11 @@ std::vector<uint8_t> get_operating_class_non_oper_channels(
             for (const auto &bw_info : channel_info.supported_bw_list) {
                 auto channel = channel_info_element.first;
                 if (oper_class.band != bw_info.bandwidth) {
-                    continue;
+                    if (!((bw_info.bandwidth == beerocks::eWiFiBandwidth::BANDWIDTH_320_1 ||
+                           bw_info.bandwidth == beerocks::eWiFiBandwidth::BANDWIDTH_320_2) &&
+                          oper_class.band == beerocks::eWiFiBandwidth::BANDWIDTH_320)) {
+                        continue;
+                    }
                 }
 
                 auto is_there_any_unavailable_overlapping_channel = [&]() -> bool {
@@ -225,6 +229,71 @@ bool tlvf_utils::create_operating_channel_report(ieee1905_1::CmduMessageTx &cmdu
         return false;
     }
 
+    auto get_operating_list = [&radio]() -> std::vector<std::pair<uint8_t, uint8_t>> {
+        std::vector<std::pair<uint8_t, uint8_t>> operating_list = {};
+
+        auto operating_classes = son::wireless_utils::get_operating_classes_of_freq_type(
+            radio->wifi_channel.get_freq_type());
+
+        auto operating_class =
+            son::wireless_utils::get_operating_class_by_channel(radio->wifi_channel);
+
+        for (auto it = operating_classes.begin();
+             it != operating_classes.end() && *it <= operating_class; ++it) {
+
+            if (son::wireless_utils::is_channel_in_operating_class(
+                    *it, radio->wifi_channel.get_channel())) {
+                operating_list.emplace_back(std::make_pair(*it, radio->wifi_channel.get_channel()));
+            }
+
+            if (son::wireless_utils::is_operating_class_using_central_channel(*it)) {
+                std::map<uint8_t, std::map<beerocks::eWiFiBandwidth, son::wireless_utils::sChannel>>
+                    channels_table;
+                if (radio->wifi_channel.get_freq_type() == beerocks::eFreqType::FREQ_5G) {
+                    channels_table = son::wireless_utils::channels_table_5g;
+                } else if (radio->wifi_channel.get_freq_type() == beerocks::eFreqType::FREQ_6G) {
+                    channels_table = son::wireless_utils::channels_table_6g;
+                }
+
+                auto channel_it = channels_table.find(radio->wifi_channel.get_channel());
+                if (channel_it == channels_table.end()) {
+                    LOG(ERROR) << "Failed find " << radio->wifi_channel.get_channel()
+                               << " channel in "
+                               << beerocks::utils::convert_frequency_type_to_string(
+                                      radio->wifi_channel.get_freq_type())
+                               << " channels table.";
+                    return {};
+                }
+
+                auto bandwidth = son::wireless_utils::operating_classes_list.find(*it)->second.band;
+                if (bandwidth == beerocks::eWiFiBandwidth::BANDWIDTH_320) {
+                    bandwidth = radio->wifi_channel.get_bandwidth();
+                }
+
+                auto center_channel_it = channel_it->second.find(bandwidth);
+                if (center_channel_it == channel_it->second.end()) {
+                    LOG(ERROR) << "Failed find bandwidth of channel "
+                               << radio->wifi_channel.get_channel() << " in "
+                               << beerocks::utils::convert_frequency_type_to_string(
+                                      radio->wifi_channel.get_freq_type())
+                               << " channels table.";
+                    continue;
+                }
+
+                operating_list.emplace_back(
+                    std::make_pair(*it, center_channel_it->second.center_channel));
+            }
+        }
+
+        return operating_list;
+    };
+
+    auto operating_list = get_operating_list();
+    if (operating_list.empty()) {
+        LOG(ERROR) << "Operating list is empty!";
+        return false;
+    }
+
     auto operating_channel_report_tlv = cmdu_tx.addClass<wfa_map::tlvOperatingChannelReport>();
     if (!operating_channel_report_tlv) {
         LOG(ERROR) << "addClass ieee1905_1::operating_channel_report_tlv has failed";
@@ -232,30 +301,27 @@ bool tlvf_utils::create_operating_channel_report(ieee1905_1::CmduMessageTx &cmdu
     }
     operating_channel_report_tlv->radio_uid() = radio_mac;
 
-    auto op_classes_list = operating_channel_report_tlv->alloc_operating_classes_list();
-    if (!op_classes_list) {
-        LOG(ERROR) << "alloc_operating_classes_list() has failed!";
-        return false;
+    for (auto p = std::make_pair(operating_list.begin(), 0); p.first != operating_list.end();
+         ++p.first, ++p.second) {
+        auto op_classes_list = operating_channel_report_tlv->alloc_operating_classes_list();
+        if (!op_classes_list) {
+            LOG(ERROR) << "alloc_operating_classes_list() has failed!";
+            return false;
+        }
+
+        auto operating_class_entry_tuple =
+            operating_channel_report_tlv->operating_classes_list(p.second);
+        if (!std::get<0>(operating_class_entry_tuple)) {
+            LOG(ERROR) << "getting operating class entry has failed!";
+            return false;
+        }
+
+        auto &operating_class_entry = std::get<1>(operating_class_entry_tuple);
+
+        operating_class_entry.operating_class = p.first->first;
+        operating_class_entry.channel_number  = p.first->second;
     }
 
-    auto operating_class_entry_tuple = operating_channel_report_tlv->operating_classes_list(0);
-    if (!std::get<0>(operating_class_entry_tuple)) {
-        LOG(ERROR) << "getting operating class entry has failed!";
-        return false;
-    }
-
-    auto &operating_class_entry = std::get<1>(operating_class_entry_tuple);
-    auto operating_class = son::wireless_utils::get_operating_class_by_channel(radio->wifi_channel);
-
-    auto center_channel =
-        son::wireless_utils::freq_to_channel(radio->wifi_channel.get_center_frequency());
-    operating_class_entry.operating_class = operating_class;
-    // operating classes 128,129,130 use center channel **unlike the other classes** (See Table
-    // E-4 in 802.11 spec)
-    operating_class_entry.channel_number =
-        son::wireless_utils::is_operating_class_using_central_channel(operating_class)
-            ? center_channel
-            : radio->wifi_channel.get_channel();
     operating_channel_report_tlv->current_transmit_power() = radio->tx_power_dB;
 
     auto wifi6_caps =

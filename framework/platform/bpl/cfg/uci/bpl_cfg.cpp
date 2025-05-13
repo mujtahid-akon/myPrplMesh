@@ -24,6 +24,8 @@ using namespace mapf;
 namespace beerocks {
 namespace bpl {
 
+#ifndef KEEP_UCI_GENERAL_OPTIONS
+
 int cfg_get_hostap_iface_steer_vaps(int32_t radio_num,
                                     char hostap_iface_steer_vaps[BPL_LOAD_STEER_ON_VAPS_LEN])
 {
@@ -60,12 +62,12 @@ int cfg_is_master()
         return 1;
     case BPL_MGMT_MODE_MULTIAP_AGENT:
         return 0;
-    case BPL_MGMT_MODE_NOT_MULTIAP:
-        return (cfg_get_operating_mode() == BPL_OPER_MODE_GATEWAY) ? 1 : 0;
     default:
         return -1;
     }
 }
+
+#endif
 
 int cfg_get_management_mode()
 {
@@ -98,33 +100,6 @@ int cfg_get_management_mode(std::string &mode)
     return cfg_get_prplmesh_param("management_mode", &mode[0], BPL_GW_DB_MANAGE_MODE_LEN);
 }
 
-int cfg_get_operating_mode()
-{
-    int retVal                            = 0;
-    char op_mode[BPL_GW_DB_OPER_MODE_LEN] = {0};
-    if (cfg_get_prplmesh_param("operating_mode", op_mode, BPL_GW_DB_OPER_MODE_LEN) < 0) {
-        MAPF_ERR("cfg_get_operating_mode: Failed to read OperatingMode\n");
-        retVal = -1;
-    } else {
-        std::string mode_str(op_mode);
-        if (mode_str == "Gateway") {
-            retVal = BPL_OPER_MODE_GATEWAY;
-        } else if (mode_str == "Gateway-WISP") {
-            retVal = BPL_OPER_MODE_GATEWAY_WISP;
-        } else if (mode_str == "WDS-Extender") {
-            retVal = BPL_OPER_MODE_WDS_EXTENDER;
-        } else if (mode_str == "WDS-Repeater") {
-            retVal = BPL_OPER_MODE_WDS_REPEATER;
-        } else if (mode_str == "L2NAT-Client") {
-            retVal = BPL_OPER_MODE_L2NAT_CLIENT;
-        } else {
-            MAPF_ERR("cfg_get_operating_mode: Unexpected OperatingMode\n");
-            retVal = -1;
-        }
-    }
-    return retVal;
-}
-
 int cfg_get_certification_mode()
 {
     int retVal = -1;
@@ -134,6 +109,8 @@ int cfg_get_certification_mode()
     }
     return retVal;
 }
+
+#ifndef KEEP_UCI_GENERAL_OPTIONS
 
 int cfg_get_load_steer_on_vaps(int num_of_interfaces,
                                char load_steer_on_vaps[BPL_LOAD_STEER_ON_VAPS_LEN])
@@ -208,17 +185,6 @@ int cfg_is_onboarding()
     int retVal = -1;
     if (cfg_get_prplmesh_param_int("onboarding", &retVal) == RETURN_ERR) {
         MAPF_ERR("cfg_is_onboarding: Failed to read Onboarding parameter\n");
-        return RETURN_ERR;
-    }
-    return retVal;
-}
-
-int cfg_get_rdkb_extensions()
-{
-    int retVal = -1;
-    if (cfg_get_prplmesh_param_int_default("rdkb_extensions", &retVal, DEFAULT_RDKB_EXTENSIONS) ==
-        RETURN_ERR) {
-        MAPF_INFO("cfg_get_rdkb_extensions: Failed to read RDKB Extensions parameter\n");
         return RETURN_ERR;
     }
     return retVal;
@@ -761,7 +727,7 @@ bool cfg_get_unsuccessful_assoc_max_reporting_rate(
     return true;
 }
 
-bool cfg_set_unsuccessful_assoc_max_reporting_rate(int &unsuccessful_assoc_max_reporting_rate)
+bool cfg_set_unsuccessful_assoc_max_reporting_rate(int unsuccessful_assoc_max_reporting_rate)
 {
     std::string option = "unsuccessful_assoc_max_reporting_rate";
     std::string value  = std::to_string(unsuccessful_assoc_max_reporting_rate);
@@ -825,7 +791,7 @@ bool cfg_get_steering_disassoc_timer_msec(std::chrono::milliseconds &steering_di
     return true;
 }
 
-bool cfg_set_steering_disassoc_timer_msec(std::chrono::milliseconds &steering_disassoc_timer_msec)
+bool cfg_set_steering_disassoc_timer_msec(std::chrono::milliseconds steering_disassoc_timer_msec)
 {
     std::string option = "steering_disassoc_timer_msec";
     std::string value  = std::to_string(steering_disassoc_timer_msec.count());
@@ -1139,6 +1105,8 @@ bool cfg_get_clients_unicast_measurements(bool &client_unicast_measurements)
     client_unicast_measurements = bool(val == 1);
     return true;
 }
+
+#endif
 
 bool cfg_commit_changes() { return uci_commit_changes("prplmesh"); }
 

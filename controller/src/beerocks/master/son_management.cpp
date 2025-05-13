@@ -452,7 +452,7 @@ void son_management::handle_cli_message(int sd, std::shared_ptr<beerocks_header>
         if (wifi_channel.is_empty()) {
             LOG(ERROR) << "Invalid channel switch request. channel="
                        << cli_request->cs_params().channel << ", bandwidth="
-                       << beerocks::utils::convert_bandwidth_to_int(
+                       << beerocks::utils::convert_bandwidth_to_string(
                               static_cast<beerocks::eWiFiBandwidth>(
                                   cli_request->cs_params().bandwidth))
                        << ", center_frequency=" << cli_request->cs_params().vht_center_frequency;
@@ -1707,7 +1707,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
                 beerocks::WifiChannel(request->channel(), freq_type, request->bandwidth()));
             if (operating_class == 0) {
                 LOG(ERROR) << "channel #" << request->channel() << " and bandwidth "
-                           << beerocks::utils::convert_bandwidth_to_int(request->bandwidth())
+                           << beerocks::utils::convert_bandwidth_to_string(request->bandwidth())
                            << ", do not have a valid Operating Class";
 
                 response->code() = uint8_t(eChannelSwitchStatus::INVALID_BANDWIDTH_AND_CHANNEL);
@@ -1726,7 +1726,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
                 if (channel_preference <=
                     (int8_t)beerocks::eChannelPreferenceRankingConsts::NON_OPERABLE) {
                     LOG(ERROR) << "channel #" << request->channel() << " and bandwidth "
-                               << beerocks::utils::convert_bandwidth_to_int(request->bandwidth())
+                               << beerocks::utils::convert_bandwidth_to_string(request->bandwidth())
                                << ", are "
                                << ((channel_preference ==
                                     (int8_t)beerocks::eChannelPreferenceRankingConsts::NON_OPERABLE)

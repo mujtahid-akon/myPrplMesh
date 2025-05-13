@@ -197,27 +197,67 @@ beerocks::eWiFiBandwidth utils::convert_bandwidth_to_enum(int bandwidth_int)
         return beerocks::BANDWIDTH_80;
     case 160:
         return beerocks::BANDWIDTH_160;
+    case 320:
+        return beerocks::BANDWIDTH_320;
     default:
         return beerocks::BANDWIDTH_80;
     }
 }
 
-int utils::convert_bandwidth_to_int(beerocks::eWiFiBandwidth bandwidth)
+std::string utils::convert_bandwidth_to_string(beerocks::eWiFiBandwidth bandwidth)
 {
     switch (bandwidth) {
     case beerocks::BANDWIDTH_20:
-        return 20;
+        return "20MHz";
     case beerocks::BANDWIDTH_40:
-        return 40;
+        return "40MHz";
     case beerocks::BANDWIDTH_80:
-        return 80;
+        return "80MHz";
     case beerocks::BANDWIDTH_80_80:
     case beerocks::BANDWIDTH_160:
-        return 160;
+        return "160MHz";
+    case beerocks::BANDWIDTH_320_1:
+        return "320MHz-1";
+    case beerocks::BANDWIDTH_320_2:
+        return "320MHz-2";
+    case beerocks::BANDWIDTH_320:
+        return "320MHz";
     default:
-        LOG(ERROR) << "Failed to convert eWiFiBandwidth: " << bandwidth << " to integer";
-        return bandwidth;
+        LOG(ERROR) << "Failed to convert eWiFiBandwidth: " << bandwidth << " to string";
+        return "<Bandwidth Type Error>";
     }
+}
+
+int utils::count_target_bandwidth(beerocks::eWiFiBandwidth bandwidth,
+                                  beerocks::eWiFiBandwidth target_bandwidth)
+{
+    auto convert_bandwidth_to_int = [](beerocks::eWiFiBandwidth bandwidth) -> int {
+        switch (bandwidth) {
+        case beerocks::BANDWIDTH_20:
+            return 20;
+        case beerocks::BANDWIDTH_40:
+            return 40;
+        case beerocks::BANDWIDTH_80:
+            return 80;
+        case beerocks::BANDWIDTH_80_80:
+        case beerocks::BANDWIDTH_160:
+            return 160;
+        case beerocks::BANDWIDTH_320_1:
+        case beerocks::BANDWIDTH_320_2:
+        case beerocks::BANDWIDTH_320:
+            return 320;
+        default:
+            LOG(ERROR) << "Failed to convert eWiFiBandwidth: " << bandwidth << " to integer";
+            return bandwidth;
+        }
+    };
+
+    auto target_bw = convert_bandwidth_to_int(target_bandwidth);
+    if (target_bw == 0) {
+        return 0;
+    }
+
+    return convert_bandwidth_to_int(bandwidth) / target_bw;
 }
 
 std::string utils::convert_frequency_type_to_string(beerocks::eFreqType freq_type)
@@ -253,6 +293,8 @@ std::string utils::convert_channel_ext_above_to_string(bool channel_ext_above_se
     case beerocks::BANDWIDTH_80:
     case beerocks::BANDWIDTH_80_80:
     case beerocks::BANDWIDTH_160:
+    case beerocks::BANDWIDTH_320_1:
+    case beerocks::BANDWIDTH_320_2:
         if (channel_ext_above_secondary) {
             return "H";
         } else {
@@ -390,7 +432,7 @@ eFreqType utils::get_freq_type_from_op_class(const uint8_t op_class)
         return eFreqType::FREQ_24G;
     } else if (op_class >= 115 && op_class <= 130) {
         return eFreqType::FREQ_5G;
-    } else if (op_class >= 131 && op_class <= 135) {
+    } else if (op_class >= 131 && op_class <= 137) {
         return eFreqType::FREQ_6G;
     }
 

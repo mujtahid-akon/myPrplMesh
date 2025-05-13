@@ -81,6 +81,8 @@ public:
     bool sta_unassoc_rssi_measurement(std::unordered_map<std::string, uint8_t> &new_list) final;
 
     std::list<std::unordered_map<std::string, std::string>> m_scan_results; //cached scan resuls
+    std::list<std::unordered_map<std::string, std::string>>
+        m_spectrum_results; //cached spectrum results
 
     // Protected methods:
 protected:

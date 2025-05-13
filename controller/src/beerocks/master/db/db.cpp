@@ -1798,6 +1798,82 @@ bool db::set_wifi7_agent_capabilities(wfa_map::tlvWifi7AgentCapabilities &wifi7_
     return ret_val;
 }
 
+void db::set_internal_eht_operations(wfa_map::cBssEntry &eht_operations_bss,
+                                     Agent::sRadio::sBss::sEhtOperations &eht_operations)
+{
+    eht_operations.eht_operation_informations.valid =
+        static_cast<bool>(eht_operations_bss.flags().eht_operation_information_valid);
+    eht_operations.sub_channel_bitmap.valid =
+        static_cast<bool>(eht_operations_bss.flags().disabled_subchannel_valid);
+    eht_operations.eht_default_pe_duration =
+        static_cast<bool>(eht_operations_bss.flags().eht_default_pe_duration);
+
+    eht_operations.group_address_bu.indication_limit =
+        static_cast<bool>(eht_operations_bss.flags().group_addressed_bu_indication_limit);
+    eht_operations.group_address_bu.indication_exponent =
+        static_cast<uint8_t>(eht_operations_bss.flags().group_addressed_bu_indication_exponent);
+
+    eht_operations.basic_eht_mcs_and_nss_set =
+        static_cast<uint32_t>(eht_operations_bss.basic_eht_mcs_and_nss_set());
+
+    if (eht_operations.eht_operation_informations.valid) {
+        eht_operations.eht_operation_informations.control =
+            static_cast<uint8_t>(eht_operations_bss.control());
+        eht_operations.eht_operation_informations.ccfs0 =
+            static_cast<uint8_t>(eht_operations_bss.ccfs0());
+        eht_operations.eht_operation_informations.ccfs1 =
+            static_cast<uint8_t>(eht_operations_bss.ccfs1());
+    }
+
+    if (eht_operations.sub_channel_bitmap.valid) {
+        eht_operations.sub_channel_bitmap.disabled_subchannel_bitmap =
+            static_cast<uint8_t>(eht_operations_bss.disabled_subchannel_bitmap());
+    }
+}
+
+bool db::set_external_eht_operations(Agent::sRadio::sBss &bss)
+{
+    bool ret_val(true);
+
+    // Needs DM node to be used
+
+    // Device.x.APMLD.x.AffiliatedAP.x.
+    // std::string path_to_obj_affiliated_ap = "TBD";
+    // if (bss.eht_operations.sub_channel_bitmap.valid) {
+    //     ret_val &= m_ambiorix_datamodel->set(
+    //         path_to_obj_affiliated_ap, "DisabledSubChannels",
+    //         bss.eht_operations.sub_channel_bitmap.disabled_subchannel_bitmap);
+    // }
+
+    return ret_val;
+}
+
+bool db::set_eht_operations(wfa_map::tlvEHTOperations &eht_ops_tlv, const sMacAddr &al_mac)
+{
+    bool ret_val(true);
+
+    for (auto radio_idx = 0; radio_idx < eht_ops_tlv.num_radio(); ++radio_idx) {
+        auto eht_operations_radio = std::get<1>(eht_ops_tlv.radio_entries(radio_idx));
+
+        for (auto bss_idx = 0; bss_idx < eht_operations_radio.num_bss(); ++bss_idx) {
+            auto eht_operations_bss = std::get<1>(eht_operations_radio.bss_entries(bss_idx));
+            auto bss                = get_bss(eht_operations_bss.bssid(), al_mac);
+
+            if (!bss || bss->dm_path.empty()) {
+                LOG(DEBUG) << "EHT Operations early storage for BSSID "
+                           << eht_operations_bss.bssid();
+                Agent::sRadio::sBss::sEhtOperations eht_operations;
+                set_internal_eht_operations(eht_operations_bss, eht_operations);
+            } else {
+                set_internal_eht_operations(eht_operations_bss, bss->eht_operations);
+                ret_val &= set_external_eht_operations(*bss);
+            }
+        }
+    }
+
+    return ret_val;
+}
+
 bool db::dm_set_sta_ht_capabilities(const std::string &path_to_sta,
                                     const beerocks::message::sRadioCapabilities &sta_cap)
 {
@@ -2237,7 +2313,7 @@ std::string db::get_hostap_supported_channels_string(const sMacAddr &radio_mac)
     for (const auto &val : supported_channels) {
         if (val.get_channel() > 0) {
             os << " ch = " << int(val.get_channel()) << " | dfs = " << int(val.is_dfs_channel())
-               << " | bw = " << beerocks::utils::convert_bandwidth_to_int(val.get_bandwidth())
+               << " | bw = " << beerocks::utils::convert_bandwidth_to_string(val.get_bandwidth())
                << " | tx_pow = " << int(val.get_tx_power()) << std::endl;
         }
     }
@@ -4926,7 +5002,7 @@ bool db::notify_sta_disconnection(const std::string &client_mac, const uint16_t 
     }
 
     std::string path_to_disassoc_event_data =
-        CONTROLLER_ROOT_DM ".DisassociationEvent.DisassociationEventData";
+        DATAELEMENTS_ROOT_DM ".DisassociationEvent.DisassociationEventData";
 
     if (!dm_check_objects_limit(m_disassoc_events, MAX_EVENT_HISTORY_SIZE)) {
         return false;
@@ -5416,19 +5492,21 @@ bool db::update_sta_wifi_channel_bw(const sMacAddr &mac, beerocks::eWiFiBandwidt
 
     if (bw == eWiFiBandwidth::BANDWIDTH_MAX) {
         LOG(INFO) << "update wifiChannel station " << mac << " bw from "
-                  << beerocks::utils::convert_bandwidth_to_int(pSta->wifi_channel.get_bandwidth())
+                  << beerocks::utils::convert_bandwidth_to_string(
+                         pSta->wifi_channel.get_bandwidth())
                   << "MHz to MAX";
     } else {
         LOG(INFO) << "update wifiChannel station " << mac << " bw from "
-                  << beerocks::utils::convert_bandwidth_to_int(pSta->wifi_channel.get_bandwidth())
+                  << beerocks::utils::convert_bandwidth_to_string(
+                         pSta->wifi_channel.get_bandwidth())
                   << " to " << bw;
     }
 
     eWiFiBandwidth prev_bw = pSta->wifi_channel.get_bandwidth();
     pSta->wifi_channel.set_bandwidth(bw);
     LOG(INFO) << "updating station " << mac << " bandwidth from "
-              << beerocks::utils::convert_bandwidth_to_int(prev_bw) << "MHz to "
-              << beerocks::utils::convert_bandwidth_to_int(bw) << "MHz";
+              << beerocks::utils::convert_bandwidth_to_string(prev_bw) << "MHz to "
+              << beerocks::utils::convert_bandwidth_to_string(bw) << "MHz";
     return true;
 }
 
@@ -6336,10 +6414,10 @@ std::string db::dm_add_steer_event()
         return {};
     }
 
-    std::string event_path = m_ambiorix_datamodel->add_instance(CONTROLLER_ROOT_DM ".SteerEvent");
+    std::string event_path = m_ambiorix_datamodel->add_instance(DATAELEMENTS_ROOT_DM ".SteerEvent");
 
     if (event_path.empty() && NBAPI_ON) {
-        LOG(ERROR) << "Failed to add instance " CONTROLLER_ROOT_DM ".SteerEvent";
+        LOG(ERROR) << "Failed to add instance " DATAELEMENTS_ROOT_DM ".SteerEvent";
         return {};
     }
     m_steer_events.push(event_path);
@@ -6376,13 +6454,14 @@ bool db::dm_restore_steering_summary_stats(Station &station)
 
 void db::dm_increment_steer_summary_stats(const std::string &param_name)
 {
-    dm_uint64_param_one_up(CONTROLLER_ROOT_DM ".Network.MultiAPSteeringSummaryStats", param_name);
+    dm_uint64_param_one_up(DATAELEMENTS_ROOT_DM ".Network.MultiAPSteeringSummaryStats", param_name);
 }
 
 bool db::dm_add_failed_connection_event(const sMacAddr &bssid, const sMacAddr &sta_mac,
                                         const uint16_t reason_code, const uint16_t status_code)
 {
-    std::string event_path = CONTROLLER_ROOT_DM ".FailedConnectionEvent.FailedConnectionEventData";
+    std::string event_path =
+        DATAELEMENTS_ROOT_DM ".FailedConnectionEvent.FailedConnectionEventData";
 
     event_path = m_ambiorix_datamodel->add_instance(event_path);
 
@@ -6404,7 +6483,7 @@ std::string db::dm_add_association_event(const sMacAddr &bssid, const sMacAddr &
                                          const std::string &assoc_ts)
 {
     std::string path_association_event =
-        CONTROLLER_ROOT_DM ".AssociationEvent.AssociationEventData";
+        DATAELEMENTS_ROOT_DM ".AssociationEvent.AssociationEventData";
 
     if (!dm_check_objects_limit(m_assoc_events, MAX_EVENT_HISTORY_SIZE)) {
         return {};
@@ -6447,13 +6526,13 @@ std::string db::dm_add_association_event(const sMacAddr &bssid, const sMacAddr &
 std::string db::dm_add_device_element(const sMacAddr &mac)
 {
     auto index = m_ambiorix_datamodel->get_instance_index(
-        CONTROLLER_ROOT_DM ".Network.Device.[ID == '%s'].", tlvf::mac_to_string(mac));
+        DATAELEMENTS_ROOT_DM ".Network.Device.[ID == '%s'].", tlvf::mac_to_string(mac));
     if (index) {
         LOG(WARNING) << "Device with ID: " << mac << " exists in the data model!";
         return {};
     }
 
-    auto device_path = m_ambiorix_datamodel->add_instance(CONTROLLER_ROOT_DM ".Network.Device");
+    auto device_path = m_ambiorix_datamodel->add_instance(DATAELEMENTS_ROOT_DM ".Network.Device");
     if (device_path.empty()) {
         LOG(ERROR) << "Failed to add instance " << device_path << ". Device mac: " << mac;
         return {};
@@ -6470,13 +6549,13 @@ std::string db::dm_add_device_element(const sMacAddr &mac)
 bool db::dm_remove_device_element(const sMacAddr &mac)
 {
     auto index = m_ambiorix_datamodel->get_instance_index(
-        CONTROLLER_ROOT_DM ".Network.Device.[ID == '%s'].", tlvf::mac_to_string(mac));
+        DATAELEMENTS_ROOT_DM ".Network.Device.[ID == '%s'].", tlvf::mac_to_string(mac));
     if (!index) {
         LOG(ERROR) << "Failed to get Network.Device index for mac: " << mac;
         return false;
     }
 
-    if (!m_ambiorix_datamodel->remove_instance(CONTROLLER_ROOT_DM ".Network.Device", index)) {
+    if (!m_ambiorix_datamodel->remove_instance(DATAELEMENTS_ROOT_DM ".Network.Device", index)) {
         LOG(ERROR) << "Failed to remove Network.Device." << index << " instance.";
         return false;
     }
@@ -8411,7 +8490,8 @@ bool db::dm_configure_service_prioritization()
 
         agent->service_prioritization.rules.clear();
 
-        wfa_map::tlvServicePrioritizationRule::sServicePrioritizationRule rule;
+        wfa_map::tlvServicePrioritizationRule::sServicePrioritizationRule rule = {};
+
         rule.id                       = 1;
         rule.precedence               = 1;
         rule.output                   = static_cast<uint8_t>(ruleOutput);

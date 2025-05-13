@@ -256,7 +256,7 @@ static void build_channels_list(ieee1905_1::CmduMessageTx &cmdu_tx,
                 };
 
                 LOG(DEBUG) << "channel=" << int(channel_info_pair.first) << ", bw="
-                           << beerocks::utils::convert_bandwidth_to_int(
+                           << beerocks::utils::convert_bandwidth_to_string(
                                   beerocks::eWiFiBandwidth(bw_it->first))
                            << ", rank=" << supported_bw_info_tlv.rank << ", multiap_preference="
                            << int(supported_bw_info_tlv.multiap_preference)
@@ -1288,7 +1288,7 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
             // Send channel_switch_request to bwl
             LOG(INFO) << " Calling failsafe_channel_set - "
                       << "failsafe_channel: " << failsafe_channel << ", channel_bandwidth: "
-                      << beerocks::utils::convert_bandwidth_to_int(
+                      << beerocks::utils::convert_bandwidth_to_string(
                              (beerocks::eWiFiBandwidth)request->params().failsafe_channel_bandwidth)
                       << ", vht_center_frequency: " << request->params().vht_center_frequency;
 
@@ -1329,7 +1329,7 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
         }
         LOG(DEBUG) << "ACTION_APMANAGER_HOSTAP_CHANNEL_SWITCH_ACS_START: requested channel="
                    << int(request->cs_params().channel) << " bandwidth="
-                   << beerocks::utils::convert_bandwidth_to_int(
+                   << beerocks::utils::convert_bandwidth_to_string(
                           (beerocks::eWiFiBandwidth)request->cs_params().bandwidth);
 
         LOG_IF(request->cs_params().channel == 0, DEBUG) << "Start ACS";
@@ -1380,8 +1380,7 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
             LOG(INFO) << "Current channel: " << ap_wlan_hal->get_radio_info().channel
                       << " Current BW: " << ap_wlan_hal->get_radio_info().bandwidth;
             if (ap_wlan_hal->get_radio_info().channel == request->cs_params().channel &&
-                utils::convert_bandwidth_to_enum(ap_wlan_hal->get_radio_info().bandwidth) ==
-                    request->cs_params().bandwidth) {
+                ap_wlan_hal->get_radio_info().bandwidth == request->cs_params().bandwidth) {
                 LOG(DEBUG) << "Setting tx power without channel switch";
                 if (!csa_notification_timer_on()) {
                     // If csa_notification_timer is enabled, a color switch event (BSS Color) is going on
@@ -1403,8 +1402,7 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
 
         if ((!request->cs_params().channel) ||
             (ap_wlan_hal->get_radio_info().channel == request->cs_params().channel &&
-             utils::convert_bandwidth_to_enum(ap_wlan_hal->get_radio_info().bandwidth) ==
-                 request->cs_params().bandwidth)) {
+             ap_wlan_hal->get_radio_info().bandwidth == request->cs_params().bandwidth)) {
             // No need to switch channels
             LOG(INFO) << "No need to switch channels as current channel and requested channels are "
                          "the same.";
@@ -1446,11 +1444,10 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
         }
         bool cancel_cac_success = false;
 
-        if (!ap_wlan_hal->cancel_cac(
-                request->cs_params().channel,
-                utils::convert_bandwidth_to_enum(request->cs_params().bandwidth),
-                request->cs_params().vht_center_frequency,
-                request->cs_params().channel_ext_above_primary)) {
+        if (!ap_wlan_hal->cancel_cac(request->cs_params().channel,
+                                     (beerocks::eWiFiBandwidth)request->cs_params().bandwidth,
+                                     request->cs_params().vht_center_frequency,
+                                     request->cs_params().channel_ext_above_primary)) {
             LOG(ERROR) << "Cancel cac failed!";
         }
 
@@ -1743,8 +1740,7 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
                 << "send sACTION_APMANAGER_CLIENT_RX_RSSI_MEASUREMENT_CMD_RESPONSE, sta_mac = "
                 << sta_mac;
 
-            int bandwidth = beerocks::utils::convert_bandwidth_to_int(
-                (beerocks::eWiFiBandwidth)request->params().bandwidth);
+            auto bandwidth = (beerocks::eWiFiBandwidth)request->params().bandwidth;
             if (ap_wlan_hal->sta_unassoc_rssi_measurement(
                     sta_mac, request->params().channel, bandwidth,
                     request->params().vht_center_frequency, request->params().measurement_delay,
@@ -1757,7 +1753,7 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
             sta_unassociated_rssi_measurement_header_id = beerocks_header->id();
             LOG(DEBUG) << "CLIENT_RX_RSSI_MEASUREMENT_REQUEST, mac = " << sta_mac
                        << " channel = " << int(request->params().channel)
-                       << " bandwidth = " << bandwidth
+                       << " bandwidth = " << beerocks::utils::convert_bandwidth_to_string(bandwidth)
                        << " vht_center_frequency = " << int(request->params().vht_center_frequency)
                        << " id = " << sta_unassociated_rssi_measurement_header_id;
         } else {
@@ -2126,8 +2122,8 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
                 response->success() = false;
             }
             // switch channel on zwdfs interface to start off channel CAC
-            LOG(DEBUG) << "Switching channel channel=" << notification->channel()
-                       << ", bw=" << utils::convert_bandwidth_to_int(notification->bandwidth())
+            LOG(DEBUG) << "Switching channel channel=" << notification->channel() << ", bw="
+                       << beerocks::utils::convert_bandwidth_to_string(notification->bandwidth())
                        << ", center_freq=" << notification->center_frequency();
 
             if (!ap_wlan_hal->switch_channel(notification->channel(), notification->bandwidth(),
@@ -2304,10 +2300,9 @@ void ApManager::beacon_metrics_response_cb(int fd)
 
 void ApManager::fill_cs_params(beerocks_message::sApChannelSwitch &params)
 {
-    params.tx_power  = static_cast<int8_t>(ap_wlan_hal->get_radio_info().tx_power);
-    params.channel   = ap_wlan_hal->get_radio_info().channel;
-    params.bandwidth = uint8_t(
-        beerocks::utils::convert_bandwidth_to_enum(ap_wlan_hal->get_radio_info().bandwidth));
+    params.tx_power                  = static_cast<int8_t>(ap_wlan_hal->get_radio_info().tx_power);
+    params.channel                   = ap_wlan_hal->get_radio_info().channel;
+    params.bandwidth                 = ap_wlan_hal->get_radio_info().bandwidth;
     params.channel_ext_above_primary = ap_wlan_hal->get_radio_info().channel_ext_above;
     params.vht_center_frequency      = ap_wlan_hal->get_radio_info().vht_center_freq;
     params.switch_reason             = uint8_t(ap_wlan_hal->get_radio_info().last_csa_sw_reason);
@@ -2746,7 +2741,7 @@ bool ApManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr)
             static_cast<bwl::sACTION_APMANAGER_HOSTAP_DFS_CHANNEL_AVAILABLE_NOTIFICATION *>(data);
         LOG(INFO) << "DFS_EVENT_NOP_FINISHED "
                   << " channel = " << int(msg->params.channel) << " bw = "
-                  << beerocks::utils::convert_bandwidth_to_int(
+                  << beerocks::utils::convert_bandwidth_to_string(
                          (beerocks::eWiFiBandwidth)msg->params.bandwidth)
                   << " vht_center_frequency = " << int(msg->params.vht_center_frequency);
 
@@ -3050,9 +3045,8 @@ bool ApManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr)
             std::string target_bssid = tlvf::mac_to_string(mgmt_frame->bssid);
             uint8_t channel          = ap_wlan_hal->get_radio_info().channel;
             auto freq_type           = ap_wlan_hal->get_radio_info().frequency_band;
-            auto bw_info =
-                utils::convert_bandwidth_to_enum(ap_wlan_hal->get_radio_info().bandwidth);
-            beerocks::WifiChannel wifi_ch(channel, freq_type, bw_info);
+            beerocks::WifiChannel wifi_ch(channel, freq_type,
+                                          ap_wlan_hal->get_radio_info().bandwidth);
 
             uint8_t op_class = son::wireless_utils::get_operating_class_by_channel(wifi_ch);
 
@@ -3082,16 +3076,13 @@ bool ApManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr)
             return false;
         }
 
-        if (m_multiap_controller_profile >=
-            wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_3) {
-            // add BSSID
-            auto bssid_tlv = cmdu_tx.addClass<wfa_map::tlvBssid>();
-            if (!bssid_tlv) {
-                LOG(ERROR) << "addClass wfa_map::tlvBssid!";
-                return false;
-            }
-            bssid_tlv->bssid() = sta_conn_fail->bssid;
+        // add BSSID
+        auto bssid_tlv = cmdu_tx.addClass<wfa_map::tlvBssid>();
+        if (!bssid_tlv) {
+            LOG(ERROR) << "addClass wfa_map::tlvBssid!";
+            return false;
         }
+        bssid_tlv->bssid() = sta_conn_fail->bssid;
 
         // add STA
         auto sta_mac_tlv = cmdu_tx.addClass<wfa_map::tlvStaMacAddressType>();
@@ -3241,8 +3232,7 @@ void ApManager::handle_hostapd_attached()
     notification->cs_params().channel_ext_above_primary =
         ap_wlan_hal->get_radio_info().channel_ext_above;
     notification->cs_params().vht_center_frequency = ap_wlan_hal->get_radio_info().vht_center_freq;
-    notification->cs_params().bandwidth            = uint8_t(
-        beerocks::utils::convert_bandwidth_to_enum(ap_wlan_hal->get_radio_info().bandwidth));
+    notification->cs_params().bandwidth            = ap_wlan_hal->get_radio_info().bandwidth;
 
     notification->params().frequency_band = ap_wlan_hal->get_radio_info().frequency_band;
     notification->params().max_bandwidth  = ap_wlan_hal->get_radio_info().max_bandwidth;

@@ -9,8 +9,6 @@
 #ifndef _DB_H_
 #define _DB_H_
 
-#include "config.h"
-
 #include "agent.h"
 #include "station.h"
 #include "unassociatedStation.h"
@@ -36,6 +34,7 @@
 #include <tlvf/wfa_map/tlvApWifi6Capabilities.h>
 #include <tlvf/wfa_map/tlvAssociatedStaExtendedLinkMetrics.h>
 #include <tlvf/wfa_map/tlvAssociatedWiFi6StaStatusReport.h>
+#include <tlvf/wfa_map/tlvEHTOperations.h>
 #include <tlvf/wfa_map/tlvProfile2ApRadioAdvancedCapabilities.h>
 #include <tlvf/wfa_map/tlvProfile2CacCapabilities.h>
 #include <tlvf/wfa_map/tlvProfile2CacCompletionReport.h>
@@ -117,7 +116,6 @@ public:
         int diagnostics_measurements_polling_rate_sec;
         int ire_rssi_report_rate_sec;
         bool load_dfs_reentry;
-        bool load_rdkb_extensions;
         bool load_client_band_steering;
         bool load_client_optimal_path_roaming;
         bool load_optimal_path_roaming_prefer_signal_strength;
@@ -217,8 +215,6 @@ public:
         bool health_check = true;
 
         bool service_fairness = false;
-
-        bool rdkb_extensions = false;
 
         bool channel_select_task         = true;
         bool dynamic_channel_select_task = true;
@@ -353,7 +349,6 @@ public:
         settings.monitor_on_vaps &= config_.load_monitor_on_vaps;
         settings.health_check &= config_.load_health_check;
         settings.service_fairness &= config_.load_service_fairness;
-        settings.rdkb_extensions &= config_.load_rdkb_extensions;
         settings.daisy_chaining_disabled &= config_.daisy_chaining_disabled;
     }
     ~db(){};
@@ -1147,6 +1142,20 @@ public:
      */
     bool set_wifi7_agent_capabilities(wfa_map::tlvWifi7AgentCapabilities &wifi7_agt_caps_tlv,
                                       std::shared_ptr<Agent> agent);
+
+    /**
+     * @brief Add optional sub-object of EHT Operations data element,
+     * set values for its parameters.
+     *
+     * Example of full path to object:
+     * "Device.WiFi.DataElements.Network.Device.1.Radio.1.Capabilities.WiFi7AgentCapabilities"
+     *
+     * @param eht_ops_tlv TLV with EHT Operations included in
+     * 'AP Capability Report' message
+     * @return True if sub-object was successfully added
+     * and values for its parameters set, false otherwise.
+     */
+    bool set_eht_operations(wfa_map::tlvEHTOperations &eht_ops_tlv, const sMacAddr &al_mac);
 
     /**
      * @brief add 'HTCapabilities' data element, set values to its parameters.
@@ -2752,11 +2761,6 @@ public:
         settings.service_fairness = en && config.load_service_fairness;
     }
     bool settings_service_fairness() { return settings.service_fairness; }
-    void settings_rdkb_extensions(bool en)
-    {
-        settings.rdkb_extensions = en && config.load_rdkb_extensions;
-    }
-    bool settings_rdkb_extensions() { return settings.rdkb_extensions; }
 
     // Params
     void setting_certification_mode(bool en) { config.certification_mode = en; }
@@ -3064,6 +3068,9 @@ private:
         bool is_bsta);
     bool set_wifi7_support(const Agent::sRadio &radio, bool is_bsta);
     bool set_wifi7_capabilities(const Agent::sRadio &radio, bool is_bsta);
+    void set_internal_eht_operations(wfa_map::cBssEntry &eht_operations_bss,
+                                     Agent::sRadio::sBss::sEhtOperations &bss);
+    bool set_external_eht_operations(Agent::sRadio::sBss &bss);
 
     int network_optimization_task_id           = -1;
     int channel_selection_task_id              = -1;

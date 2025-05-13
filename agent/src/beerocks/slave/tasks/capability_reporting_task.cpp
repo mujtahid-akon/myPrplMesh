@@ -486,6 +486,13 @@ void CapabilityReportingTask::handle_ap_capability_query(ieee1905_1::CmduMessage
 
 bool CapabilityReportingTask::prepare_ap_capability_message(bool early)
 {
+    // The add_vs_tlv method invokes the handler to add Vendor specific TLVs to the
+    // AP Capability Report message.
+    if (!multi_vendor::tlvf_handler::add_vs_tlv(
+            m_cmdu_tx, ieee1905_1::eMessageType::AP_CAPABILITY_REPORT_MESSAGE)) {
+        LOG(ERROR) << "Failed adding few TLVs in AP_CAPABILITY_REPORT_MESSAGE";
+    }
+
     auto ap_capability_tlv = m_cmdu_tx.addClass<wfa_map::tlvApCapability>();
     //TODO : These looks like a vendor specific params, where to read them from ?
     // For now, lets  enable all of them to be able to develop/test the unassociated stations stats feature
@@ -878,8 +885,8 @@ bool CapabilityReportingTask::add_ap_wifi6_capabilities(const std::string &iface
 
     tlv->radio_uid() = radio->front.iface_mac;
     int number_of_role;
-    //Check Operating mode, if Repeater then number of role for agent will be 2.
-    if (db->device_conf.operating_mode == OPER_MODE_WDS_REPEATER) {
+    //Check Management mode, if Repeater then number of role for agent will be 2.
+    if (db->device_conf.management_mode == MGMT_MODE_MULTIAP_AGENT) {
         number_of_role = 2;
     } else {
         number_of_role = 1;

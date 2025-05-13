@@ -1446,7 +1446,7 @@ bool ChannelSelectionTask::check_is_there_better_channel_than_current(const sMac
 
     LOG(DEBUG) << "Next best channel " << (int)selected_channel.channel << "-"
                << (int)selected_channel.operating_class << " bandwidth: "
-               << beerocks::utils::convert_bandwidth_to_int(
+               << beerocks::utils::convert_bandwidth_to_string(
                       beerocks::eWiFiBandwidth(selected_channel.bw))
                << " has a preference score of " << (int)selected_channel.preference_score
                << " and a DFS state of " << (int)selected_channel.dfs_state << ".";
@@ -1462,7 +1462,7 @@ bool ChannelSelectionTask::check_is_there_better_channel_than_current(const sMac
 
         LOG(DEBUG) << "Already operating on channel: " << (int)selected_channel.channel
                    << " with bandwidth: "
-                   << beerocks::utils::convert_bandwidth_to_int(
+                   << beerocks::utils::convert_bandwidth_to_string(
                           beerocks::eWiFiBandwidth(selected_channel.bw))
                    << ".";
 
@@ -1608,7 +1608,14 @@ ChannelSelectionTask::sSelectedChannel ChannelSelectionTask::select_next_channel
         }
 
         for (auto &bw_info : channel_info.supported_bw_list) {
-            const auto bandwidth       = bw_info.bandwidth;
+            const auto bandwidth = bw_info.bandwidth;
+            if (freq_type == beerocks::eFreqType::FREQ_6G &&
+                ((channel_number <= BANDWIDTH_320_2_LOWER_CHANNEL_LIMIT &&
+                  bandwidth == beerocks::eWiFiBandwidth::BANDWIDTH_320_2) ||
+                 (channel_number >= BANDWIDTH_320_1_UPPER_CHANNEL_LIMIT &&
+                  bandwidth == beerocks::eWiFiBandwidth::BANDWIDTH_320_1))) {
+                continue;
+            }
             const auto operating_class = son::wireless_utils::get_operating_class_by_channel(
                 beerocks::WifiChannel(channel_number, freq_type, bandwidth));
 
@@ -1619,14 +1626,13 @@ ChannelSelectionTask::sSelectedChannel ChannelSelectionTask::select_next_channel
 
             auto channel = channel_number;
             if (son::wireless_utils::is_operating_class_using_central_channel(operating_class)) {
-                auto source_channel_it =
-                    son::wireless_utils::channels_table_5g.find(channel_number);
-                if (source_channel_it == son::wireless_utils::channels_table_5g.end()) {
+                channel = son::wireless_utils::get_center_channel(
+                    channel, son::wireless_utils::which_freq_op_cls(operating_class), bandwidth);
+                if (!channel) {
                     LOG(WARNING) << "Couldn't find source channel " << channel_number
                                  << " for overlapping channels";
                     continue;
                 }
-                channel = source_channel_it->second.at(bandwidth).center_channel;
             }
 
             const auto cumulative_preference =
@@ -1657,7 +1663,7 @@ ChannelSelectionTask::sSelectedChannel ChannelSelectionTask::select_next_channel
             auto primary_preference = cumulative_preference;
             if (bandwidth >= eWiFiBandwidth::BANDWIDTH_80) {
                 LOG(INFO) << "[" << channel << "-" << operating_class << "("
-                          << utils::convert_bandwidth_to_int(bandwidth)
+                          << beerocks::utils::convert_bandwidth_to_string(bandwidth)
                           << "MHz)] uses a beacon channel.";
                 auto best_channel_pair =
                     find_best_beacon_channel(channel, bandwidth, operating_class);
@@ -1669,7 +1675,7 @@ ChannelSelectionTask::sSelectedChannel ChannelSelectionTask::select_next_channel
             }
 
             LOG(INFO) << "[" << channel << "-" << operating_class << "("
-                      << utils::convert_bandwidth_to_int(bandwidth)
+                      << beerocks::utils::convert_bandwidth_to_string(bandwidth)
                       << "MHz)] has a preference score of " << primary_preference;
 
             if (primary_preference < best_channel.preference_score) {
@@ -1684,7 +1690,7 @@ ChannelSelectionTask::sSelectedChannel ChannelSelectionTask::select_next_channel
             }
 
             LOG(INFO) << "[" << channel << "-" << operating_class << "("
-                      << utils::convert_bandwidth_to_int(bandwidth)
+                      << beerocks::utils::convert_bandwidth_to_string(bandwidth)
                       << "MHz)] is the new Best-Channel";
             // Override selected channel
             best_channel.channel          = channel;
@@ -2079,8 +2085,8 @@ void ChannelSelectionTask::zwdfs_fsm()
             son::wireless_utils::channel_to_freq(center_channel, beerocks::eFreqType::FREQ_5G);
 
         LOG(DEBUG) << "Sending ZWDFS_ANT_CHANNEL_SWITCH_REQUEST on, channel="
-                   << m_selected_channel.channel
-                   << ", bw=" << utils::convert_bandwidth_to_int(m_selected_channel.bw);
+                   << m_selected_channel.channel << ", bw="
+                   << beerocks::utils::convert_bandwidth_to_string(m_selected_channel.bw);
 
         m_zwdfs_ant_in_use = true;
         m_btl_ctx.send_cmdu(agent_fd, m_cmdu_tx);
@@ -2381,7 +2387,7 @@ ChannelSelectionTask::select_best_usable_channel(const std::string &front_radio_
                     if (overlap_channel_info_it == radio->channels_list.end()) {
                         LOG(ERROR)
                             << "Channel " << channel << " supprots bw="
-                            << utils::convert_bandwidth_to_int(supported_bw.bandwidth)
+                            << beerocks::utils::convert_bandwidth_to_string(supported_bw.bandwidth)
                             << " but beacon channel=" << int(overlap_ch) << " is not supported!";
 
                         return false;

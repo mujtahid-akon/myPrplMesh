@@ -434,13 +434,11 @@ bool base_wlan_hal_whm::refresh_radio_info()
     radio->read_child(m_radio_info.wifi_ctrl_enabled, "Enable");
 
     if (radio->read_child(s_val, "CurrentOperatingChannelBandwidth")) {
-        auto bandwidth         = wbapi_utils::bandwith_from_string(s_val);
-        m_radio_info.bandwidth = beerocks::utils::convert_bandwidth_to_int(bandwidth);
+        m_radio_info.bandwidth = wbapi_utils::bandwith_from_string(s_val);
     }
     radio->read_child(m_radio_info.channel, "Channel");
     m_radio_info.is_dfs_channel = son::wireless_utils::is_dfs_channel(m_radio_info.channel);
 
-    std::vector<int32_t> bandwidths = {20, 40, 80, 160};
     if (radio->read_child(s_val, "PossibleChannels")) {
         auto channels_vec = beerocks::string_utils::str_split(s_val, ',');
         for (auto &chan_str : channels_vec) {
@@ -475,14 +473,22 @@ bool base_wlan_hal_whm::refresh_radio_info()
 
             if (radio->read_child(s_val, "MaxChannelBandwidth")) {
                 m_radio_info.max_bandwidth = wbapi_utils::bandwith_from_string(s_val);
-                auto max_bandwidth =
-                    beerocks::utils::convert_bandwidth_to_int(m_radio_info.max_bandwidth);
+                std::vector<beerocks::eWiFiBandwidth> bandwidths;
+                if (radio->read_child(s_val, "SupportedOperatingChannelBandwidth")) {
+                    auto supported_bandwiths_vec = beerocks::string_utils::str_split(s_val, ',');
+                    for (const auto &bw : supported_bandwiths_vec) {
+                        if (!bw.compare("Auto")) {
+                            continue;
+                        }
+                        bandwidths.push_back(wbapi_utils::bandwith_from_string(bw));
+                    }
+                }
                 for (auto &bandw_iter : bandwidths) {
-                    if (bandw_iter > max_bandwidth) {
+                    if (bandw_iter > m_radio_info.max_bandwidth) {
                         continue;
                     }
-                    channel_info
-                        .bw_info_list[beerocks::utils::convert_bandwidth_to_enum(bandw_iter)] = 1;
+                    // Fill with the lowest operable preference value
+                    channel_info.bw_info_list[bandw_iter] = 1;
                 }
             }
         }
@@ -638,7 +644,8 @@ bool base_wlan_hal_whm::refresh_radio_info()
 
     if (radio->read_child(s_val, "ExtensionChannel")) {
         bool channel_ext_above = (s_val == "AboveControlChannel");
-        if (!channel_ext_above && (s_val == "Auto") && (m_radio_info.bandwidth > 20)) {
+        if (!channel_ext_above && (s_val == "Auto") &&
+            (m_radio_info.bandwidth > beerocks::eWiFiBandwidth::BANDWIDTH_20)) {
             if (m_radio_info.frequency_band != beerocks::eFreqType::FREQ_24G) {
                 channel_ext_above = ((m_radio_info.channel / 4) % 2);
             } else {
@@ -648,8 +655,7 @@ bool base_wlan_hal_whm::refresh_radio_info()
         m_radio_info.channel_ext_above = channel_ext_above;
     }
     m_radio_info.vht_center_freq = son::wireless_utils::channel_to_vht_center_freq(
-        m_radio_info.channel, m_radio_info.frequency_band,
-        beerocks::utils::convert_bandwidth_to_enum(m_radio_info.bandwidth),
+        m_radio_info.channel, m_radio_info.frequency_band, m_radio_info.bandwidth,
         m_radio_info.channel_ext_above);
 
     AmbiorixVariant result;

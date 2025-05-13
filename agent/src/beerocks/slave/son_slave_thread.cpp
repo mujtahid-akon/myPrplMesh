@@ -264,6 +264,8 @@ bool slave_thread::thread_init()
             ieee1905_1::eMessageType::VIRTUAL_BSS_MOVE_CANCEL_REQUEST_MESSAGE,
             ieee1905_1::eMessageType::VIRTUAL_BSS_RESPONSE_MESSAGE,
             ieee1905_1::eMessageType::TRIGGER_CHANNEL_SWITCH_ANNOUNCEMENT_REQUEST_MESSAGE,
+            ieee1905_1::eMessageType::CLIENT_ASSOCIATION_CONTROL_REQUEST_MESSAGE,
+            ieee1905_1::eMessageType::CLIENT_STEERING_REQUEST_MESSAGE,
             // Controller's messages which are used to update connectivity
             ieee1905_1::eMessageType::ACK_MESSAGE,
             ieee1905_1::eMessageType::LINK_METRIC_QUERY_MESSAGE,
@@ -541,12 +543,6 @@ bool slave_thread::read_platform_configuration()
 
     int temp_int;
 
-    if ((temp_int = bpl::cfg_get_rdkb_extensions()) < 0) {
-        LOG(ERROR) << "Failed reading 'rdkb_extensions'";
-        return false;
-    }
-    db->device_conf.rdkb_extensions_enabled = static_cast<bool>(temp_int);
-
     if (!bpl::cfg_get_band_steering(db->device_conf.client_band_steering_enabled)) {
         LOG(DEBUG) << "Failed to read cfg_get_band_steering, setting to default value: "
                    << beerocks::bpl::DEFAULT_BAND_STEERING;
@@ -571,12 +567,6 @@ bool slave_thread::read_platform_configuration()
     std::string mgmt_mode;
     bpl::cfg_get_management_mode(mgmt_mode);
     db->dm_set_management_mode(mgmt_mode);
-
-    if ((temp_int = bpl::cfg_get_operating_mode()) < 0) {
-        LOG(ERROR) << "Failed reading 'operating_mode'";
-        return false;
-    }
-    db->device_conf.operating_mode = uint8_t(temp_int);
 
     if ((temp_int = bpl::cfg_get_certification_mode()) < 0) {
         LOG(ERROR) << "Failed reading 'certification_mode'";
@@ -666,8 +656,9 @@ bool slave_thread::read_platform_configuration()
     }
 
     // Set local_gw flag
-    db->device_conf.local_gw = (db->device_conf.operating_mode == BPL_OPER_MODE_GATEWAY ||
-                                db->device_conf.operating_mode == BPL_OPER_MODE_GATEWAY_WISP);
+    db->device_conf.local_gw =
+        (db->device_conf.management_mode == BPL_MGMT_MODE_MULTIAP_CONTROLLER_AGENT ||
+         db->device_conf.management_mode == BPL_MGMT_MODE_MULTIAP_CONTROLLER);
 
     db->device_conf.client_optimal_path_roaming_prefer_signal_strength_enabled =
         0; // TODO add platform DB flag
@@ -700,7 +691,6 @@ bool slave_thread::read_platform_configuration()
     LOG(DEBUG) << "local_controller: " << db->device_conf.local_controller;
     LOG(DEBUG) << "backhaul_preferred_radio_band: "
                << db->device_conf.back_radio.backhaul_preferred_radio_band;
-    LOG(DEBUG) << "rdkb_extensions: " << db->device_conf.rdkb_extensions_enabled;
     LOG(DEBUG) << beerocks::utils::get_zwdfs_string(db->device_conf.zwdfs_flag);
     LOG(DEBUG) << "best_channel_rank_threshold: " << db->device_conf.best_channel_rank_threshold;
     LOG(DEBUG) << "max_prioritization_rules: " << db->device_conf.max_prioritization_rules;
@@ -915,6 +905,10 @@ bool slave_thread::handle_cmdu_from_broker(uint32_t iface_index, const sMacAddr 
                                 beerocks::net::FileDescriptor::invalid_descriptor, beerocks_header);
         return true;
     }
+    case ieee1905_1::eMessageType::CLIENT_ASSOCIATION_CONTROL_REQUEST_MESSAGE:
+        return handle_client_association_request(cmdu_rx);
+    case ieee1905_1::eMessageType::CLIENT_STEERING_REQUEST_MESSAGE:
+        return handle_client_steering_request(cmdu_rx);
     default: {
         m_task_pool.handle_cmdu(cmdu_rx, iface_index, dst_mac, src_mac,
                                 beerocks::net::FileDescriptor::invalid_descriptor);
@@ -939,10 +933,6 @@ bool slave_thread::handle_cmdu_control_ieee1905_1_message(int fd,
         return handle_ap_metrics_query(fd, cmdu_rx);
     case ieee1905_1::eMessageType::BEACON_METRICS_QUERY_MESSAGE:
         return handle_beacon_metrics_query(fd, cmdu_rx);
-    case ieee1905_1::eMessageType::CLIENT_ASSOCIATION_CONTROL_REQUEST_MESSAGE:
-        return handle_client_association_request(fd, cmdu_rx);
-    case ieee1905_1::eMessageType::CLIENT_STEERING_REQUEST_MESSAGE:
-        return handle_client_steering_request(fd, cmdu_rx);
     case ieee1905_1::eMessageType::HIGHER_LAYER_DATA_MESSAGE:
         return handle_1905_higher_layer_data_message(fd, cmdu_rx);
     case ieee1905_1::eMessageType::UNASSOCIATED_STA_LINK_METRICS_QUERY_MESSAGE:
@@ -1179,7 +1169,7 @@ bool slave_thread::handle_cmdu_control_message(int fd,
         LOG(INFO) << "rx_rssi measurement request for client mac=" << request_in->params().mac
                   << " ip=" << network_utils::ipv4_to_string(request_in->params().ipv4)
                   << " channel=" << int(request_in->params().channel) << " bandwidth="
-                  << utils::convert_bandwidth_to_int(
+                  << beerocks::utils::convert_bandwidth_to_string(
                          (beerocks::eWiFiBandwidth)request_in->params().bandwidth)
                   << " cross=" << int(request_in->params().cross)
                   << " id=" << int(beerocks_header->id());
@@ -4901,7 +4891,7 @@ bool slave_thread::forward_cmdu_to_controller(ieee1905_1::CmduMessageRx &cmdu_rx
     return m_broker_client->forward_cmdu(cmdu_rx, dst_addr, db->bridge.mac);
 }
 
-bool slave_thread::handle_client_association_request(int fd, ieee1905_1::CmduMessageRx &cmdu_rx)
+bool slave_thread::handle_client_association_request(ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     const auto mid = cmdu_rx.getMessageId();
     LOG(DEBUG) << "Received CLIENT_ASSOCIATION_CONTROL_REQUEST_MESSAGE, mid=" << std::dec
@@ -5067,7 +5057,7 @@ bool slave_thread::handle_ack_message(int fd, ieee1905_1::CmduMessageRx &cmdu_rx
     return true;
 }
 
-bool slave_thread::handle_client_steering_request(int fd, ieee1905_1::CmduMessageRx &cmdu_rx)
+bool slave_thread::handle_client_steering_request(ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     const auto mid = cmdu_rx.getMessageId();
 
@@ -5090,6 +5080,75 @@ bool slave_thread::handle_client_steering_request(int fd, ieee1905_1::CmduMessag
         // TODO Handle 0 or more then 1 sta in list, currenlty cli steers only 1 client
         LOG(DEBUG) << "Request Mode bit is set - Steering Mandate";
 
+        sMacAddr sta_mac = steering_request_tlv_profile2
+                               ? std::get<1>(steering_request_tlv_profile2->sta_list(0))
+                               : std::get<1>(steering_request_tlv->sta_list(0));
+
+        sMacAddr source_bssid = steering_request_tlv_profile2
+                                    ? steering_request_tlv_profile2->bssid()
+                                    : steering_request_tlv->bssid();
+
+        auto db    = AgentDB::get();
+        auto radio = db->get_radio_by_mac(source_bssid, AgentDB::eMacType::BSSID);
+        if (!radio) {
+            LOG(ERROR) << "Radio with BSSID " << source_bssid
+                       << " as requested on steering request, not found ";
+            return false;
+        }
+
+        auto associated_sta = radio->associated_clients.find(sta_mac);
+        if (associated_sta == radio->associated_clients.end()) {
+            if (!cmdu_tx.create(mid, ieee1905_1::eMessageType::ACK_MESSAGE)) {
+                LOG(ERROR) << "cmdu creation of type ACK_MESSAGE, has failed";
+                return false;
+            }
+            auto error_code_tlv = cmdu_tx.addClass<wfa_map::tlvErrorCode>();
+            if (!error_code_tlv) {
+                LOG(ERROR) << "addClass wfa_map::tlvErrorCode has failed";
+                return false;
+            }
+            error_code_tlv->reason_code() =
+                wfa_map::tlvErrorCode::STA_NOT_ASSOCIATED_WITH_ANY_BSS_OPERATED_BY_THE_AGENT;
+            error_code_tlv->sta_mac() = sta_mac;
+            LOG(DEBUG) << "sending ACK message back to controller with mid: " << std::hex << mid;
+            return send_cmdu_to_controller({}, cmdu_tx);
+        }
+
+        auto btm = db->steering_policy.btm_steering_disallowed.find(sta_mac);
+        if (btm != db->steering_policy.btm_steering_disallowed.end()) {
+            if (!cmdu_tx.create(mid, ieee1905_1::eMessageType::ACK_MESSAGE)) {
+                LOG(ERROR) << "cmdu creation of type ACK_MESSAGE, has failed";
+                return false;
+            }
+            LOG(DEBUG) << "Sending ACK message back to controller with mid:" << std::hex << mid;
+            if (!send_cmdu_to_controller({}, cmdu_tx)) {
+                return false;
+            }
+
+            auto request_out = message_com::create_vs_message<
+                beerocks_message::cACTION_APMANAGER_CLIENT_DISCONNECT_REQUEST>(cmdu_tx, mid);
+            if (request_out == nullptr) {
+                LOG(ERROR) << "Failed building ACTION_APMANAGER_CLIENT_DISCONNECT_REQUEST message!";
+                return false;
+            }
+
+            auto it = std::find_if(radio->front.bssids.begin(), radio->front.bssids.end(),
+                                   [&](const beerocks::AgentDB::sRadio::sFront::sBssid &bssid) {
+                                       return bssid.mac == source_bssid;
+                                   });
+
+            int8_t index =
+                (it != radio->front.bssids.end()) ? it - radio->front.bssids.begin() : -1;
+
+            request_out->mac()    = sta_mac;
+            request_out->vap_id() = index;
+            request_out->type()   = beerocks_message::eDisconnect_Type_Deauth;
+            request_out->reason() = beerocks_message::eWifi_Steering_Event_Client_Disconnect;
+            request_out->src()    = beerocks_message::eClient_Disconnect_Source_Ignore;
+
+            return send_cmdu(m_radio_managers[radio->front.iface_name].ap_manager_fd, cmdu_tx);
+        }
+
         auto request_out = message_com::create_vs_message<
             beerocks_message::cACTION_APMANAGER_CLIENT_BSS_STEER_REQUEST>(cmdu_tx, mid);
         if (!request_out) {
@@ -5097,10 +5156,11 @@ bool slave_thread::handle_client_steering_request(int fd, ieee1905_1::CmduMessag
             return false;
         }
 
+        request_out->params().mac       = sta_mac;
+        request_out->params().cur_bssid = source_bssid;
+
         if (steering_request_tlv_profile2) {
-            auto bssid_list                 = steering_request_tlv_profile2->target_bssid_list(0);
-            request_out->params().cur_bssid = steering_request_tlv_profile2->bssid();
-            request_out->params().mac = std::get<1>(steering_request_tlv_profile2->sta_list(0));
+            auto bssid_list = steering_request_tlv_profile2->target_bssid_list(0);
             request_out->params().disassoc_timer_ms =
                 steering_request_tlv_profile2->btm_disassociation_timer_ms();
             request_out->params().target.bssid = std::get<1>(bssid_list).target_bssid;
@@ -5112,9 +5172,7 @@ bool slave_thread::handle_client_steering_request(int fd, ieee1905_1::CmduMessag
                 steering_request_tlv_profile2->request_flags().btm_disassociation_imminent_bit;
             request_out->params().target.reason = std::get<1>(bssid_list).target_bss_reason_code;
         } else {
-            auto bssid_list                 = steering_request_tlv->target_bssid_list(0);
-            request_out->params().cur_bssid = steering_request_tlv->bssid();
-            request_out->params().mac       = std::get<1>(steering_request_tlv->sta_list(0));
+            auto bssid_list = steering_request_tlv->target_bssid_list(0);
             request_out->params().disassoc_timer_ms =
                 steering_request_tlv->btm_disassociation_timer_ms();
             request_out->params().target.bssid = std::get<1>(bssid_list).target_bssid;
@@ -5125,15 +5183,6 @@ bool slave_thread::handle_client_steering_request(int fd, ieee1905_1::CmduMessag
             request_out->params().disassoc_imminent =
                 steering_request_tlv->request_flags().btm_disassociation_imminent_bit;
             request_out->params().target.reason = -1; // Mark that reason is not added
-        }
-
-        auto db = AgentDB::get();
-        auto radio =
-            db->get_radio_by_mac(request_out->params().cur_bssid, AgentDB::eMacType::BSSID);
-        if (!radio) {
-            LOG(ERROR) << "Radio with BSSID " << request_out->params().cur_bssid
-                       << " as requested on steering request, not found ";
-            return false;
         }
 
         send_cmdu(m_radio_managers[radio->front.iface_name].ap_manager_fd, cmdu_tx);
@@ -5319,7 +5368,7 @@ void slave_thread::fill_channel_list_to_agent_db(
 
         for (const auto &supported_bw : radio->channels_list[channel].supported_bw_list) {
             LOG(DEBUG) << "channel=" << int(channel) << ", bw="
-                       << beerocks::utils::convert_bandwidth_to_int(
+                       << beerocks::utils::convert_bandwidth_to_string(
                               beerocks::eWiFiBandwidth(supported_bw.bandwidth))
                        << ", rank=" << supported_bw.rank
                        << ", multiap_preference=" << int(supported_bw.multiap_preference);
@@ -5438,10 +5487,10 @@ bool slave_thread::update_vaps_info(const std::string &iface,
                    << ", p1_dis: " << bss.backhaul_bss_disallow_profile1_agent_association
                    << ", p2_dis: " << bss.backhaul_bss_disallow_profile2_agent_association;
 
-        for (auto &mld_conf : db->mld_configurations) {
-            if (mld_conf.ssid == bss.ssid) {
-                mld_conf.mac = vaps[vap_idx].ap_mld_mac;
-                for (auto &affiliated_ap : mld_conf.affiliated_aps) {
+        for (auto &ap_mld_conf : db->ap_mld_configurations) {
+            if (ap_mld_conf.mld_config.mld_ssid == bss.ssid) {
+                ap_mld_conf.mld_config.mld_mac = vaps[vap_idx].ap_mld_mac;
+                for (auto &affiliated_ap : ap_mld_conf.affiliated_aps) {
                     if (affiliated_ap.ruid == radio->front.iface_mac) {
                         affiliated_ap.bssid = bss.mac;
                         break;

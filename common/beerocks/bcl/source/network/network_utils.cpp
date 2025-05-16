@@ -1628,7 +1628,10 @@ sMacAddr network_utils::get_eth_sw_mac_from_bridge_mac(const sMacAddr &bridge_ma
      * (as OUI is not relevant here anyway)
      */
     if (mac.oct[0] & 0x2) {
-        mac.oct[4] -= 1;
+        size_t size = sizeof(mac.oct);
+        for (size_t i = 0; i < size / 2; i++) {
+            std::swap(mac.oct[i], mac.oct[size - 1 - i]);
+        }
     }
     //then force the locally administrated mac address flag
     mac.oct[0] |= 0x2;
@@ -1728,4 +1731,72 @@ network_utils::linux_get_bridge_forwarding_table(const std::string &br_ifname, c
     }
 
     return fdb_entries;
+}
+
+bool network_utils::linux_iface_is_physical(const std::string &iface)
+{
+    std::string iflink_path  = "/sys/class/net/" + iface + "/iflink";
+    std::string ifindex_path = "/sys/class/net/" + iface + "/ifindex";
+
+    std::ifstream iflink_file(iflink_path);
+    std::ifstream ifindex_file(ifindex_path);
+
+    if (!iflink_file || !ifindex_file) {
+        LOG(ERROR) << "Failed to open iflink/ifindex files for " << iface;
+        return false;
+    }
+
+    int iflink  = 0;
+    int ifindex = 0;
+    iflink_file >> iflink;
+    ifindex_file >> ifindex;
+
+    if (iflink_file.fail() || ifindex_file.fail()) {
+        LOG(ERROR) << "Failed to read iflink/ifindex parameters for " << iface;
+        return false;
+    }
+
+    /* Physical interfaces have the same 'iflink' and 'ifindex' values */
+    return (iflink == ifindex) ? true : false;
+}
+
+std::vector<std::string> network_utils::linux_get_lan_interfaces()
+{
+    std::vector<std::string> lan_interfaces;
+
+    auto bridges = linux_get_bridges();
+    for (const auto &bridge : bridges) {
+        auto iface_list = linux_get_iface_list_from_bridge(bridge);
+        for (const auto &iface : iface_list) {
+            std::string uevent_path = "/sys/class/net/" + iface + "/uevent";
+            std::ifstream uevent_file(uevent_path);
+            bool is_wlan = false;
+            if (uevent_file.is_open()) {
+                std::string line;
+                while (std::getline(uevent_file, line)) {
+                    if (line.find("DEVTYPE=wlan") != std::string::npos) {
+                        is_wlan = true;
+                        break;
+                    }
+                }
+            } else {
+                LOG(WARNING) << "Failed to open " << uevent_path;
+                continue;
+            }
+
+            /* Skip wlan interfaces */
+            if (is_wlan) {
+                continue;
+            }
+
+            /* Skip non-physical interfaces (veth, dummy etc.)*/
+            if (!linux_iface_is_physical(iface)) {
+                continue;
+            }
+
+            lan_interfaces.push_back(iface);
+        }
+    }
+
+    return lan_interfaces;
 }

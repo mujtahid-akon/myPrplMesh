@@ -43,16 +43,6 @@ int cfg_get_hostap_iface_steer_vaps(int32_t radio_num,
                                         hostap_iface_steer_vaps, BPL_LOAD_STEER_ON_VAPS_LEN);
 }
 
-int cfg_is_enabled()
-{
-    int retVal = -1;
-    if (cfg_get_prplmesh_param_int("enable", &retVal) == RETURN_ERR) {
-        MAPF_ERR("cfg_is_enabled: Failed to read Enable parameter\n");
-        return RETURN_ERR;
-    }
-    return retVal;
-}
-
 int cfg_is_master()
 {
     switch (cfg_get_management_mode()) {
@@ -151,7 +141,8 @@ int cfg_get_load_steer_on_vaps(int num_of_interfaces,
     return RETURN_OK;
 }
 
-int cfg_get_dcs_channel_pool(int radio_num, char channel_pool[BPL_DCS_CHANNEL_POOL_LEN])
+int cfg_get_dcs_channel_pool(const BPL_WLAN_IFACE &iface,
+                             char channel_pool[BPL_DCS_CHANNEL_POOL_LEN])
 {
     if (!channel_pool) {
         MAPF_ERR("invalid input: channel_pool is NULL");
@@ -163,7 +154,7 @@ int cfg_get_dcs_channel_pool(int radio_num, char channel_pool[BPL_DCS_CHANNEL_PO
         return RETURN_ERR;
     }
 
-    return cfg_get_prplmesh_radio_param(radio_num, "dcs_channel_pool", channel_pool,
+    return cfg_get_prplmesh_radio_param(iface.radio_num, "dcs_channel_pool", channel_pool,
                                         BPL_DCS_CHANNEL_POOL_LEN);
 }
 
@@ -733,17 +724,6 @@ bool cfg_set_unsuccessful_assoc_max_reporting_rate(int unsuccessful_assoc_max_re
     std::string value  = std::to_string(unsuccessful_assoc_max_reporting_rate);
 
     return cfg_set_prplmesh_config(option, value);
-}
-
-bool bpl_get_lan_interfaces(std::vector<std::string> &lan_iface_list)
-{
-    std::string iface_names;
-    if (cfg_uci_get_lan_interfaces("lan", iface_names) != RETURN_OK) {
-        LOG(ERROR) << "Read network lan interfaces names from UCI failed.";
-    }
-
-    lan_iface_list = beerocks::string_utils::str_split(iface_names, ' ');
-    return true;
 }
 
 bool bpl_cfg_get_backhaul_wire_iface(std::string &iface)

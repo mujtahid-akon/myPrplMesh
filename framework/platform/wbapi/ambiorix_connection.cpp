@@ -42,6 +42,12 @@ bool AmbiorixConnection::init()
     }
     amxc_var_new(&m_config);
     amxc_var_set_type(m_config, AMXC_VAR_ID_HTABLE);
+
+    // set requires-device-prefix configuration even the option is already set to true by default
+    // The purpose is to workaround events issue (PPW-498)
+    amxc_var_t *usp_section = amxc_var_add_key(amxc_htable_t, m_config, "usp", NULL);
+    amxc_var_add_key(bool, usp_section, "requires-device-prefix", true);
+
     int ret = 0;
     // Load the backend .so file
     ret = amxb_be_load(m_amxb_backend.c_str());
@@ -67,11 +73,10 @@ AmbiorixVariantSmartPtr AmbiorixConnection::get_object(const std::string &object
                                                        const int32_t depth, bool only_first)
 {
     std::string path(object_path);
-    //proxied objs under root "Device." are not available through direct usp socket
-    //so access them directly by skipping the "Device." prefix
+    // if direct usp socket is used add "Device." prefix if not present before getting object
     std::string prefix("Device.");
-    if ((m_bus_uri.rfind("usp:", 0) == 0) && (path.rfind(prefix, 0) == 0)) {
-        path.erase(0, prefix.length());
+    if ((m_bus_uri.rfind("usp:", 0) == 0) && (path.rfind(prefix, 0) != 0)) {
+        path.insert(0, prefix);
     }
     std::lock_guard<std::recursive_mutex> lock(m_mutex);
     AmbiorixVariant result;
@@ -197,10 +202,10 @@ int AmbiorixConnection::read()
 
 int AmbiorixConnection::read_signal()
 {
-    const std::lock_guard<std::recursive_mutex> lock(m_mutex);
     int ret;
     do {
         std::lock_guard<std::mutex> guard(amxp_signal_read_mutex);
+        std::lock_guard<std::recursive_mutex> lock(m_mutex);
         ret = amxp_signal_read();
     } while (ret == 0);
     return ret;

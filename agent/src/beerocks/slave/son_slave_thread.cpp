@@ -669,19 +669,17 @@ bool slave_thread::read_platform_configuration()
     db->device_conf.load_balancing_enabled   = 0; // for v1.3 TODO read from CAL DB
     db->device_conf.service_fairness_enabled = 0; // for v1.3 TODO read from CAL DB
 
-    std::vector<std::string> lan_iface_list;
-    if (beerocks::bpl::bpl_get_lan_interfaces(lan_iface_list)) {
-
-        db->ethernet.lan.clear();
-
+    db->ethernet.lan.clear();
+    auto lan_ifaces = beerocks::net::network_utils::linux_get_lan_interfaces();
+    for (const auto &lan_iface : lan_ifaces) {
         std::string iface_mac;
-        for (const auto &lan_iface : lan_iface_list) {
 
-            if (beerocks::net::network_utils::linux_iface_get_mac(lan_iface, iface_mac)) {
-                db->ethernet.lan.emplace_back(lan_iface, tlvf::mac_from_string(iface_mac));
-            }
+        if (beerocks::net::network_utils::linux_iface_get_mac(lan_iface, iface_mac)) {
+            db->ethernet.lan.emplace_back(lan_iface, tlvf::mac_from_string(iface_mac));
+            LOG(DEBUG) << "LAN interface added: " << lan_iface << " - " << iface_mac;
         }
     }
+
     LOG(DEBUG) << "client_band_steering_enabled: " << db->device_conf.client_band_steering_enabled;
     LOG(DEBUG) << "client_optimal_path_roaming_enabled: "
                << db->device_conf.client_optimal_path_roaming_enabled;
@@ -2469,6 +2467,8 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
 
         update_vaps_info(fronthaul_iface, notification->vap_list().vaps);
 
+        radio->chipset_vendor = notification->params().chipset_vendor;
+
         // cac
         save_cac_capabilities_params_to_db(fronthaul_iface);
 
@@ -2626,7 +2626,6 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
 
         notification_out->cs_params() = notification_in->cs_params();
         send_cmdu_to_controller(fronthaul_iface, cmdu_tx);
-        send_operating_channel_report(fronthaul_iface);
 
         auto notification_out_bhm = message_com::create_vs_message<
             beerocks_message::cACTION_BACKHAUL_HOSTAP_CSA_NOTIFICATION>(cmdu_tx);
@@ -2668,7 +2667,6 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
         }
         notification_out->cs_params() = notification_in->cs_params();
         send_cmdu_to_controller(fronthaul_iface, cmdu_tx);
-        send_operating_channel_report(fronthaul_iface);
 
         auto notification_out_bhm = message_com::create_vs_message<
             beerocks_message::cACTION_BACKHAUL_HOSTAP_CSA_ERROR_NOTIFICATION>(cmdu_tx);
@@ -2992,7 +2990,6 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
          */
         if (!radio->front.zwdfs) {
             send_cmdu_to_controller(fronthaul_iface, cmdu_tx);
-            send_operating_channel_report(fronthaul_iface);
         }
 
         auto notification_out_bhm = message_com::create_vs_message<
@@ -4250,7 +4247,6 @@ bool slave_thread::agent_fsm()
             agent_reset();
             break;
         }
-        iface_mac = tlvf::mac_to_string(tlvf::generate_ieee1905_al_mac(iface_mac));
 
         // Update bridge parameters on AgentDB.
         db->bridge.mac = tlvf::mac_from_string(iface_mac);

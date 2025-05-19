@@ -162,7 +162,7 @@ int wbapi_utils::get_object_id(const std::string &object_path)
     return stoi(token);
 }
 
-std::string wbapi_utils::search_path_wifi() { return std::string("WiFi."); }
+std::string wbapi_utils::search_path_wifi() { return std::string("Device.WiFi."); }
 
 std::string wbapi_utils::search_path_radio() { return search_path_wifi() + "Radio."; }
 
@@ -245,6 +245,11 @@ std::string wbapi_utils::search_path_mac_filtering(const std::string &vap_ifname
     return search_path_ap_by_iface(vap_ifname) + "MACFiltering.";
 }
 
+std::string wbapi_utils::search_path_mac_filtering_entries(const std::string &vap_ifname)
+{
+    return search_path_mac_filtering(vap_ifname) + "Entry.";
+}
+
 std::string wbapi_utils::search_path_mac_filtering_entry_by_mac(const std::string &vap_ifname,
                                                                 const std::string &mac)
 {
@@ -311,6 +316,12 @@ std::string wbapi_utils::get_path_radio_reference(const AmbiorixVariant &obj)
 {
     std::string value;
     if (obj.read_child(value, "RadioReference")) {
+
+        // add "Device." prefix if not present before getting object.
+        std::string prefix("Device.");
+        if (value.rfind(prefix, 0) != 0) {
+            value.insert(0, prefix);
+        }
         value += ".";
     }
     return value;
@@ -352,6 +363,13 @@ std::string wbapi_utils::get_radio_iface(const AmbiorixVariant &obj)
 {
     std::string value;
     obj.read_child(value, "Name");
+    return value;
+}
+
+std::string wbapi_utils::get_radio_op_freq_band(const AmbiorixVariant &obj)
+{
+    std::string value;
+    obj.read_child(value, "OperatingFrequencyBand");
     return value;
 }
 

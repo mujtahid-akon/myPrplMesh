@@ -46,14 +46,6 @@ static std::shared_ptr<beerocks::nbapi::Amxrt> guarantee = nullptr;
 #include "ambiorix_impl.h"
 #include "on_action.h"
 
-#ifndef AMBIORIX_BACKEND_PATH
-#define AMBIORIX_BACKEND_PATH "/usr/bin/mods/amxb/mod-amxb-ubus.so"
-#endif // AMBIORIX_BACKEND_PATH
-
-#ifndef AMBIORIX_BUS_URI
-#define AMBIORIX_BUS_URI "ubus:"
-#endif // AMBIORIX_BUS_URI
-
 #ifndef CONTROLLER_DATAMODEL_PATH
 #define CONTROLLER_DATAMODEL_PATH "config/controller/odl/master_config.odl"
 #endif
@@ -261,7 +253,7 @@ static void fill_master_config(son::db::sDbMasterConfig &master_conf,
                 continue;
             }
             char radio_channel_pool[BPL_LOAD_STEER_ON_VAPS_LEN] = {0};
-            if (beerocks::bpl::cfg_get_dcs_channel_pool(index, radio_channel_pool) < 0) {
+            if (beerocks::bpl::cfg_get_dcs_channel_pool(*it, radio_channel_pool) < 0) {
                 master_conf.default_channel_pools[it->ifname] = std::string();
             } else {
                 master_conf.default_channel_pools[it->ifname] = std::string(radio_channel_pool);
@@ -749,8 +741,7 @@ int main(int argc, char *argv[])
         event_loop, on_action_handlers, events_list, funcs_list);
     LOG_IF(!amb_dm_obj, FATAL) << "Unable to create Ambiorix!";
 
-    LOG_IF(!amb_dm_obj->init(AMBIORIX_BACKEND_PATH, AMBIORIX_BUS_URI, controller_dm_path), FATAL)
-        << "Unable to init ambiorix object!";
+    LOG_IF(!amb_dm_obj->init(controller_dm_path), FATAL) << "Unable to init ambiorix object!";
 #else
     auto amb_dm_obj = std::make_shared<beerocks::nbapi::AmbiorixDummy>();
 #endif //ENABLE_NBAPI
@@ -762,22 +753,17 @@ int main(int argc, char *argv[])
     fill_master_config(master_conf, beerocks_master_conf);
 
     // Set Network.ID to the Data Model
-    if (!amb_dm_obj->set(DATAELEMENTS_ROOT_DM ".Network", "ID",
-                         tlvf::mac_to_string(tlvf::generate_ieee1905_al_mac(bridge_info.mac)))) {
-        LOG(ERROR) << "Failed to add Network.ID, mac: "
-                   << tlvf::mac_to_string(tlvf::generate_ieee1905_al_mac(bridge_info.mac));
+    if (!amb_dm_obj->set(DATAELEMENTS_ROOT_DM ".Network", "ID", bridge_info.mac)) {
+        LOG(ERROR) << "Failed to add Network.ID, mac: " << bridge_info.mac;
         return false;
     }
 
-    if (!amb_dm_obj->set(DATAELEMENTS_ROOT_DM ".Network", "ControllerID",
-                         tlvf::mac_to_string(tlvf::generate_ieee1905_al_mac(bridge_info.mac)))) {
-        LOG(ERROR) << "Failed to add Network.ControllerID, mac: "
-                   << tlvf::mac_to_string(tlvf::generate_ieee1905_al_mac(bridge_info.mac));
+    if (!amb_dm_obj->set(DATAELEMENTS_ROOT_DM ".Network", "ControllerID", bridge_info.mac)) {
+        LOG(ERROR) << "Failed to add Network.ControllerID, mac: " << bridge_info.mac;
         return false;
     }
 
-    son::db master_db(master_conf, logger, tlvf::generate_ieee1905_al_mac(bridge_info.mac),
-                      amb_dm_obj);
+    son::db master_db(master_conf, logger, tlvf::mac_from_string(bridge_info.mac), amb_dm_obj);
 
 #ifdef ENABLE_NBAPI
     prplmesh::controller::actions::g_database = &master_db;

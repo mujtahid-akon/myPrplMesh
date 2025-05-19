@@ -252,6 +252,7 @@ private:
 
     std::shared_ptr<bwl::sta_wlan_hal> get_wireless_hal(std::string iface = "");
 
+private:
     /**
      * Buffer to hold CMDU to be transmitted.
      */
@@ -354,6 +355,7 @@ private:
 
     std::chrono::steady_clock::time_point state_time_stamp_timeout;
     int state_attempts;
+    bool reassociation = false;
 
     bool hidden_ssid = false;
 

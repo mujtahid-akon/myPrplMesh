@@ -250,6 +250,11 @@ public:
     static std::string get_radio_iface(const AmbiorixVariant &obj);
 
     /**
+     * @brief get interface operating freq band of Radio object data
+     */
+    static std::string get_radio_op_freq_band(const AmbiorixVariant &obj);
+
+    /**
      * @brief get interface name of SSID object data
      */
     static std::string get_ssid_iface(const AmbiorixVariant &obj);
@@ -263,6 +268,11 @@ public:
      * @brief return search path of AccessPoint's MAC filters object
      */
     static std::string search_path_mac_filtering(const std::string &vap_ifname);
+
+    /**
+     * @brief return search path of AccessPoint's MAC filters Entries instances
+     */
+    static std::string search_path_mac_filtering_entries(const std::string &vap_ifname);
 
     /**
      * @brief return search path of AccessPoint's MAC filter entry object

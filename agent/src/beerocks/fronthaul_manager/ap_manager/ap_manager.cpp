@@ -1928,6 +1928,10 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
                 LOG(ERROR) << "All the vaps are not yet enabled";
                 return;
             }
+
+#ifndef USE_PRPLMESH_WHM
+            // this artificial CSA is useless when using pwhm
+
             // hostapd is enabled and started radio beaconing after autoconfiguration
             // then radio tx power is updated, so to keep agent DB updated send CSA notification
             // like it is handled in cACTION_APMANAGER_ENABLE_APS_REQUEST.
@@ -1940,6 +1944,7 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
             ap_wlan_hal->refresh_radio_info();
             fill_cs_params(csa_notification->cs_params());
             send_cmdu(cmdu_tx);
+#endif
 
             // The 'available_vaps' container is cleared and filled inside update_vap_credentials()
             auto response = message_com::create_vs_message<
@@ -3228,11 +3233,6 @@ void ApManager::handle_hostapd_attached()
     notification->params().iface_mac  = tlvf::mac_from_string(ap_wlan_hal->get_radio_mac());
     notification->params().ant_num    = ap_wlan_hal->get_radio_info().ant_num;
     notification->params().tx_power   = ap_wlan_hal->get_radio_info().tx_power;
-    notification->cs_params().channel = ap_wlan_hal->get_radio_info().channel;
-    notification->cs_params().channel_ext_above_primary =
-        ap_wlan_hal->get_radio_info().channel_ext_above;
-    notification->cs_params().vht_center_frequency = ap_wlan_hal->get_radio_info().vht_center_freq;
-    notification->cs_params().bandwidth            = ap_wlan_hal->get_radio_info().bandwidth;
 
     notification->params().frequency_band = ap_wlan_hal->get_radio_info().frequency_band;
     notification->params().max_bandwidth  = ap_wlan_hal->get_radio_info().max_bandwidth;
@@ -3253,9 +3253,15 @@ void ApManager::handle_hostapd_attached()
 
     notification->params().zwdfs = m_ap_support_zwdfs;
 
+    string_utils::copy_string(notification->params().chipset_vendor,
+                              ap_wlan_hal->get_radio_info().chipset_vendor.c_str(),
+                              beerocks::message::CHIPSET_VENDOR_LENGTH);
+
     notification->params().hybrid_mode_supported = ap_wlan_hal->hybrid_mode_supported();
 
     notification->radio_max_bss() = ap_wlan_hal->get_radio_info().radio_max_bss_supported;
+
+    fill_cs_params(notification->cs_params());
 
     auto channel_list_class = notification->create_channel_list();
     build_channels_list(cmdu_tx, ap_wlan_hal->get_radio_info().channels_list, channel_list_class);
@@ -3284,6 +3290,7 @@ void ApManager::handle_hostapd_attached()
     LOG(INFO) << " eht_supported = " << ap_wlan_hal->get_radio_info().eht_supported;
     LOG(INFO) << " zwdfs = " << m_ap_support_zwdfs;
     LOG(INFO) << " radio_max_bss = " << ap_wlan_hal->get_radio_info().radio_max_bss_supported;
+    LOG(INFO) << " chipset_vendor = " << ap_wlan_hal->get_radio_info().chipset_vendor;
 
     copy_vaps_info(ap_wlan_hal, notification->vap_list().vaps);
 
@@ -3330,6 +3337,10 @@ bool ApManager::handle_ap_enabled(int vap_id)
 
     if (!ap_wlan_hal->refresh_vaps_info(vap_id)) {
         LOG(ERROR) << "Failed updating vap info!!!";
+    }
+
+    if (!ap_wlan_hal->clear_blacklist()) {
+        LOG(ERROR) << "Failed to clear blacklist!!!";
     }
 
     auto vap_iter = ap_wlan_hal->get_radio_info().available_vaps.find(vap_id);

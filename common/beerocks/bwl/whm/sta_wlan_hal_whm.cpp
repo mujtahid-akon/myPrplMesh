@@ -40,13 +40,18 @@ sta_wlan_hal_whm::sta_wlan_hal_whm(const std::string &iface_name, hal_event_cb_t
 
     m_ambiorix_cl.resolve_path(wbapi_utils::search_path_ep_by_iface(iface_name), m_ep_path);
 
+    // get radio path from m_ep_path
     std::string radRef;
-    if (m_ambiorix_cl.get_param(radRef, m_ep_path, "RadioReference")) {
-        m_ambiorix_cl.resolve_path(radRef + ".", m_radio_path);
-    }
+    auto obj = m_ambiorix_cl.get_object(m_ep_path);
+    if (obj) {
+        radRef = wbapi_utils::get_path_radio_reference(*obj);
+        m_ambiorix_cl.resolve_path(radRef, m_radio_path);
 
-    if (!m_ambiorix_cl.get_param(m_radio_info.iface_name, m_radio_path, "Name")) {
-        LOG(ERROR) << "Failed to update m_radio_info interface name";
+        if (!m_ambiorix_cl.get_param(m_radio_info.iface_name, m_radio_path, "Name")) {
+            LOG(ERROR) << "Failed to update m_radio_info interface name";
+        }
+    } else {
+        LOG(ERROR) << "Failed to get object from " << m_ep_path;
     }
 
     if (!m_ep_path.empty() && hal_conf.is_repeater) {
@@ -540,6 +545,10 @@ bool sta_wlan_hal_whm::reassociate()
 {
     Endpoint endpoint;
     if (read_status(endpoint)) {
+        if (endpoint.bssid == beerocks::net::network_utils::ZERO_MAC_STRING) {
+            LOG(ERROR) << "Got zero BSSID after read status";
+            return false;
+        }
         update_status(endpoint);
         if (is_connected(endpoint.connection_status)) {
             LOG(TRACE) << "reassociate: - EP already connected";
@@ -561,6 +570,7 @@ bool sta_wlan_hal_whm::reassociate()
                 msg->multi_ap_primary_vlan_id = 0;
             }
             event_queue_push(Event::Connected, msg_buff);
+            return true;
         } else {
             LOG(TRACE) << "reassociate: - Toggle EP";
             AmbiorixVariant params(AMXC_VAR_ID_HTABLE);
@@ -571,8 +581,8 @@ bool sta_wlan_hal_whm::reassociate()
                 LOG(ERROR) << "Failed to toggle endpoint " << get_iface_name();
                 return false;
             }
+            return false;
         }
-        return true;
     }
     return false;
 }
@@ -718,14 +728,36 @@ bool sta_wlan_hal_whm::enable_profile(int profile_id)
 
     // Path example: WiFi.EndPoint.[IntfName == 'wlan0'].
     std::string profile_ref;
-    m_ambiorix_cl.resolve_path(profile_path, profile_ref);
+    if (!m_ambiorix_cl.resolve_path(profile_path, profile_ref)) {
+        LOG(ERROR) << "Failed to resolve profile path: " << profile_path;
+        return false;
+    } else {
+        LOG(DEBUG) << "Resolved profile path: " << profile_path
+                   << " -> profile_ref: " << profile_ref;
+    }
+
+    // We only need the DM path under “WiFi.”, strip leading “Device.” if present
+    constexpr const char *device_prefix = "Device.";
+    if (profile_ref.rfind(device_prefix, 0) == 0) {
+        profile_ref.erase(0, strlen(device_prefix));
+        LOG(DEBUG) << "Stripped Device prefix, new profile_ref: " << profile_ref;
+    }
+
     params.set_type(AMXC_VAR_ID_HTABLE);
-    params.add_child("ProfileReference", profile_ref);
+    ret = params.add_child("ProfileReference", profile_ref);
+    if (!ret) {
+        LOG(ERROR) << "Failed to add ProfileReference " << get_iface_name();
+    }
+
     ret = m_ambiorix_cl.update_object(m_ep_path, params);
     if (!ret) {
         LOG(ERROR) << "Failed to set profile preference " << get_iface_name();
         return false;
+    } else {
+        LOG(DEBUG) << "set ProfileReference: " << profile_ref << " as profile reference for "
+                   << get_iface_name();
     }
+
     return true;
 }
 
@@ -811,12 +843,12 @@ bool sta_wlan_hal_whm::process_ep_event(const std::string &interface, const std:
             if (!read_status(endpoint)) {
                 LOG(ERROR) << "Failed reading connection status for iface: " << get_iface_name();
                 return false;
-            }
-            update_status(endpoint);
-            if (m_active_bssid == beerocks::net::network_utils::ZERO_MAC_STRING) {
-                LOG(ERROR) << "Got zero BSSID after status update";
+            } else if (endpoint.bssid == beerocks::net::network_utils::ZERO_MAC_STRING) {
+                LOG(ERROR) << "Got zero BSSID after read status";
                 return false;
             }
+            update_status(endpoint);
+
             LOG(DEBUG) << get_iface_name() << " - Connected: bssid = " << m_active_bssid
                        << ", channel = " << m_active_channel;
             auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sACTION_BACKHAUL_CONNECTED_NOTIFICATION));

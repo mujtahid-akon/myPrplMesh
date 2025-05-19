@@ -175,6 +175,7 @@
                     /* Used in optimal_path_task; applies bonus to current BSS {phy_rate or rssi}; 
                     choice of parameter is based on prefer_signal_strength flag */
                     %persistent uint32 SteeringCurrentBonus {
+                        default 10;
                         on action validate call check_range [0, 10000];
                     }
 
@@ -184,7 +185,7 @@
                         default 200;
                     }
 
-                    /* Link Metric Request Interval in Seconds */
+                    /* Interval for periodic link metrics requests from all agents (set to 0 to disable). */
                     %persistent uint32 LinkMetricsRequestIntervalSec {
                         default 60;
                     }
@@ -192,7 +193,7 @@
                     /* Used by controller to start / stop channel selection task */
                     %persistent bool ChannelSelectionTaskEnabled {
                         userflags %upc;
-                        default false;
+                        default true;
                     }
                     
                     /* Used by controller to start / stop dynamic channel selection task */
@@ -224,25 +225,25 @@
 
                     /* Used by controller to start / stop statistics polling task */
                     %persistent bool StatisticsPollingTaskEnabled {
-                        default false;
+                        default true;
                     }
 
                     /* Interval (in seconds) for statistics polling task */
                     %persistent uint32 StatisticsPollingRateSec {
-                        default 1;
+                        default 10;
                         on action validate call check_range [1, 10000];
                     }
                     
                     /* Used by channel selection task; currently (03.2024) does nothing 
                     as the task never goes to the state where this flag is checked */
                     %persistent bool DFSReentryEnabled {
-                        default false;
+                        default true;
                     }
 
                     /* Used by channel selection task; currently (03.2024) does nothing 
                     as the task never goes to the state where this flag is checked */
                     %persistent bool DFSTaskEnabled {
-                        default false;
+                        default true;
                     }
 
                     /* Used by handle_cmdu_1905_autoconfiguration_WSC; don`t send credentials to extenders if enabled */
@@ -334,6 +335,20 @@
                         default false;
                     }
 
+                    /* DCS channel pool for radio 2.4 GHz that is used to determine what channels to scan */
+                    %persistent string DCSChannelPool_24GHz {
+                        default "1,6,11";
+                    }
+                    
+                    /* DCS channel pool for radio 5 GHz that is used to determine what channels to scan */
+                    %persistent string DCSChannelPool_5GHz {
+                        default "36-48,149-165";
+                    }
+                    
+                    /* DCS channel pool for radio 6 GHz that is used to determine what channels to scan */
+                    %persistent string DCSChannelPool_6GHz {
+                        default "0";
+                    }
 
                     /* QoS configuration */
                     %persistent object QoS {

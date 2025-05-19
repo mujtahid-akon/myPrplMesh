@@ -336,20 +336,12 @@ struct BPL_WLAN_PARAMS {
 struct BPL_WLAN_IFACE {
     int radio_num;
     char ifname[BPL_IFNAME_LEN];
+    eFreqType freq_type;
 };
 
 /****************************************************************************/
 /******************************** Functions *********************************/
 /****************************************************************************/
-
-/**
- * Returns the beerocks state.
- *
- * @return 1 if enabled.
- * @return 0 if disabled.
- * @return -1 Error.
- */
-int cfg_is_enabled();
 
 /**
  * Returns whether the current platform is configured as Master.
@@ -403,7 +395,9 @@ int cfg_get_load_steer_on_vaps(int num_of_interfaces,
 /**
  *
  */
-int cfg_get_dcs_channel_pool(int radio_num, char channel_pool[BPL_DCS_CHANNEL_POOL_LEN]);
+int cfg_get_dcs_channel_pool(const BPL_WLAN_IFACE &iface,
+                             char channel_pool[BPL_DCS_CHANNEL_POOL_LEN]);
+
 /**
  * Returns the maximum number of failures allowed on agent before stopping its execution.
  *
@@ -936,14 +930,6 @@ bool cfg_get_unsuccessful_assoc_max_reporting_rate(unsigned int &max_reporting_r
  * @return true on success, otherwise false
  */
 bool cfg_set_unsuccessful_assoc_max_reporting_rate(int &max_reporting_rate);
-
-/**
- * @brief Reads lan interfaces names from bridge configuration.
- *
- * @param [out] lan_iface_list lan interfaces name list
- * @return true on success, otherwise false
- */
-bool bpl_get_lan_interfaces(std::vector<std::string> &lan_iface_list);
 
 /**
  * @brief Writes wireless network configuration for the given interface.

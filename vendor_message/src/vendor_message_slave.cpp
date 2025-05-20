@@ -84,7 +84,10 @@ bool VendorMessageSlave::thread_init()
     // Create an instance of a broker client connected to the broker server that is running in the
     // transport process
     m_broker_client = m_broker_client_factory->create_instance();
-    LOG_IF(!m_broker_client, FATAL) << "Failed to create instance of broker client";
+    if (!m_broker_client) {
+        LOG(ERROR) << "Failed to create instance of broker client";
+        return false;
+    }
 
     beerocks::btl::BrokerClient::EventHandlers broker_client_handlers;
     // Install a CMDU-received event handler for CMDU messages received from the transport process.

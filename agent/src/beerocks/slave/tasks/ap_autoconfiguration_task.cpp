@@ -507,6 +507,9 @@ bool ApAutoConfigurationTask::send_ap_autoconfiguration_search_message(
     auto db = AgentDB::get();
 
     auto numberOfSupportedService = 2;
+    if (db->device_conf.local_controller) {
+        numberOfSupportedService += 2;
+    }
     if (db->device_conf.certification_mode) {
         // The R4 QCA WFA controller won't answer Autoconfig Searches that specify EM_AP_AGENT as a supported service. See PPM-3287.
         numberOfSupportedService = 1;
@@ -589,10 +592,15 @@ bool ApAutoConfigurationTask::send_ap_autoconfiguration_search_message(
             if (serviceID == 0) {
                 std::get<1>(supportedServiceTuple) =
                     wfa_map::tlvSupportedService::eSupportedService::MULTI_AP_AGENT;
-            }
-            if (serviceID == 1) {
+            } else if (serviceID == 1) {
                 std::get<1>(supportedServiceTuple) =
                     wfa_map::tlvSupportedService::eSupportedService::EM_AP_AGENT;
+            } else if (serviceID == 2) {
+                std::get<1>(supportedServiceTuple) =
+                    wfa_map::tlvSupportedService::eSupportedService::MULTI_AP_CONTROLLER;
+            } else if (serviceID == 3) {
+                std::get<1>(supportedServiceTuple) =
+                    wfa_map::tlvSupportedService::eSupportedService::EM_AP_CONTROLLER;
             }
         }
 

@@ -5,7 +5,7 @@
 
 from .prplmesh_base_test import PrplMeshBaseTest
 from boardfarm.exceptions import SkipTest
-import environment
+import environment as env
 
 
 class ApConfigBSSTeardownCli(PrplMeshBaseTest):
@@ -17,6 +17,7 @@ class ApConfigBSSTeardownCli(PrplMeshBaseTest):
 
     """
 
+    @env.process_faults_check
     def runTest(self):
         # Locate test participants
         try:
@@ -51,7 +52,7 @@ class ApConfigBSSTeardownCli(PrplMeshBaseTest):
 
         vap_bss_type = radio_0_vap_0.get_bss_type()
 
-        if vap_bss_type != environment.BssType.Fronthaul:
+        if vap_bss_type != env.BssType.Fronthaul:
             self.fail(
                 f"Radio 0 vap {ssid} bss type is {vap_bss_type.name} "
                 "when it should be Fronthaul")

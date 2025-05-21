@@ -4,11 +4,13 @@
 # See LICENSE file for more details.
 
 from .prplmesh_base_test import PrplMeshBaseTest
+import environment as env
 
 
 class InitialApConfig(PrplMeshBaseTest):
     """Check initial configuration on device."""
 
+    @env.process_faults_check
     def runTest(self):
         # Locate test participants
         agent = self.dev.DUT.agent_entity

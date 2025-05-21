@@ -9,8 +9,8 @@ import time
 from .prplmesh_base_test import PrplMeshBaseTest
 from boardfarm.exceptions import SkipTest
 from capi import tlv
-from environment import ChannelTlvs
 from opts import debug
+import environment as env
 
 
 class ChannelSelection(PrplMeshBaseTest):
@@ -30,6 +30,7 @@ class ChannelSelection(PrplMeshBaseTest):
     - Should fail if channels haven't changed to 6 and 36
     """
 
+    @env.process_faults_check
     def runTest(self):
 
         def check_single_channel_response(self, resp_code) -> None:
@@ -187,10 +188,10 @@ class ChannelSelection(PrplMeshBaseTest):
         self.checkpoint()
 
         # payload_wlan0 - request for change channel on 6
-        payload_wlan0 = ChannelTlvs.CHANNEL_6.value
+        payload_wlan0 = env.ChannelTlvs.CHANNEL_6.value
 
         # payload_wlan2  - request for change channel on 36
-        payload_wlan2 = ChannelTlvs.CHANNEL_36.value
+        payload_wlan2 = env.ChannelTlvs.CHANNEL_36.value
 
         """
         Step 1: Trigger channel selection to channel 6 and 36. Check that

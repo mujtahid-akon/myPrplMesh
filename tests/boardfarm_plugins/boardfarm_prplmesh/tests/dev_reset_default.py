@@ -8,6 +8,7 @@ import time
 
 from .prplmesh_base_test import PrplMeshBaseTest
 from boardfarm.exceptions import SkipTest
+import environment as env
 
 
 class DevResetDefault(PrplMeshBaseTest):
@@ -20,6 +21,7 @@ class DevResetDefault(PrplMeshBaseTest):
 
     """
 
+    @env.process_faults_check
     def runTest(self):
         # Locate test participants
         try:

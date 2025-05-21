@@ -8,10 +8,11 @@ from boardfarm.exceptions import SkipTest
 from opts import debug
 
 import time
+import environment as env
 
 
 class Topology(PrplMeshBaseTest):
-
+    @env.process_faults_check
     def runTest(self):
         # Locate test participants
         try:

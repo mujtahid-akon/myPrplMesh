@@ -11,6 +11,7 @@ from capi import tlv
 from opts import debug
 
 import time
+import environment as env
 
 
 class LinkMetrics(PrplMeshBaseTest):
@@ -26,6 +27,7 @@ class LinkMetrics(PrplMeshBaseTest):
         GW - Controller
     '''
 
+    @env.process_faults_check
     def runTest(self):
         # Locate test participants
         try:

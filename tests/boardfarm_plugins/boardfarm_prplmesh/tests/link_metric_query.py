@@ -4,6 +4,7 @@ from boardfarm.exceptions import SkipTest
 from .prplmesh_base_test import PrplMeshBaseTest
 from capi import tlv
 from opts import debug
+import environment as env
 
 
 class LinkMetricQuery(PrplMeshBaseTest):
@@ -35,6 +36,7 @@ class LinkMetricQuery(PrplMeshBaseTest):
     (for wireless tx links) are not checked in this test.
     """
 
+    @env.process_faults_check
     def runTest(self):
         # skip this test if one of the components does not exist in setup
         try:

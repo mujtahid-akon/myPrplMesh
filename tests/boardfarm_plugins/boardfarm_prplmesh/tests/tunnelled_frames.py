@@ -7,10 +7,11 @@ from .prplmesh_base_test import PrplMeshBaseTest
 from boardfarm.exceptions import SkipTest
 from opts import debug
 from time import sleep
+import environment as env
 
 
 class TunnelledFrames(PrplMeshBaseTest):
-
+    @env.process_faults_check
     def runTest(self):
         # Locate test participants
         try:

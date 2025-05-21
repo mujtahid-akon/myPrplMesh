@@ -10,13 +10,14 @@ from opts import debug
 from capi import tlv
 
 import time
+import environment as env
 
 
 class NbapiDevice(PrplMeshBaseTest):
     '''
     Test for NBAPI device object.
     '''
-
+    @env.process_faults_check
     def runTest(self):
         try:
             agent = self.dev.DUT.agent_entity

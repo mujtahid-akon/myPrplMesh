@@ -14,6 +14,7 @@ from datetime import datetime, timedelta
 import dateutil.parser
 import pytz
 import re
+import environment as env
 
 
 class NbapiAssociationEvent(PrplMeshBaseTest):
@@ -21,7 +22,7 @@ class NbapiAssociationEvent(PrplMeshBaseTest):
     Test for NBAPI Device.WiFi.DataElements.Network.Device.Radio.AssociationEvent object.
     This object describes an event generated when a STA associates to a BSS.
     '''
-
+    @env.process_faults_check
     def runTest(self):
         try:
             controller = self.dev.lan.controller_entity

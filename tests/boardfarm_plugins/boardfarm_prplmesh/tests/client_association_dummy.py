@@ -9,6 +9,7 @@ import time
 from .prplmesh_base_test import PrplMeshBaseTest
 from boardfarm.exceptions import SkipTest
 from opts import debug
+import environment as env
 
 
 class ClientAssociationDummy(PrplMeshBaseTest):
@@ -33,6 +34,7 @@ class ClientAssociationDummy(PrplMeshBaseTest):
         Connection map is checked for repeater 1 wlan0
     """
 
+    @env.process_faults_check
     def runTest(self):
         # Locate test participants
         try:

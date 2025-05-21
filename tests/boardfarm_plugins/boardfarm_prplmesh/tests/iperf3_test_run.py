@@ -1,9 +1,11 @@
 from .prplmesh_base_test import PrplMeshBaseTest
+import environment as env
 
 
 class Iperf3TestRun(PrplMeshBaseTest):
     """Check initial configuration on device."""
 
+    @env.process_faults_check
     def runTest(self):
 
         agent = self.dev.DUT.agent_entity

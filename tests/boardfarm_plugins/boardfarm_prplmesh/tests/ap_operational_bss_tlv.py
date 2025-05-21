@@ -10,6 +10,7 @@ from boardfarm.exceptions import SkipTest
 from opts import debug
 
 import time
+import environment as env
 
 
 class ApOperationalBss(PrplMeshBaseTest):
@@ -17,6 +18,7 @@ class ApOperationalBss(PrplMeshBaseTest):
         Additionally, check the currently used BSS type
     '''
 
+    @env.process_faults_check
     def runTest(self):
         try:
             controller = self.dev.lan.controller_entity

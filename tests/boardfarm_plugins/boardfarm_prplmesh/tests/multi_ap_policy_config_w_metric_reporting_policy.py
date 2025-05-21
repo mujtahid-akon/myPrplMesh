@@ -5,6 +5,7 @@
 
 from boardfarm.exceptions import SkipTest
 from common_flow import CommonFlows
+import environment as env
 
 
 class MultiApPolicyConfigWMetricReportingPolicy(CommonFlows):
@@ -15,6 +16,7 @@ class MultiApPolicyConfigWMetricReportingPolicy(CommonFlows):
         GW - Controller
     """
 
+    @env.process_faults_check
     def runTest(self):
         # Locate test participants
         try:

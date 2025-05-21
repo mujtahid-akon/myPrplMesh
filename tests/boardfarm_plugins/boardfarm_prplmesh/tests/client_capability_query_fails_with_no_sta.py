@@ -8,6 +8,7 @@
 from .prplmesh_base_test import PrplMeshBaseTest
 from boardfarm.exceptions import SkipTest
 from opts import debug
+import environment as env
 
 
 class ClientCapabilityQueryFailsWithNoSta(PrplMeshBaseTest):
@@ -22,6 +23,7 @@ class ClientCapabilityQueryFailsWithNoSta(PrplMeshBaseTest):
         The action should return an error message
     """
 
+    @env.process_faults_check
     def runTest(self):
         # Locate test participants
         try:

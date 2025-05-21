@@ -7,6 +7,7 @@ from .prplmesh_base_test import PrplMeshBaseTest
 from boardfarm.exceptions import SkipTest
 from capi import tlv
 from opts import debug
+import environment as env
 
 
 class ClientAssociation(PrplMeshBaseTest):
@@ -23,6 +24,7 @@ class ClientAssociation(PrplMeshBaseTest):
         GW controller if checked for a ACK message
     """
 
+    @env.process_faults_check
     def runTest(self):
         # Locate test participants
         try:

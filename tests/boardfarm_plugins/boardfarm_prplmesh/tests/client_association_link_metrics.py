@@ -10,6 +10,7 @@ import time
 from .prplmesh_base_test import PrplMeshBaseTest
 from capi import tlv
 from opts import debug
+import environment as env
 
 
 class ClientAssociationLinkMetrics(PrplMeshBaseTest):
@@ -17,6 +18,7 @@ class ClientAssociationLinkMetrics(PrplMeshBaseTest):
     an Associated STA Link Metrics Query message with an Associated STA Link Metrics
     Response message containing an Associated STA Link Metrics TLV for the associated STA.'''
 
+    @env.process_faults_check
     def runTest(self):
         # Locate test participants
         agent = self.dev.DUT.agent_entity

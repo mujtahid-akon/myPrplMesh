@@ -6,11 +6,12 @@
 from .prplmesh_base_test import PrplMeshBaseTest
 from boardfarm.exceptions import SkipTest
 from opts import debug
+import environment as env
 
 
 class RemoteStation(PrplMeshBaseTest):
     """Check initial configuration on device."""
-
+    @env.process_faults_check
     def runTest(self):
         try:
             agent = self.dev.DUT.agent_entity

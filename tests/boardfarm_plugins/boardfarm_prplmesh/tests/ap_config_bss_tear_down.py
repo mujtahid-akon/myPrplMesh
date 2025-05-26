@@ -6,6 +6,7 @@
 from .prplmesh_base_test import PrplMeshBaseTest
 from boardfarm.exceptions import SkipTest
 from capi import tlv
+import environment as env
 
 
 class ApConfigBSSTeardown(PrplMeshBaseTest):
@@ -17,6 +18,7 @@ class ApConfigBSSTeardown(PrplMeshBaseTest):
 
     """
 
+    @env.process_faults_check
     def runTest(self):
         # Locate test participants
         try:

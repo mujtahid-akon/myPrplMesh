@@ -14,6 +14,7 @@ from datetime import datetime, timedelta
 import dateutil.parser
 import pytz
 import re
+import environment as env
 
 
 class NbapiSta(PrplMeshBaseTest):
@@ -21,7 +22,7 @@ class NbapiSta(PrplMeshBaseTest):
     This test checks various parameters of NBAPI sta object.
     Path to this object: Device.WiFi.DataElements.Network.Device.Radio.BSS.STA
     '''
-
+    @env.process_faults_check
     def runTest(self):
         try:
             agent = self.dev.DUT.agent_entity

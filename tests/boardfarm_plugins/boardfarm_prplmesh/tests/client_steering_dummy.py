@@ -37,6 +37,7 @@ class ClientSteeringDummy(PrplMeshBaseTest):
         Value of BTMSuccesses should be incremented by one
     """
 
+    @env.process_faults_check
     def runTest(self):
         # Locate test participants
         try:

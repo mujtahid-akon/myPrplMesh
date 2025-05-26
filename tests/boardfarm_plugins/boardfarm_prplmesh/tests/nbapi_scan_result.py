@@ -10,7 +10,7 @@ from capi import tlv
 import sniffer
 
 import time
-
+import environment as env
 # TO DO: Add this test to testsuites after PPM-491 merged.
 # Add only supported channels to Channel Scan Request TLV
 
@@ -102,6 +102,7 @@ class NbapiScanResult(PrplMeshBaseTest):
         pos = ts_len + 12
         self.check_neighbors(neighbor_paths, neighbors_num, pos)
 
+    @env.process_faults_check
     def runTest(self):
         try:
             agent = self.dev.DUT.agent_entity

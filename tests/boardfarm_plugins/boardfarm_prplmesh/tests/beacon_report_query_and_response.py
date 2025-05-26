@@ -11,6 +11,7 @@ from capi import tlv
 from opts import debug
 
 import time
+import environment as env
 
 
 class BeaconReportQueryAndResponse(PrplMeshBaseTest):
@@ -19,6 +20,7 @@ class BeaconReportQueryAndResponse(PrplMeshBaseTest):
     receiving a response from the STA, and sending the contents of that response
     in a Beacon Metrics Response message to the Controller '''
 
+    @env.process_faults_check
     def runTest(self):
         # Locate test participants
         try:

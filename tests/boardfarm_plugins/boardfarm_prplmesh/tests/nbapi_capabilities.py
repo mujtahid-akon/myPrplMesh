@@ -10,6 +10,7 @@ from typing import List
 import sniffer
 
 import time
+import environment as env
 
 
 class NbapiCapabilities(PrplMeshBaseTest):
@@ -50,6 +51,7 @@ class NbapiCapabilities(PrplMeshBaseTest):
                 assert len(non_op_channels) == 1, f"Non-operable channel {channel} was not found."
         supported_op_classes.remove(op_class)
 
+    @env.process_faults_check
     def runTest(self):
         try:
             agent = self.dev.DUT.agent_entity

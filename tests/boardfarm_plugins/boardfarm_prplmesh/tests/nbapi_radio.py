@@ -10,6 +10,7 @@ from capi import tlv
 from opts import debug
 
 import time
+import environment as env
 
 
 class NbapiRadio(PrplMeshBaseTest):
@@ -23,6 +24,7 @@ class NbapiRadio(PrplMeshBaseTest):
         actual = controller.nbapi_get_parameter(path, name)
         assert actual == int(expected), f"Wrong value for {name}: {actual} expected {expected}"
 
+    @env.process_faults_check
     def runTest(self):
         try:
             agent = self.dev.DUT.agent_entity

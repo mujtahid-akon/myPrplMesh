@@ -14,6 +14,7 @@ from datetime import datetime, timedelta
 import dateutil.parser
 import pytz
 import re
+import environment as env
 
 
 class NbapiBSS(PrplMeshBaseTest):
@@ -24,6 +25,7 @@ class NbapiBSS(PrplMeshBaseTest):
     def assertEqual(self, name: str, actual: int, expected: str):
         assert actual == int(expected), f"Wrong value for {name}: {actual} expected {expected}"
 
+    @env.process_faults_check
     def runTest(self):
         try:
             agent = self.dev.DUT.agent_entity

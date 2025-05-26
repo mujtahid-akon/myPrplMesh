@@ -8,6 +8,7 @@ import time
 
 from .prplmesh_base_test import PrplMeshBaseTest
 from boardfarm.exceptions import SkipTest
+import environment as env
 
 
 class CapiWirelessOnboarding(PrplMeshBaseTest):
@@ -18,6 +19,7 @@ class CapiWirelessOnboarding(PrplMeshBaseTest):
         Checks if prplMesh uses the AP1 radio 0 MAC as backhaul MAC after the onboarding process
     """
 
+    @env.process_faults_check
     def runTest(self):
         # Locate test participants
         try:

@@ -7,10 +7,12 @@ from .prplmesh_base_test import PrplMeshBaseTest
 from boardfarm.exceptions import SkipTest
 from opts import debug
 import time
+import environment as env
 
 
 class ApCapabilityQuery(PrplMeshBaseTest):
 
+    @env.process_faults_check
     def runTest(self):
         # Locate test participants
         try:

@@ -20,6 +20,7 @@ from typing import Dict, Any, List
 
 
 # Third-party imports:
+from boardfarm.exceptions import SkipTest
 import pexpect
 import yaml
 
@@ -414,6 +415,44 @@ def nbapi_ubus_command_not_fail(entity: ALEntity, path: str, command: str,
         return json.loads(result)
     else:
         return result
+
+
+# Helper function used by the implementations based on ba-cli
+def ba_cli_command(entity: ALEntity, path: str) -> List[str]:
+    command = ["ba-cli", path]
+    result = ""
+    try:
+        debug(f"Executing ba-cli {path}")
+        result = entity.command(*command)
+    except subprocess.CalledProcessError as error:
+        debug(error)
+    return result.split('\n') if result else []
+
+
+# Decorator that adds a prologue and epilogue to a function for checking ProcessFaults;
+# it should only be used with PrplMeshBaseTest class or its subclasses.
+def process_faults_check(func):
+    def wrapper(self, *args, **kwargs):
+        try:
+            DUT = self.dev.DUT.agent_entity
+        except AttributeError as ae:
+            raise SkipTest(ae)
+
+        # We do have support for ProcessFaults only for ALEntityPrplWrt
+        # in other cases we should skip this check
+        if not isinstance(DUT, ALEntityPrplWrt):
+            debug("Unable to perform check because ProcessFaults is not supported")
+            return func(self, *args, **kwargs)
+
+        ba_cli_command(DUT, "ProcessFaults.RemoveAllProcessFaults()")
+        result = func(self, *args, **kwargs)
+        pfaults = ba_cli_command(DUT, "ProcessFaults.ProcessFault.*.?")
+        debug('\n'.join(pfaults))
+
+        assert pfaults[1] == "No data found", "ProcessFaults.ProcessFault. isn't empty"
+
+        return result
+    return wrapper
 
 
 # Concrete implementation with docker

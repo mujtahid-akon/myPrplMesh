@@ -7,6 +7,7 @@ from boardfarm.exceptions import SkipTest
 from capi import tlv
 from common_flow import CommonFlows
 from time import sleep
+import environment as env
 
 
 class V2Certification_4_7_10(CommonFlows):
@@ -18,7 +19,7 @@ class V2Certification_4_7_10(CommonFlows):
         AP1 - Agent1 [DUT]
         GW - Controller
     """
-
+    @env.process_faults_check
     def runTest(self):
         # Locate test participants
         try:

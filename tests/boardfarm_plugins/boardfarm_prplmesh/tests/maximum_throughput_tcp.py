@@ -9,11 +9,13 @@ from datetime import datetime
 from opts import debug
 
 import threading
+import environment as env
 
 
 class MaximumThroughputTcp(PrplMeshBaseTest):
     """Check initial configuration on device."""
 
+    @env.process_faults_check
     def runTest(self):
         try:
             agent = self.dev.DUT.agent_entity

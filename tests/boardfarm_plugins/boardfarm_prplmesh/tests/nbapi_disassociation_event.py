@@ -14,6 +14,7 @@ from datetime import datetime, timedelta
 import dateutil.parser
 import pytz
 import re
+import environment as env
 
 
 class NbapiDisassociationEvent(PrplMeshBaseTest):
@@ -22,7 +23,7 @@ class NbapiDisassociationEvent(PrplMeshBaseTest):
     This object describes an event generated when a STA disassociates from a BSS.
     Also, test Network object.
     '''
-
+    @env.process_faults_check
     def runTest(self):
         try:
             controller = self.dev.lan.controller_entity

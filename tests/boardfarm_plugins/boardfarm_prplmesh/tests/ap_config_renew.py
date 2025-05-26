@@ -8,12 +8,13 @@ import time
 
 from .prplmesh_base_test import PrplMeshBaseTest
 from capi import tlv
-import environment
+import environment as env
 
 
 class ApConfigRenew(PrplMeshBaseTest):
     """Check initial configuration on device."""
 
+    @env.process_faults_check
     def runTest(self):
         # Locate test participants
         agent = self.dev.DUT.agent_entity
@@ -52,7 +53,7 @@ class ApConfigRenew(PrplMeshBaseTest):
 
         vap_bss_type = radio_0_vap_0.get_bss_type()
 
-        if vap_bss_type != environment.BssType.Fronthaul:
+        if vap_bss_type != env.BssType.Fronthaul:
             self.fail(
                 f"Radio 0 vap {ssid_1} bss type is {vap_bss_type.name}"
                 " when it should be Fronthaul")
@@ -64,7 +65,7 @@ class ApConfigRenew(PrplMeshBaseTest):
 
         vap_bss_type = radio_0_vap_1.get_bss_type()
 
-        if vap_bss_type != environment.BssType.Backhaul:
+        if vap_bss_type != env.BssType.Backhaul:
             self.fail(
                 f"Radio 1 vap {ssid_2} bss type is {vap_bss_type.name}"
                 " when it should be Backhaul")

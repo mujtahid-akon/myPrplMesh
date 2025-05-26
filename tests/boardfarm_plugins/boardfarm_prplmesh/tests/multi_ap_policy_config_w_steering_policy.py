@@ -9,6 +9,7 @@ from capi import tlv
 from opts import debug
 
 import time
+import environment as env
 
 
 class MultiApPolicyConfigWSteeringPolicy(PrplMeshBaseTest):
@@ -18,7 +19,7 @@ class MultiApPolicyConfigWSteeringPolicy(PrplMeshBaseTest):
 
         GW - Controller
     """
-
+    @env.process_faults_check
     def runTest(self):
         # Locate test participants
         try:

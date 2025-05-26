@@ -8,13 +8,14 @@ from boardfarm.exceptions import SkipTest
 from opts import debug
 
 import time
+import environment as env
 
 
 class NbapiAccessPoint(PrplMeshBaseTest):
     '''
     This test supposed to test all possible parameters of AccessPoint object..
     '''
-
+    @env.process_faults_check
     def check_bss_is_disabled(self, ssid: str, radio, controller):
         for bss in radio.vaps.values():
             enabled = controller.nbapi_get_parameter(bss.path, "Enabled")

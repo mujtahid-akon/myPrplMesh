@@ -7,6 +7,7 @@ import time
 from boardfarm.exceptions import SkipTest
 from opts import debug
 from .prplmesh_base_test import PrplMeshBaseTest
+import environment as env
 
 
 class TopologyDiscoveryBurst(PrplMeshBaseTest):
@@ -20,7 +21,7 @@ class TopologyDiscoveryBurst(PrplMeshBaseTest):
     source macs is done quickly by the agent. This test imitates step 20 of the R3 4.7.10_ETH test.
 
     """
-
+    @env.process_faults_check
     def runTest(self):
         # Locate test participants
         try:

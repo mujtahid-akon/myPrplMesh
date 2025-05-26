@@ -8,6 +8,7 @@ from .prplmesh_base_test import PrplMeshBaseTest
 from boardfarm.exceptions import SkipTest
 from opts import debug
 import time
+import environment as env
 
 
 class NbapiRadioBackhaulSta(PrplMeshBaseTest):
@@ -16,7 +17,7 @@ class NbapiRadioBackhaulSta(PrplMeshBaseTest):
        Object stores MACAddress of the Backhaul Station (bSTA) on given radio.
        It also checks Backhaul STA Radio Capabilities TLV.
     '''
-
+    @env.process_faults_check
     def runTest(self):
         try:
             agent = self.dev.DUT.agent_entity

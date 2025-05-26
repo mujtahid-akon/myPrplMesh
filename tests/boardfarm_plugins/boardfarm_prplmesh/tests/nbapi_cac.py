@@ -9,6 +9,7 @@ import time
 from .prplmesh_base_test import PrplMeshBaseTest
 from boardfarm.exceptions import SkipTest
 from opts import debug
+import environment as env
 
 
 class NbapiCAC(PrplMeshBaseTest):
@@ -23,7 +24,7 @@ class NbapiCAC(PrplMeshBaseTest):
             CACNonOccupancyChannel.{i}.
             CACActiveChannel.{i}.
     """
-
+    @env.process_faults_check
     def runTest(self):
 
         def check_cac_completion_report(self, agent, channel_pref_report) -> None:

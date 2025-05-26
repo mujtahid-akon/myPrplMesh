@@ -20,6 +20,7 @@ class ClientSteeringMandate(PrplMeshBaseTest):
         GW - Controller
     """
 
+    @env.process_faults_check
     def runTest(self):
         # Locate test participants
         try:

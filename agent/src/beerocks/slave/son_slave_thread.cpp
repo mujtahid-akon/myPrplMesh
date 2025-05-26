@@ -74,6 +74,7 @@
 #include <easylogging++.h>
 
 #include <cstring>
+#include <sstream>
 
 #include <sys/socket.h>
 
@@ -227,7 +228,10 @@ bool slave_thread::thread_init()
     // Create an instance of a broker client connected to the broker server that is running in the
     // transport process
     m_broker_client = m_broker_client_factory->create_instance();
-    LOG_IF(!m_broker_client, FATAL) << "Failed to create instance of broker client";
+    if (!m_broker_client) {
+        LOG(ERROR) << "Failed to create instance of broker client";
+        return false;
+    }
 
     beerocks::btl::BrokerClient::EventHandlers broker_client_handlers;
     // Install a CMDU-received event handler for CMDU messages received from the transport process.
@@ -5355,20 +5359,45 @@ void slave_thread::fill_channel_list_to_agent_db(
     for (uint8_t ch_idx = 0; ch_idx < channels_list_length; ch_idx++) {
         auto &channel_info = std::get<1>(channel_list_class->channels_list(ch_idx));
         auto channel       = channel_info.beacon_channel();
+
         radio->channels_list[channel].tx_power_dbm = channel_info.tx_power_dbm();
         radio->channels_list[channel].dfs_state    = channel_info.dfs_state();
-        auto supported_bw_size                     = channel_info.supported_bandwidths_length();
-        radio->channels_list[channel].supported_bw_list.resize(supported_bw_size);
-        std::copy_n(&std::get<1>(channel_info.supported_bandwidths(0)), supported_bw_size,
-                    radio->channels_list[channel].supported_bw_list.begin());
 
-        for (const auto &supported_bw : radio->channels_list[channel].supported_bw_list) {
-            LOG(DEBUG) << "channel=" << int(channel) << ", bw="
-                       << beerocks::utils::convert_bandwidth_to_string(
-                              beerocks::eWiFiBandwidth(supported_bw.bandwidth))
-                       << ", rank=" << supported_bw.rank
-                       << ", multiap_preference=" << int(supported_bw.multiap_preference);
+        auto supported_bw_size = channel_info.supported_bandwidths_length();
+        auto &bw_vec           = radio->channels_list[channel].supported_bw_list;
+        bw_vec.resize(supported_bw_size);
+        std::copy_n(&std::get<1>(channel_info.supported_bandwidths(0)), supported_bw_size,
+                    bw_vec.begin());
+    }
+
+    // Summarize all channels in one concise DEBUG log
+    {
+        std::ostringstream oss;
+        oss << "[";
+        bool first_chan = true;
+        for (const auto &entry : radio->channels_list) {
+            int ch              = entry.first;
+            const auto &bw_list = entry.second.supported_bw_list;
+            if (bw_list.empty())
+                continue;
+
+            if (!first_chan)
+                oss << ",";
+            first_chan = false;
+
+            oss << ch << "(";
+            for (size_t i = 0; i < bw_list.size(); ++i) {
+                if (i)
+                    oss << ",";
+                oss << beerocks::utils::convert_bandwidth_to_string(
+                    beerocks::eWiFiBandwidth(bw_list[i].bandwidth));
+            }
+            oss << ")";
         }
+        oss << "]";
+
+        //[36(20MHz,40MHz,80MHz,160MHz),40(20MHz,40MHz,80MHz,160MHz),…]
+        LOG(DEBUG) << "fronthaul_iface=" << fronthaul_iface << " channels_summary=" << oss.str();
     }
 }
 

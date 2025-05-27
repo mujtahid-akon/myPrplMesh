@@ -677,7 +677,8 @@ bool Controller::handle_cmdu_1905_autoconfiguration_search(const sMacAddr &src_m
     auto &auto_config_freq_band = tlvAutoconfigFreqBand->value();
     LOG(DEBUG) << "band=" << int(auto_config_freq_band);
 
-    bool supported_agent_service = false;
+    bool supported_controller_service = false;
+    bool supported_agent_service      = false;
     for (int i = 0; i < tlvSupportedServiceIn->supported_service_list_length(); i++) {
         auto supportedServiceTuple = tlvSupportedServiceIn->supported_service_list(i);
         if (!std::get<0>(supportedServiceTuple)) {
@@ -687,10 +688,20 @@ bool Controller::handle_cmdu_1905_autoconfiguration_search(const sMacAddr &src_m
         auto supportedService = std::get<1>(supportedServiceTuple);
         if (supportedService == wfa_map::tlvSupportedService::eSupportedService::MULTI_AP_AGENT) {
             supported_agent_service = true;
+        } else if (supportedService ==
+                       wfa_map::tlvSupportedService::eSupportedService::MULTI_AP_CONTROLLER ||
+                   supportedService ==
+                       wfa_map::tlvSupportedService::eSupportedService::EM_AP_CONTROLLER) {
+            supported_controller_service = true;
         } else {
             LOG(INFO) << "Not supported service, received value:" << std::hex
                       << int(supportedService);
         }
+    }
+    if (supported_controller_service && al_mac != database.get_local_bridge_mac()) {
+        LOG(ERROR) << "[Multiple Controllers Detected] Received "
+                      "AP_AUTOCONFIGURATION_SEARCH_MESSAGE from another Controller: "
+                   << al_mac;
     }
     if (!supported_agent_service) {
         LOG(WARNING) << "MULTI_AP_AGENT is not supported as service";

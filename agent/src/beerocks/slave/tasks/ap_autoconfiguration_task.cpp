@@ -995,14 +995,16 @@ void ApAutoConfigurationTask::handle_ap_autoconfiguration_response(
 {
     auto db = AgentDB::get();
     if (db->device_conf.local_controller && src_mac != db->bridge.mac) {
-        LOG(INFO) << "This agent has a local controller with mac=" << db->bridge.mac
-                  << " but response came from src_mac=" << src_mac << ", ignoring";
+        LOG(ERROR) << "[Multiple Controllers Detected] This agent has a local controller with mac="
+                   << db->bridge.mac << " but response came from src_mac=" << src_mac
+                   << ", ignoring";
         return;
     }
     if (db->controller_info.bridge_mac != network_utils::ZERO_MAC &&
         src_mac != db->controller_info.bridge_mac) {
-        LOG(INFO) << "current controller_bridge_mac=" << db->controller_info.bridge_mac
-                  << " but response came from src_mac=" << src_mac << ", ignoring";
+        LOG(ERROR) << "[Multiple Controllers Detected] current controller_bridge_mac="
+                   << db->controller_info.bridge_mac
+                   << " but response came from src_mac=" << src_mac << ", ignoring";
         return;
     }
 
@@ -1336,7 +1338,9 @@ void ApAutoConfigurationTask::handle_ap_autoconfiguration_wsc_renew(
     LOG(DEBUG) << "AP-Autoconfiguration Renew Message from Controller " << src_mac;
     auto db = AgentDB::get();
     if (src_mac != db->controller_info.bridge_mac) {
-        LOG(ERROR) << "Ignoring AP-Autoconfiguration Renew Message from an unknown Controller";
+        LOG(ERROR) << "[Multiple Controllers Detected] Ignoring AP-Autoconfiguration Renew Message "
+                      "from an unknown Controller: "
+                   << src_mac;
         return;
     }
 

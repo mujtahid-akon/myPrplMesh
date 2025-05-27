@@ -25,6 +25,7 @@
 #include <tlvf/wfa_map/tlvApOperationalBSS.h>
 #include <tlvf/wfa_map/tlvClientAssociationEvent.h>
 #include <tlvf/wfa_map/tlvProfile2ReasonCode.h>
+#include <tlvf/wfa_map/tlvSupportedService.h>
 
 #include <beerocks/tlvf/beerocks_message_1905_vs.h>
 
@@ -75,7 +76,30 @@ bool topology_task::handle_topology_response(const sMacAddr &src_mac,
         return false;
     }
 
-    const auto &al_mac = tlvDeviceInformation->mac();
+    const auto &al_mac                = tlvDeviceInformation->mac();
+    bool supported_controller_service = false;
+    auto tlvSupportedService          = cmdu_rx.getClass<wfa_map::tlvSupportedService>();
+    if (tlvSupportedService) {
+        auto num_service = tlvSupportedService->supported_service_list_length();
+        for (decltype(num_service) i = 0; i < num_service; i++) {
+            bool ret;
+            wfa_map::tlvSupportedService::eSupportedService val;
+            std::tie(ret, val) =
+                tlvSupportedService->supported_service_list(static_cast<size_t>(i));
+            if (ret == false)
+                break;
+            if (val == wfa_map::tlvSupportedService::eSupportedService::MULTI_AP_CONTROLLER ||
+                val == wfa_map::tlvSupportedService::eSupportedService::EM_AP_CONTROLLER) {
+                supported_controller_service = true;
+                break;
+            }
+        }
+    }
+    if (supported_controller_service && al_mac != database.get_local_bridge_mac()) {
+        LOG(ERROR) << "[Multiple Controllers Detected] Received TOPOLOGY_RESPONSE_MESSAGE from "
+                      "another Controller: "
+                   << al_mac;
+    }
 
     auto agent = database.m_agents.get(al_mac);
     if (!agent) {

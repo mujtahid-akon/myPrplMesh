@@ -96,7 +96,8 @@ void CapabilityReportingTask::handle_client_capability_query(ieee1905_1::CmduMes
 
     auto db = AgentDB::get();
     if (src_mac != db->controller_info.bridge_mac) {
-        LOG(ERROR) << "Ignoring CLIENT_CAPABILITY_QUERY_MESSAGE from an unknown Controller: "
+        LOG(ERROR) << "[Multiple Controllers Detected] Ignoring CLIENT_CAPABILITY_QUERY_MESSAGE "
+                      "from an unknown Controller: "
                    << src_mac;
         return;
     }
@@ -466,7 +467,8 @@ void CapabilityReportingTask::handle_ap_capability_query(ieee1905_1::CmduMessage
 
     auto db = AgentDB::get();
     if (src_mac != db->controller_info.bridge_mac) {
-        LOG(ERROR) << "Ignoring AP_CAPABILITY_QUERY_MESSAGE from an unknown Controller: "
+        LOG(ERROR) << "[Multiple Controllers Detected] Ignoring AP_CAPABILITY_QUERY_MESSAGE from "
+                      "an unknown Controller: "
                    << src_mac;
         return;
     }
@@ -646,7 +648,8 @@ void CapabilityReportingTask::handle_backhaul_sta_capability_query(
 
     auto db = AgentDB::get();
     if (src_mac != db->controller_info.bridge_mac) {
-        LOG(ERROR) << "Ignoring BACKHAUL_STA_CAPABILITY_QUERY_MESSAGE from an unknown Controller: "
+        LOG(ERROR) << "[Multiple Controllers Detected] Ignoring "
+                      "BACKHAUL_STA_CAPABILITY_QUERY_MESSAGE from an unknown Controller: "
                    << src_mac;
         return;
     }

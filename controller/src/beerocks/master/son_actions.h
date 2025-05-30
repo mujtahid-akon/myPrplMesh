@@ -75,6 +75,9 @@ public:
         const int &duration_sec,
         wfa_map::tlvClientAssociationControlRequest::eAssociationControl association_flag);
 
+    static bool handle_agent_ap_mld_configuration_tlv(db &database, const sMacAddr &al_mac,
+                                                      ieee1905_1::CmduMessageRx &cmdu_rx);
+
 private:
     static bool
     check_hostap_activability(db &database,

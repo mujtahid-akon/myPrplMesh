@@ -24,6 +24,7 @@
 #include <tlvf/ieee_1905_1/tlvAlMacAddress.h>
 #include <tlvf/ieee_1905_1/tlvSupportedFreqBand.h>
 #include <tlvf/ieee_1905_1/tlvSupportedRole.h>
+#include <tlvf/wfa_map/tlvAgentApMldConfiguration.h>
 #include <tlvf/wfa_map/tlvClientAssociationControlRequest.h>
 #include <tlvf/wfa_map/tlvProfile2MultiApProfile.h>
 
@@ -567,4 +568,193 @@ bool son_actions::send_client_association_control(
                << tlvf::mac_to_string(agent_mac) << " for bssid "
                << association_control_request_tlv->bssid_to_block_client() << duration_str;
     return son_actions::send_cmdu_to_agent(agent_mac, cmdu_tx, database);
+}
+
+bool son_actions::handle_agent_ap_mld_configuration_tlv(db &database, const sMacAddr &al_mac,
+                                                        ieee1905_1::CmduMessageRx &cmdu_rx)
+{
+
+    // Handle AgentApMldConfiguration TLV
+    auto agent = database.m_agents.get(al_mac);
+    if (!agent) {
+        LOG(ERROR) << "Agent with mac is not found in database mac=" << al_mac;
+        return false;
+    }
+
+    auto agent_ap_mld_configuration = cmdu_rx.getClass<wfa_map::tlvAgentApMldConfiguration>();
+    if (!agent_ap_mld_configuration) {
+        LOG(DEBUG) << "No tlvAgentApMldConfiguration TLV received";
+    } else {
+        // Update APMLD Database and Data Model based on received AgentApMldConfiguration TLV
+        for (uint8_t ap_mld_it = 0; ap_mld_it < agent_ap_mld_configuration->num_ap_mld();
+             ++ap_mld_it) {
+
+            // Get AgentApMld configuration from TLV
+            std::tuple<bool, wfa_map::cApMld &> ap_mld_tuple(
+                agent_ap_mld_configuration->ap_mld(ap_mld_it));
+            if (!std::get<0>(ap_mld_tuple)) {
+                LOG(ERROR) << "Couldn't get AP MLD from tlvAgentApMldConfiguration";
+                return false;
+            }
+            wfa_map::cApMld &ap_mld = std::get<1>(ap_mld_tuple);
+
+            // SSID
+            if (ap_mld.ssid_str().empty()) {
+                // Dropping this MLD from updation, as SSID is our key for ApMld
+                // Hence, SSID shall not be empty
+                LOG(ERROR) << "SSID is empty in tlvAgentApMldConfiguration";
+                continue;
+            }
+
+            // Get or Allocate ApMld from DB
+            auto ssid            = ap_mld.ssid_str();
+            Agent::sAPMLD *apmld = database.get_or_allocate_ap_mld(al_mac, ssid);
+
+            // SSID
+            // Update SSID for both existing and new ApMld
+            apmld->mld_info.mld_ssid = ssid;
+
+            // MAC
+            if (ap_mld.ap_mld_mac_addr_valid().is_valid) {
+                apmld->mld_info.mld_mac = ap_mld.ap_mld_mac_addr();
+            } else {
+                apmld->mld_info.mld_mac = beerocks::net::network_utils::ZERO_MAC;
+                LOG(WARNING) << "AP MLD MAC is not valid in tlvAgentApMldConfiguration";
+            }
+
+            // MLD MODE FLAGS - str, nstr, emlsr, emlmr
+            if (ap_mld.modes().str) {
+                apmld->mld_info.mld_mode =
+                    Agent::sMLDInfo::mode(apmld->mld_info.mld_mode | Agent::sMLDInfo::mode::STR);
+            }
+
+            if (ap_mld.modes().nstr) {
+                apmld->mld_info.mld_mode =
+                    Agent::sMLDInfo::mode(apmld->mld_info.mld_mode | Agent::sMLDInfo::mode::NSTR);
+            }
+
+            if (ap_mld.modes().emlsr) {
+                apmld->mld_info.mld_mode =
+                    Agent::sMLDInfo::mode(apmld->mld_info.mld_mode | Agent::sMLDInfo::mode::EMLSR);
+            }
+
+            if (ap_mld.modes().emlmr) {
+                apmld->mld_info.mld_mode =
+                    Agent::sMLDInfo::mode(apmld->mld_info.mld_mode | Agent::sMLDInfo::mode::EMLMR);
+            }
+
+            for (uint8_t affiliated_ap_it = 0; affiliated_ap_it < ap_mld.num_affiliated_ap();
+                 ++affiliated_ap_it) {
+                std::tuple<bool, wfa_map::cAffiliatedAp &> affiliated_ap_tuple(
+                    ap_mld.affiliated_ap(affiliated_ap_it));
+                if (!std::get<0>(affiliated_ap_tuple)) {
+                    LOG(ERROR) << "Couldn't get Affiliated AP from APMLD SSID : "
+                               << apmld->mld_info.mld_ssid;
+                    return false;
+                }
+
+                // Get or Allocate Affiliated AP from DB
+                auto ruid = std::get<1>(affiliated_ap_tuple).ruid();
+                Agent::sAPMLD::sAffiliatedAP *affiliated_ap =
+                    database.get_or_allocate_affiliated_ap(*apmld, ruid);
+
+                // RUID
+                // Update RUID for both existing and new Affiliated AP
+                affiliated_ap->ruid = ruid;
+
+                // BSSID
+                if (std::get<1>(affiliated_ap_tuple)
+                        .affiliated_ap_fields_valid()
+                        .affiliated_ap_mac_addr_valid) {
+                    affiliated_ap->bssid =
+                        std::get<1>(affiliated_ap_tuple).affiliated_ap_mac_addr();
+                } else {
+                    affiliated_ap->bssid = beerocks::net::network_utils::ZERO_MAC;
+                }
+
+                // LinkID
+                // Check existing TLVs while polulating valid
+                if (std::get<1>(affiliated_ap_tuple).affiliated_ap_fields_valid().linkid_valid) {
+                    affiliated_ap->link_id = std::get<1>(affiliated_ap_tuple).linkid();
+                } else {
+                    affiliated_ap->link_id = -1;
+                }
+            }
+            // Add AP MLD Info in Data Model
+            database.dm_add_ap_mld(al_mac, *apmld);
+        }
+
+        // Remove redundant APMLD/AffiliatedAP
+
+        /* Use local copy of ap_mlds for looping
+           and remove actual ap_mlds from db */
+        auto ap_mlds = agent->ap_mlds;
+
+        for (auto db_apmld_it : ap_mlds) {
+            bool apmld_found     = 0;
+            uint8_t tlv_apmld_it = 0;
+            auto mld_ssid        = db_apmld_it.first;
+            for (tlv_apmld_it = 0; tlv_apmld_it < agent_ap_mld_configuration->num_ap_mld();
+                 ++tlv_apmld_it) {
+                // Get AgentApMld config from TLV
+                std::tuple<bool, wfa_map::cApMld &> ap_mld_tuple(
+                    agent_ap_mld_configuration->ap_mld(tlv_apmld_it));
+                if (std::get<0>(ap_mld_tuple)) {
+                    wfa_map::cApMld &ap_mld = std::get<1>(ap_mld_tuple);
+                    // Check for SSID match
+                    if (mld_ssid == ap_mld.ssid_str()) {
+                        apmld_found = 1;
+                        break;
+                    }
+                }
+            }
+
+            // Remove redundant ApMld
+            if (!apmld_found) {
+                // Remove Database only if Data Model is removed
+                if (database.dm_remove_ap_mld(agent->al_mac, mld_ssid)) {
+                    // Remove Database
+                    agent->ap_mlds.erase(mld_ssid);
+                    LOG(DEBUG) << "Removed ApMld with ssid: " << mld_ssid
+                               << " from Agent: " << al_mac;
+                }
+            } else {
+                // Logic to remove redundant Affiliated APs (added earlier, but not present now)
+                for (auto db_affl_ap_it : db_apmld_it.second.affiliated_aps) {
+                    auto ruid = db_affl_ap_it.first;
+                    std::tuple<bool, wfa_map::cApMld &> ap_mld_tuple(
+                        agent_ap_mld_configuration->ap_mld(tlv_apmld_it));
+                    if (std::get<0>(ap_mld_tuple)) {
+                        wfa_map::cApMld &ap_mld = std::get<1>(ap_mld_tuple);
+                        bool afflap_found       = 0;
+                        for (uint8_t tlv_affl_ap_it = 0;
+                             tlv_affl_ap_it < ap_mld.num_affiliated_ap(); ++tlv_affl_ap_it) {
+                            // Get AffiliatedAp config from TLV
+                            std::tuple<bool, wfa_map::cAffiliatedAp &> affiliated_ap_tuple(
+                                ap_mld.affiliated_ap(tlv_affl_ap_it));
+                            if (std::get<0>(affiliated_ap_tuple)) {
+                                // Check RUID match
+                                if (ruid == std::get<1>(affiliated_ap_tuple).ruid()) {
+                                    afflap_found = 1;
+                                    break;
+                                }
+                            }
+                        }
+                        // Remove redundant Affiliated AP
+                        if (!afflap_found) {
+                            // Remove Database only if Data Model is removed
+                            if (database.dm_remove_affiliated_ap(agent->al_mac, mld_ssid, ruid)) {
+                                // Remove Database
+                                agent->ap_mlds[mld_ssid].affiliated_aps.erase(ruid);
+                                LOG(DEBUG) << "Removed Affiliated AP with ruid: " << ruid
+                                           << " from ApMld with ssid: " << mld_ssid
+                                           << " of Agent: " << al_mac;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return true;
 }

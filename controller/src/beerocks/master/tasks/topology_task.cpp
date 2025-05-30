@@ -511,6 +511,12 @@ bool topology_task::handle_topology_response(const sMacAddr &src_mac,
 
     //TODO: After handling Device and Neighbor Information, identify Parent Agent (PPM-2043)
 
+    // Handle Agent APMLD Configuration TLV
+    if (!son_actions::handle_agent_ap_mld_configuration_tlv(database, al_mac, cmdu_rx)) {
+        LOG(ERROR) << "handle_ap_mld_configuration_tlv has failed!";
+        return false;
+    }
+
     return true;
 }
 

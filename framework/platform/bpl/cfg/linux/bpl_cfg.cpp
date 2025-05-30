@@ -732,13 +732,6 @@ bool cfg_get_clients_measurement_mode(eClientsMeasurementMode &clients_measureme
     return true;
 }
 
-bool cfg_get_radio_stats_enable(bool &radio_stats_enable)
-{
-    radio_stats_enable = true;
-
-    return true;
-}
-
 bool cfg_get_rssi_measurements_timeout(int &rssi_measurements_timeout_msec)
 {
     int retVal = DEFAULT_RSSI_MEASUREMENT_TIMEOUT_MSEC;

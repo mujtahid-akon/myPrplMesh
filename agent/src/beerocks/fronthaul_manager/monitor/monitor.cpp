@@ -208,13 +208,8 @@ bool Monitor::thread_init()
     mon_db.set_clients_measuremet_mode(
         (monitor_db::eClientsMeasurementMode)clients_measuremet_mode);
 #endif /* FEATURE_PRE_ASSOCIATION_STEERING */
-    bool radio_stats_enable;
-    if (!beerocks::bpl::cfg_get_radio_stats_enable(radio_stats_enable)) {
-        LOG(DEBUG) << "Failed to read radio_stats_enable - using default value: true ";
-        radio_stats_enable = true;
-    }
 
-    mon_db.set_radio_stats_enable(radio_stats_enable);
+    mon_db.set_radio_stats_enable(true);
 
     bool clients_unicast_measurements;
     if (!beerocks::bpl::cfg_get_clients_unicast_measurements(clients_unicast_measurements)) {
